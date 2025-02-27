@@ -502,30 +502,34 @@ html {
   }
   
   /* עיצוב טופס הוספת מתכון חדש */
+  .form-popup-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    position: relative;
+    width: 80%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
   #recipeForm {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    align-items: center;
-    animation: zoomIn 0.5s ease-in-out;
+    align-items: stretch;
+    width: 100%;
+    padding: 20px;
   }
   
   #recipeForm input[type="text"],
+  #recipeForm input[type="url"],
   #recipeForm textarea {
-    width: 80%;
-    padding: 15px;
-    border: none;
-    border-radius: 30px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
     font-size: 1rem;
-    background-color: #f0f0f0;
-    transition: background-color 0.3s, box-shadow 0.3s;
-  }
-  
-  #recipeForm input[type="text"]:focus,
-  #recipeForm textarea:focus {
-    background-color: #e0e0e0;
-    box-shadow: 0 0 10px rgba(92, 184, 92, 0.5);
-    outline: none;
   }
   
   #recipeForm button[type="submit"] {
@@ -555,23 +559,68 @@ html {
     flex: 1;
   }
   
-  /* עיצוב חדש לטופס */
-  .form-popup-content {
-    background: linear-gradient(135deg, #f0f0f0, #ffffff);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    border-radius: 30px;
+  /* סגנונות לטיימר */
+  .compact-timer {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
   }
   
-  /* אנימציית כניסה לטופס */
-  @keyframes zoomIn {
-    from {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+  .timer-input {
+    width: 40px;
+    height: 24px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    padding: 0 4px;
+    background: white;
+  }
+  
+  .timer-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+  
+  .timer-controls {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .timer-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .timer-btn:hover {
+    background-color: var(--primary-color-dark);
+    transform: scale(1.05);
+  }
+  
+  .timer-display {
+    min-width: 40px;
+    font-size: 14px;
+    font-family: monospace;
+    color: #333;
   }
   
   /* Style for recipe notes resembling a sticky note */
@@ -732,68 +781,4 @@ html {
     justify-content: center;
     margin-top: auto;
     padding-top: 20px; /* מרווח נוסף מעל הכפתורים */
-  }
-  
-  /* סגנונות לטיימר */
-  .compact-timer {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 8px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(5px);
-    z-index: 1000;
-  }
-  
-  .timer-input {
-    width: 40px;
-    height: 24px;
-    text-align: center;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    font-size: 14px;
-    padding: 0 4px;
-    background: white;
-  }
-  
-  .timer-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-  }
-  
-  .timer-controls {
-    display: flex;
-    gap: 4px;
-  }
-  
-  .timer-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 4px;
-    background-color: var(--primary-color);
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    transition: all 0.2s ease;
-  }
-  
-  .timer-btn:hover {
-    background-color: var(--primary-color-dark);
-    transform: scale(1.05);
-  }
-  
-  .timer-display {
-    min-width: 40px;
-    font-size: 14px;
-    font-family: monospace;
-    color: #333;
   }
