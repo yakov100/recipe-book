@@ -470,9 +470,15 @@ html {
   /* סגנונות לכותרת המתכון ב-Popup */
   .recipe-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .recipe-source {
+    font-size: 0.9rem;
+    color: #666;
+    font-style: italic;
   }
   
   .recipe-title {
@@ -827,4 +833,21 @@ html {
     margin-bottom: 10px;
     color: #b38600;
     font-size: 1.1rem;
+  }
+
+  .recipe-rating {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 24px;
+  }
+  
+  .recipe-rating span {
+    cursor: pointer;
+    color: gold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+  }
+  
+  .recipe-rating span:hover {
+    transform: scale(1.2);
   }

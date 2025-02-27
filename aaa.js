@@ -261,12 +261,13 @@
       popupBody.innerHTML = `
         <div class="recipe-full" ${recipe.image ? `style="background-image: url('${recipe.image}')"` : ''}>
           <div class="recipe-content-overlay">
-            <h2 class="recipe-title">${recipe.name}</h2>
+            <div class="recipe-header">
+              <h2 class="recipe-title">${recipe.name}</h2>
+              <span class="recipe-source">${recipe.source}</span>
+            </div>
             <div class="recipe-flex-container">
               <div class="recipe-right-side">
-                <p><strong>מקור:</strong> ${recipe.source}</p>
                 <p><strong>קטגוריה:</strong> ${recipe.category}</p>
-                ${generateStars(recipe.rating || 0, actualIndex)}
                 <div class="recipe-main-content">
                   <div class="ingredients-section">
                     <p><strong>מצרכים:</strong></p>
@@ -283,11 +284,12 @@
                 </div>
               </div>
               <div class="recipe-left-side">
+                <div class="recipe-rating">
+                  ${generateStars(recipe.rating || 0, actualIndex)}
+                </div>
                 ${recipe.videoUrl ? `
                   <div class="recipe-video">
-                    <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" 
-                      frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                      allowfullscreen></iframe>
+                    <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                   </div>` : ''}
                 ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
                 ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
