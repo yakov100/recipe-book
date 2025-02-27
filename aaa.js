@@ -187,10 +187,22 @@
         // פרטי המתכון
         const cardContent = document.createElement('div');
         cardContent.className = 'recipe-details';
-        cardContent.innerHTML = `
-          <h3>${recipe.name}<span class="recipe-source">${recipe.source || ''}</span></h3>
-        `;
-  
+        
+        // הוספת שם המתכון ומקור המתכון
+        const titleContainer = document.createElement('div');
+        titleContainer.className = 'recipe-title-container';
+        
+        const recipeName = document.createElement('span');
+        recipeName.className = 'recipe-name';
+        recipeName.textContent = recipe.name;
+        titleContainer.appendChild(recipeName);
+        
+        const recipeSource = document.createElement('span');
+        recipeSource.className = 'recipe-source';
+        recipeSource.textContent = recipe.source || 'לא ידוע';
+        titleContainer.appendChild(recipeSource);
+        
+        cardContent.appendChild(titleContainer);
         card.appendChild(cardContent);
 
         // Create overlay container for action buttons on hover
