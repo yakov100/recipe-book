@@ -191,29 +191,51 @@
           <h3>${recipe.name}<span class="recipe-source">${recipe.source || ''}</span></h3>
         `;
   
-        // כפתורי פעולה
-        const actionButtons = document.createElement('div');
-        actionButtons.className = 'action-buttons';
-        actionButtons.innerHTML = `
-          <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${index})" title="ערוך">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${index})" title="שתף">
-            <i class="fas fa-share"></i>
-          </button>
-          <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${index})" title="הורד">
-            <i class="fas fa-download"></i>
-          </button>
-          <button class="action-btn" onclick="event.stopPropagation(); deleteRecipe(${index})" title="מחק">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
-        cardContent.appendChild(actionButtons);
-        
         card.appendChild(cardContent);
+
+        // Create overlay container for action buttons on hover
+        const overlayButtons = document.createElement('div');
+        overlayButtons.className = 'action-buttons-overlay';
+        overlayButtons.innerHTML = `
+           <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${index})" title="ערוך" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+             <i class="fas fa-edit"></i>
+           </button>
+           <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${index})" title="שתף" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+             <i class="fas fa-share"></i>
+           </button>
+           <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${index})" title="הורד" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+             <i class="fas fa-download"></i>
+           </button>
+           <button class="action-btn" onclick="event.stopPropagation(); deleteRecipe(${index})" title="מחק" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+             <i class="fas fa-trash"></i>
+           </button>
+        `;
+        // Set initial styles for the overlay
+        overlayButtons.style.display = 'none';
+        overlayButtons.style.position = 'absolute';
+        overlayButtons.style.top = '0';
+        overlayButtons.style.left = '0';
+        overlayButtons.style.width = '100%';
+        overlayButtons.style.height = '100%';
+        overlayButtons.style.justifyContent = 'center';
+        overlayButtons.style.alignItems = 'center';
+        overlayButtons.style.backgroundColor = 'rgba(255,255,255,0.8)'; // Semi-transparent white background
+        // Ensure the card is positioned relative to contain the absolute overlay
+        card.style.position = 'relative';
+        card.appendChild(overlayButtons);
+
+        // Add hover event listeners to show/hide the overlay
+        card.addEventListener('mouseenter', () => {
+          overlayButtons.style.display = 'flex';
+        });
+        card.addEventListener('mouseleave', () => {
+          overlayButtons.style.display = 'none';
+        });
+
         card.addEventListener('click', () => {
           showRecipe(index, filteredRecipes);
         });
+
         container.appendChild(card);
       });
     }
@@ -558,8 +580,8 @@
                 ${recipe.videoUrl ? `<div class="recipe-video">
                   <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 </div>` : ''}
-                ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
                 ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
+                ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
             </body>
             </html>
         `;
