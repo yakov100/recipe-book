@@ -170,20 +170,45 @@
     function displayRecipes(filteredRecipes) {
       const container = document.getElementById('recipesContainer');
       container.innerHTML = '';
+
       filteredRecipes.forEach((recipe, index) => {
         const card = document.createElement('div');
         card.className = 'recipe-card';
-        const cardContent = document.createElement('div');
-        cardContent.className = 'recipe-details';
-        cardContent.innerHTML = `
-            <h3>${recipe.name}<span class="recipe-source">${recipe.source}</span></h3>
-        `;
+
+        // תמונת המתכון
         if (recipe.image) {
           const img = document.createElement('img');
           img.src = recipe.image;
           img.alt = recipe.name;
           card.appendChild(img);
         }
+
+        // פרטי המתכון
+        const cardContent = document.createElement('div');
+        cardContent.className = 'recipe-details';
+        cardContent.innerHTML = `
+          <h3>${recipe.name}<span class="recipe-source">${recipe.source || ''}</span></h3>
+        `;
+
+        // כפתורי פעולה
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'action-buttons';
+        actionButtons.innerHTML = `
+          <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${index})" title="ערוך">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${index})" title="שתף">
+            <i class="fas fa-share"></i>
+          </button>
+          <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${index})" title="הורד">
+            <i class="fas fa-download"></i>
+          </button>
+          <button class="action-btn" onclick="event.stopPropagation(); deleteRecipe(${index})" title="מחק">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+        cardContent.appendChild(actionButtons);
+        
         card.appendChild(cardContent);
         card.addEventListener('click', () => {
           showRecipe(index, filteredRecipes);
