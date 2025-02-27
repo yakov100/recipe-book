@@ -9,10 +9,11 @@
 <body>
   <header class="header">
     <button class="menu-icon" onclick="openMenu()">
-      <div></div>
-      <div></div>
-      <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
     </button>
+    <h1>ספר המתכונים שלי</h1>
   </header>
 
   <!-- תפריט הצד -->
@@ -41,6 +42,14 @@
       <div class="filter-rating" id="filterRating"></div>
     </div>
     <div class="recipes-container" id="recipesContainer"></div>
+    <div class="compact-timer">
+      <input type="number" id="timer-input" min="1" max="999" value="1" class="timer-input" title="דקות">
+      <div class="timer-controls">
+        <button id="start-timer" class="timer-btn" title="התחל">▶</button>
+        <button id="stop-timer" class="timer-btn" title="עצור" style="display: none;">⏹</button>
+      </div>
+      <span id="timer-display" class="timer-display"></span>
+    </div>
   </main>
 
   <!-- חלון המתכון -->

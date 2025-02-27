@@ -27,6 +27,7 @@
       setupBackupReminder();
       setRecipesPerRow(6); // ברירת מחדל ל-6 מתכונים בשורה
       drawGridIcons();
+      initializeTimer();
   
       // הוספת מאזיני אירועים לסגירת חלונות בעת לחיצה מחוץ לתוכן
       setupPopupCloseOnOverlayClick();
@@ -739,5 +740,82 @@
     window.openMenu = openMenu;
     window.closeMenu = closeMenu;
     window.setRecipesPerRow = setRecipesPerRow;
-  })();
   
+    // Timer functionality
+    let timerInterval;
+
+    function beep(duration, frequency, volume, type) {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = type || 'sine';
+        oscillator.frequency.value = frequency || 440;
+        gainNode.gain.value = volume || 0.10;
+        oscillator.start();
+        setTimeout(() => {
+            oscillator.stop();
+        }, duration);
+    }
+
+    function initializeTimer() {
+        const startBtn = document.getElementById('start-timer');
+        const stopBtn = document.getElementById('stop-timer');
+        
+        if (startBtn && stopBtn) {
+            startBtn.addEventListener('click', startTimer);
+            stopBtn.addEventListener('click', stopTimer);
+        }
+    }
+
+    function startTimer() {
+        const minutes = parseInt(document.getElementById('timer-input').value);
+        if (isNaN(minutes) || minutes <= 0) return;
+
+        const startBtn = document.getElementById('start-timer');
+        const stopBtn = document.getElementById('stop-timer');
+        const display = document.getElementById('timer-display');
+
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'flex';
+
+        let totalSeconds = minutes * 60;
+        const endTime = Date.now() + (totalSeconds * 1000);
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            const now = Date.now();
+            const remaining = Math.max(0, endTime - now);
+            
+            if (remaining === 0) {
+                clearInterval(timerInterval);
+                beep(3000, 440, 0.5, 'sine');
+                startBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+                display.textContent = '';
+                return;
+            }
+
+            const remainingMinutes = Math.floor(remaining / 60000);
+            const remainingSeconds = Math.floor((remaining % 60000) / 1000);
+            display.textContent = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        const startBtn = document.getElementById('start-timer');
+        const stopBtn = document.getElementById('stop-timer');
+        const display = document.getElementById('timer-display');
+
+        clearInterval(timerInterval);
+        startBtn.style.display = 'flex';
+        stopBtn.style.display = 'none';
+        display.textContent = '';
+    }
+
+    // Initialize timer when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeTimer();
+    });
+})();

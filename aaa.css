@@ -1,3 +1,8 @@
+:root {
+    --primary-color: #28a745;
+    --primary-color-dark: #218838;
+}
+
 /* סגנונות CSS */
 html {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -13,8 +18,8 @@ html {
   
   .header {
     display: flex;
-    justify-content: flex-start;
     align-items: center;
+    justify-content: flex-start;
     padding: 15px;
     margin-bottom: 20px;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
@@ -23,19 +28,31 @@ html {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
   
+  .header h1 {
+    margin: 0;
+    font-size: 1.5em;
+    text-align: center;
+    flex-grow: 1;
+  }
+  
   .menu-icon {
-    font-size: 30px;
+    width: 35px;
+    height: 30px;
+    position: relative;
     cursor: pointer;
-    user-select: none;
-    background-color: transparent;
+    background: none;
     border: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   
   .menu-icon div {
-    width: 35px;
+    width: 100%;
     height: 4px;
     background-color: #333;
-    margin: 6px 0;
+    border-radius: 3px;
     transition: 0.4s;
   }
   
@@ -764,4 +781,68 @@ html {
     justify-content: center;
     margin-top: auto;
     padding-top: 20px; /* מרווח נוסף מעל הכפתורים */
+  }
+  
+  /* סגנונות לטיימר */
+  .compact-timer {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+  }
+  
+  .timer-input {
+    width: 40px;
+    height: 24px;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+    padding: 0 4px;
+    background: white;
+  }
+  
+  .timer-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+  
+  .timer-controls {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .timer-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+  }
+  
+  .timer-btn:hover {
+    background-color: var(--primary-color-dark);
+    transform: scale(1.05);
+  }
+  
+  .timer-display {
+    min-width: 40px;
+    font-size: 14px;
+    font-family: monospace;
+    color: #333;
   }
