@@ -505,127 +505,142 @@ html {
   
   /* עיצוב טופס הוספת מתכון חדש */
   .form-popup-content {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 600px;
+    width: 90%;
+    margin: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     position: relative;
-    width: 80%;
-    max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
   }
-  
+
   #recipeForm {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    align-items: stretch;
-    width: 100%;
-    padding: 20px;
   }
-  
+
+  #recipeForm h2 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 1.8em;
+    font-weight: 600;
+  }
+
   #recipeForm input[type="text"],
   #recipeForm input[type="url"],
   #recipeForm textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
     font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
   }
-  
-  #recipeForm button[type="submit"] {
-    padding: 15px 30px;
-    background-color: #5cb85c;
-    color: white;
-    border: none;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: background-color 0.3s, transform 0.3s;
+
+  #recipeForm input[type="text"]:focus,
+  #recipeForm input[type="url"]:focus,
+  #recipeForm textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+    outline: none;
+    background-color: #ffffff;
   }
-  
-  #recipeForm button[type="submit"]:hover {
-    background-color: #4cae4c;
-    transform: translateY(-3px);
+
+  #recipeForm textarea {
+    min-height: 120px;
+    resize: vertical;
   }
-  
+
+  #recipeForm label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: -15px;
+  }
+
   .file-upload-container {
     display: flex;
-    align-items: center;
     gap: 10px;
-    width: 80%;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 12px;
+    border: 2px dashed #e9ecef;
   }
-  
-  .file-upload-container input[type="file"] {
+
+  #recipeForm input[type="file"] {
     flex: 1;
-  }
-  
-  /* סגנונות לטיימר */
-  .compact-timer {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.9);
     padding: 8px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(5px);
-    z-index: 1000;
   }
-  
-  .timer-input {
-    width: 40px;
-    height: 24px;
-    text-align: center;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    font-size: 14px;
-    padding: 0 4px;
-    background: white;
-  }
-  
-  .timer-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-  }
-  
-  .timer-controls {
-    display: flex;
-    gap: 4px;
-  }
-  
-  .timer-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 4px;
-    background-color: var(--primary-color);
+
+  #recipeForm button[type="submit"] {
+    background: var(--primary-color);
     color: white;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+  }
+
+  #recipeForm button[type="submit"]:hover {
+    background: var(--primary-color-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+  }
+
+  #recipeForm button[type="button"] {
+    background: #6c757d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  #recipeForm button[type="button"]:hover {
+    background: #5a6268;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+    transition: color 0.3s ease;
+  }
+
+  .close-btn:hover {
+    color: #343a40;
+  }
+
+  @media (max-width: 768px) {
+    .form-popup-content {
+      padding: 20px;
+      width: 95%;
+    }
+    
+    #recipeForm {
+      gap: 15px;
+    }
+    
+    #recipeForm h2 {
+      font-size: 1.5em;
+    }
   }
   
-  .timer-btn:hover {
-    background-color: var(--primary-color-dark);
-    transform: scale(1.05);
-  }
-  
-  .timer-display {
-    min-width: 40px;
-    font-size: 14px;
-    font-family: monospace;
-    color: #333;
-  }
-  
-  /* Style for recipe notes resembling a sticky note */
   .recipe-notes {
     background-color: #fffb8f; /* light yellow */
     border: 1px solid #f0e68c; /* khaki border */
