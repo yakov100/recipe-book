@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Chrome Permanently",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "file": "${workspaceFolder}/aaa.html",
+      "runtimeArgs": [
+        "--new-window"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ספר מתכונים דיגיטלי</title>
+  <link rel="stylesheet" href="aaa.css">
+</head>
+<body>
+  <header class="header">
+    <button class="menu-icon" onclick="openMenu()">
+      <div></div>
+      <div></div>
+      <div></div>
+    </button>
+  </header>
+
+  <!-- תפריט הצד -->
+  <div id="sideMenu" class="side-menu">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">&times;</a>
+    <a href="#" onclick="openFormPopup(); closeMenu();">הוסף מתכון</a>
+    <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורד את כל המתכונים</a>
+    <a href="#" onclick="exportRecipes(); closeMenu();">ייצא ל-JSON</a>
+    <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">ייבא מ-JSON</a>
+    <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
+    <hr>
+    <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
+    <div class="recipes-per-row">
+      <div class="grid-icon" id="grid6" onclick="setRecipesPerRow(6); closeMenu();"></div>
+      <div class="grid-icon" id="grid8" onclick="setRecipesPerRow(8); closeMenu();"></div>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="search-container">
+      <div class="category-filter" id="categoryFilter">
+        <!-- כפתורי הקטגוריות יתווספו דינמית -->
+      </div>
+      <input type="text" id="searchName" placeholder="חפש לפי שם" oninput="filterRecipes()">
+      <input type="text" id="searchIngredients" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
+      <div class="filter-rating" id="filterRating"></div>
+    </div>
+    <div class="recipes-container" id="recipesContainer"></div>
+  </main>
+
+  <!-- חלון המתכון -->
+  <div class="popup-overlay" id="popup">
+    <div class="popup-content">
+      <button class="close-btn" onclick="closePopup()">&times;</button>
+      <div id="popupBody"></div>
+    </div>
+  </div>
+
+  <!-- חלון הוספת מתכון -->
+  <div class="popup-overlay" id="formPopup" style="display: none;">
+    <div class="form-popup-content">
+      <button class="close-btn" onclick="closeFormPopup()">&times;</button>
+      <form id="recipeForm">
+        <h2>הוסף מתכון חדש</h2>
+        <input type="text" id="recipeName" placeholder="שם המתכון" required>
+        <input type="text" id="recipeSource" placeholder="מקור המתכון">
+        <textarea id="ingredients" placeholder="מצרכים" required></textarea>
+        <textarea id="instructions" placeholder="אופן ההכנה" required></textarea>
+        <label for="category">קטגוריה:</label>
+        <input type="text" id="category" list="categoryList" placeholder="הכנס קטגוריה או בחר קיימת" required>
+        <datalist id="categoryList">
+          <!-- הקטגוריות יתווספו דינמית -->
+        </datalist>
+        <textarea id="notes" placeholder="הערות"></textarea>
+        <label for="recipeVideo">קישור לסרטון YouTube:</label>
+        <input type="url" id="recipeVideo" name="recipeVideo" placeholder="https://www.youtube.com/watch?v=">
+        <div class="file-upload-container">
+          <input type="file" id="image" accept="image/*">
+          <button type="button" onclick="document.getElementById('ocrImage').click()">OCR</button>
+        </div>
+        <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
+        <button type="submit">שמור מתכון</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- תזכורת לגיבוי -->
+  <div class="backup-reminder" id="backupReminder" style="display: none;">
+    <span>זמן לגיבוי! לא גיביתם את המתכונים שלכם מזה זמן רב.</span>
+    <button onclick="closeBackupReminder()">×</button>
+  </div>
+
+  <!-- חלון אישור מחיקה -->
+  <div class="popup-overlay" id="confirmPopup" style="display: none;">
+    <div class="confirm-popup-content">
+      <h3>האם ברצונך למחוק את המתכון?</h3>
+      <button class="confirm" onclick="deleteRecipe()">מחק</button>
+      <button class="cancel" onclick="closeConfirmPopup()">בטל</button>
+    </div>
+  </div>
+
+  <!-- ספריה חיצונית ל-OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+  <script src="aaa.js"></script>
+</body>
+</html>
