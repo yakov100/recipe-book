@@ -42,6 +42,7 @@
       const category = document.getElementById('category').value || 'שונות';
       const notes = document.getElementById('notes').value;
       const videoUrl = document.getElementById('recipeVideo').value;
+      const recipeLink = document.getElementById('recipeLink').value;
       const file = document.getElementById('image').files[0];
   
       let rating = 0;
@@ -51,14 +52,14 @@
   
       if (file) {
         resizeImage(file, 300, 300, (resizedDataUrl) => {
-          saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, image: resizedDataUrl, rating });
+          saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, recipeLink, image: resizedDataUrl, rating });
         });
       } else {
         let image = defaultImages[category] || '';
         if (editingIndex !== -1 && recipes[editingIndex].image && recipes[editingIndex].image !== defaultImages[recipes[editingIndex].category]) {
           image = recipes[editingIndex].image;
         }
-        saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, image, rating });
+        saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, recipeLink, image, rating });
       }
     });
   
@@ -170,11 +171,11 @@
     function displayRecipes(filteredRecipes) {
       const container = document.getElementById('recipesContainer');
       container.innerHTML = '';
-
+  
       filteredRecipes.forEach((recipe, index) => {
         const card = document.createElement('div');
         card.className = 'recipe-card';
-
+  
         // תמונת המתכון
         if (recipe.image) {
           const img = document.createElement('img');
@@ -182,14 +183,14 @@
           img.alt = recipe.name;
           card.appendChild(img);
         }
-
+  
         // פרטי המתכון
         const cardContent = document.createElement('div');
         cardContent.className = 'recipe-details';
         cardContent.innerHTML = `
           <h3>${recipe.name}<span class="recipe-source">${recipe.source || ''}</span></h3>
         `;
-
+  
         // כפתורי פעולה
         const actionButtons = document.createElement('div');
         actionButtons.className = 'action-buttons';
@@ -254,6 +255,7 @@
                       frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                       allowfullscreen></iframe>
                   </div>` : ''}
+                ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
                 ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
                 <div class="action-buttons">
                   <button class="action-button" data-tooltip="ערוך" onclick="editRecipe(${actualIndex})">✎</button>
@@ -293,6 +295,7 @@
       document.getElementById('category').value = recipe.category;
       document.getElementById('notes').value = recipe.notes;
       document.getElementById('recipeVideo').value = recipe.videoUrl;
+      document.getElementById('recipeLink').value = recipe.recipeLink;
       document.getElementById('image').value = '';
       editingIndex = index;
       closePopup();
@@ -372,6 +375,7 @@
               ${recipe.videoUrl ? `<div class="recipe-video">
                 <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
               </div>` : ''}
+              ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
               ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
           </body>
           </html>
@@ -555,6 +559,7 @@
                   <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 </div>` : ''}
                 ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
+                ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
             </body>
             </html>
         `;
@@ -662,6 +667,7 @@
                 ${recipe.videoUrl ? `<div class="recipe-video">
                   <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 </div>` : ''}
+                ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
                 ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
             </div>
         `;
