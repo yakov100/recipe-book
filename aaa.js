@@ -1,7 +1,9 @@
 (() => {
-    document.addEventListener('DOMContentLoaded', loadRecipesAndDisplay);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadRecipesAndDisplay();
+    });
   
-    let recipes = JSON.parse(localStorage.getItem('recipes')) || [];
+    let recipes = [];
     let editingIndex = -1;
     let backupReminderTimeout;
     let selectedCategory = '';
@@ -20,16 +22,45 @@
     }
   
     function loadRecipesAndDisplay() {
+      try {
+        // נסה לטעון את המתכונים מ-localStorage
+        const storedRecipes = localStorage.getItem('recipes');
+        console.log('Raw stored recipes:', storedRecipes);
+        
+        if (!storedRecipes) {
+          recipes = [];
+        } else {
+          // נקה מתכונים לא תקינים
+          const parsedRecipes = JSON.parse(storedRecipes);
+          console.log('Parsed recipes:', parsedRecipes);
+          
+          recipes = parsedRecipes.filter(recipe => {
+            const isValid = recipe && 
+              typeof recipe === 'object' && 
+              recipe.name && 
+              recipe.ingredients;
+            
+            if (!isValid) {
+              console.log('Invalid recipe found:', recipe);
+            }
+            return isValid;
+          });
+          
+          console.log('Valid recipes:', recipes);
+        }
+      } catch (error) {
+        console.error('Error loading recipes:', error);
+        recipes = [];
+      }
+
       updateCategoryList();
       updateCategoryButtons();
       displayRecipes(recipes);
       document.getElementById('filterRating').innerHTML = generateFilterStars();
       setupBackupReminder();
-      setRecipesPerRow(6); // ברירת מחדל ל-6 מתכונים בשורה
+      setRecipesPerRow(6);
       drawGridIcons();
       initializeTimer();
-  
-      // הוספת מאזיני אירועים לסגירת חלונות בעת לחיצה מחוץ לתוכן
       setupPopupCloseOnOverlayClick();
     }
   
@@ -64,11 +95,19 @@
     });
   
     function saveRecipe(recipe) {
+      // וודא שהמתכון תקין לפני השמירה
+      if (!recipe || !recipe.name || !recipe.ingredients) {
+        console.error('Invalid recipe:', recipe);
+        alert('שגיאה: לא ניתן לשמור מתכון ללא שם או מצרכים');
+        return;
+      }
+
       if (editingIndex === -1) {
         recipes.push(recipe);
       } else {
         recipes[editingIndex] = recipe;
       }
+
       try {
         localStorage.setItem('recipes', JSON.stringify(recipes));
         updateCategoryList();
@@ -156,26 +195,69 @@
     }
   
     function filterRecipes() {
-      const searchName = document.getElementById('searchName').value.toLowerCase();
-      const searchIngredients = document.getElementById('searchIngredients').value.toLowerCase();
+      const searchName = document.getElementById('searchName').value.toLowerCase().trim();
+      const searchIngredients = document.getElementById('searchIngredients').value.toLowerCase().trim();
       const selectedRating = getSelectedRating();
+
+      // וודא שיש מתכונים לסנן
+      if (!Array.isArray(recipes) || recipes.length === 0) {
+        console.log('No recipes to filter');
+        displayRecipes([]);
+        return;
+      }
+
+      // אם אין פילטרים פעילים, הצג את כל המתכונים
+      if (!searchName && !searchIngredients && !selectedCategory && !selectedRating) {
+        console.log('No filters active, showing all recipes:', recipes.length);
+        displayRecipes(recipes);
+        return;
+      }
+
       const filteredRecipes = recipes.filter(recipe => {
-        return recipe.name.toLowerCase().includes(searchName) &&
-               recipe.ingredients.toLowerCase().includes(searchIngredients) &&
-               (selectedCategory === '' || recipe.category === selectedCategory) &&
-               (selectedRating === 0 || recipe.rating === selectedRating);
+        // וודא שהמתכון תקין
+        if (!recipe || !recipe.name || !recipe.ingredients) {
+          console.log('Skipping invalid recipe:', recipe);
+          return false;
+        }
+        
+        const nameMatch = !searchName || recipe.name.toLowerCase().includes(searchName);
+        const ingredientsMatch = !searchIngredients || recipe.ingredients.toLowerCase().includes(searchIngredients);
+        // אם אין קטגוריה נבחרת או שהקטגוריה תואמת
+        const categoryMatch = !selectedCategory || (recipe.category && recipe.category.trim() === selectedCategory.trim());
+        const ratingMatch = !selectedRating || (recipe.rating && recipe.rating === selectedRating);
+
+        return nameMatch && ingredientsMatch && categoryMatch && ratingMatch;
       });
+      
+      console.log('Filtered recipes:', filteredRecipes.length, 'out of', recipes.length);
       displayRecipes(filteredRecipes);
     }
   
-    function displayRecipes(filteredRecipes) {
+    function displayRecipes(recipesToShow) {
       const container = document.getElementById('recipesContainer');
       container.innerHTML = '';
-  
-      filteredRecipes.forEach((recipe, index) => {
+
+      console.log('Displaying recipes:', recipesToShow);
+
+      if (!Array.isArray(recipesToShow)) {
+        console.error('Invalid recipes array:', recipesToShow);
+        return;
+      }
+
+      recipesToShow.forEach((recipe, index) => {
+        if (!recipe || !recipe.name) {
+          console.error('Invalid recipe at index', index, recipe);
+          return;
+        }
+
+        // מצא את האינדקס האמיתי במערך המקורי
+        const actualIndex = recipes.indexOf(recipe);
+        console.log('Recipe:', recipe.name, 'filtered index:', index, 'actual index:', actualIndex);
+
         const card = document.createElement('div');
         card.className = 'recipe-card';
-  
+        card.onclick = () => showRecipe(actualIndex);
+
         // תמונת המתכון
         if (recipe.image) {
           const img = document.createElement('img');
@@ -183,7 +265,7 @@
           img.alt = recipe.name;
           card.appendChild(img);
         }
-  
+
         // פרטי המתכון
         const cardContent = document.createElement('div');
         cardContent.className = 'recipe-details';
@@ -192,12 +274,12 @@
         const titleContainer = document.createElement('div');
         titleContainer.className = 'recipe-title-container';
         
-        const recipeName = document.createElement('span');
+        const recipeName = document.createElement('h2');
         recipeName.className = 'recipe-name';
         recipeName.textContent = recipe.name;
         titleContainer.appendChild(recipeName);
         
-        const recipeSource = document.createElement('span');
+        const recipeSource = document.createElement('p');
         recipeSource.className = 'recipe-source';
         recipeSource.textContent = recipe.source || 'לא ידוע';
         titleContainer.appendChild(recipeSource);
@@ -209,52 +291,29 @@
         const overlayButtons = document.createElement('div');
         overlayButtons.className = 'action-buttons-overlay';
         overlayButtons.innerHTML = `
-           <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${index})" title="ערוך" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+           <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${actualIndex})" title="ערוך">
              <i class="fas fa-edit"></i>
            </button>
-           <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${index})" title="שתף" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+           <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${actualIndex})" title="שתף">
              <i class="fas fa-share"></i>
            </button>
-           <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${index})" title="הורד" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+           <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${actualIndex})" title="הורד">
              <i class="fas fa-download"></i>
            </button>
-           <button class="action-btn" onclick="event.stopPropagation(); deleteRecipe(${index})" title="מחק" style="background-color: #4CAF50; border-radius: 50%; width: 40px; height: 40px; border: none; color: white; margin: 0 5px; cursor: pointer;">
+           <button class="action-btn" onclick="event.stopPropagation(); confirmDeleteRecipe(${actualIndex})" title="מחק">
              <i class="fas fa-trash"></i>
            </button>
         `;
-        // Set initial styles for the overlay
-        overlayButtons.style.display = 'none';
-        overlayButtons.style.position = 'absolute';
-        overlayButtons.style.top = '0';
-        overlayButtons.style.left = '0';
-        overlayButtons.style.width = '100%';
-        overlayButtons.style.height = '100%';
-        overlayButtons.style.justifyContent = 'center';
-        overlayButtons.style.alignItems = 'center';
-        overlayButtons.style.backgroundColor = 'rgba(255,255,255,0.8)'; // Semi-transparent white background
-        // Ensure the card is positioned relative to contain the absolute overlay
-        card.style.position = 'relative';
         card.appendChild(overlayButtons);
 
-        // Add hover event listeners to show/hide the overlay
-        card.addEventListener('mouseenter', () => {
-          overlayButtons.style.display = 'flex';
-        });
-        card.addEventListener('mouseleave', () => {
-          overlayButtons.style.display = 'none';
-        });
-
-        card.addEventListener('click', () => {
-          showRecipe(index, filteredRecipes);
-        });
-
+        // הוספת הכרטיס למיכל
         container.appendChild(card);
+        console.log('Added recipe card:', recipe.name);
       });
     }
   
-    function showRecipe(index, filteredRecipes) {
-      const recipe = filteredRecipes[index];
-      const actualIndex = recipes.indexOf(recipe);
+    function showRecipe(index) {
+      const recipe = recipes[index];
       const popup = document.getElementById('popup');
       const popupBody = document.getElementById('popupBody');
       
@@ -285,7 +344,7 @@
               </div>
               <div class="recipe-left-side">
                 <div class="recipe-rating">
-                  ${generateStars(recipe.rating || 0, actualIndex)}
+                  ${generateStars(recipe.rating || 0, index)}
                 </div>
                 ${recipe.videoUrl ? `
                   <div class="recipe-video">
@@ -294,10 +353,10 @@
                 ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
                 ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
                 <div class="action-buttons">
-                  <button class="action-button" data-tooltip="ערוך" onclick="editRecipe(${actualIndex})">✎</button>
-                  <button class="action-button" data-tooltip="מחק" onclick="confirmDeleteRecipe(${actualIndex})">🗑</button>
-                  <button class="action-button" data-tooltip="הורד" onclick="downloadRecipe(${actualIndex})">⭳</button>
-                  <button class="action-button" data-tooltip="שתף" onclick="shareRecipe(${actualIndex})">⤤</button>
+                  <button class="action-button" data-tooltip="ערוך" onclick="editRecipe(${index})">✎</button>
+                  <button class="action-button" data-tooltip="מחק" onclick="confirmDeleteRecipe(${index})">🗑</button>
+                  <button class="action-button" data-tooltip="הורד" onclick="downloadRecipe(${index})">⭳</button>
+                  <button class="action-button" data-tooltip="שתף" onclick="shareRecipe(${index})">⤤</button>
                 </div>
               </div>
             </div>
@@ -439,7 +498,7 @@
     function rateRecipe(index, rating) {
       recipes[index].rating = rating;
       localStorage.setItem('recipes', JSON.stringify(recipes));
-      showRecipe(index, recipes);
+      showRecipe(index);
       displayRecipes(recipes);
     }
   
