@@ -124,7 +124,9 @@ html {
   }
   
   .main {
-    padding: 20px;
+    height: calc(100vh - 100px); /* Subtract header height and margin */
+    overflow-y: auto;
+    padding: 20px 0;
   }
   
   .search-container {
