@@ -810,45 +810,69 @@
   
     // Timer functionality
     let timerInterval;
+    let timerPaused = false;
+    let pausedTimeRemaining = 0;
 
     function beep(duration, frequency, volume, type) {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
         oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        oscillator.type = type || 'sine';
-        oscillator.frequency.value = frequency || 440;
-        gainNode.gain.value = volume || 0.10;
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = type;
+        oscillator.frequency.value = frequency;
+        gainNode.gain.value = volume;
+        
         oscillator.start();
         setTimeout(() => {
             oscillator.stop();
+            audioContext.close();
         }, duration);
     }
 
-    function initializeTimer() {
-        const startBtn = document.getElementById('start-timer');
-        const stopBtn = document.getElementById('stop-timer');
+    function formatTime(totalSeconds) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function getTimeInSeconds() {
+        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
+        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
+        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
+        return (hours * 3600) + (minutes * 60) + seconds;
+    }
+
+    function setTimeInputs(totalSeconds) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
         
-        if (startBtn && stopBtn) {
-            startBtn.addEventListener('click', startTimer);
-            stopBtn.addEventListener('click', stopTimer);
-        }
+        document.getElementById('timer-hours').value = hours;
+        document.getElementById('timer-minutes').value = minutes;
+        document.getElementById('timer-seconds').value = seconds;
     }
 
     function startTimer() {
-        const minutes = parseInt(document.getElementById('timer-input').value);
-        if (isNaN(minutes) || minutes <= 0) return;
+        const totalSeconds = timerPaused ? Math.ceil(pausedTimeRemaining / 1000) : getTimeInSeconds();
+        if (totalSeconds <= 0) return;
 
         const startBtn = document.getElementById('start-timer');
+        const pauseBtn = document.getElementById('pause-timer');
         const stopBtn = document.getElementById('stop-timer');
         const display = document.getElementById('timer-display');
-
+        
         startBtn.style.display = 'none';
+        pauseBtn.style.display = 'flex';
         stopBtn.style.display = 'flex';
+        display.classList.add('active');
 
-        let totalSeconds = minutes * 60;
-        const endTime = Date.now() + (totalSeconds * 1000);
+        const endTime = Date.now() + (timerPaused ? pausedTimeRemaining : totalSeconds * 1000);
+        timerPaused = false;
+        pausedTimeRemaining = 0;
 
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -857,28 +881,96 @@
             
             if (remaining === 0) {
                 clearInterval(timerInterval);
-                beep(3000, 440, 0.5, 'sine');
+                // צפצוף מספר פעמים
+                let beepCount = 0;
+                const beepInterval = setInterval(() => {
+                    if (beepCount < 5) {
+                        beep(200, 440, 0.3, 'square');
+                        beepCount++;
+                    } else {
+                        clearInterval(beepInterval);
+                    }
+                }, 400);
+                
                 startBtn.style.display = 'flex';
+                pauseBtn.style.display = 'none';
                 stopBtn.style.display = 'none';
+                display.classList.remove('active');
                 display.textContent = '';
                 return;
             }
 
-            const remainingMinutes = Math.floor(remaining / 60000);
-            const remainingSeconds = Math.floor((remaining % 60000) / 1000);
-            display.textContent = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            display.textContent = formatTime(Math.ceil(remaining / 1000));
         }, 1000);
+    }
+
+    function pauseTimer() {
+        const startBtn = document.getElementById('start-timer');
+        const pauseBtn = document.getElementById('pause-timer');
+        const display = document.getElementById('timer-display');
+        
+        clearInterval(timerInterval);
+        timerPaused = true;
+        pausedTimeRemaining = (Date.now() - startTime);
+        
+        startBtn.style.display = 'flex';
+        pauseBtn.style.display = 'none';
+        display.classList.remove('active');
     }
 
     function stopTimer() {
         const startBtn = document.getElementById('start-timer');
+        const pauseBtn = document.getElementById('pause-timer');
         const stopBtn = document.getElementById('stop-timer');
         const display = document.getElementById('timer-display');
 
         clearInterval(timerInterval);
+        timerPaused = false;
+        pausedTimeRemaining = 0;
+        
         startBtn.style.display = 'flex';
+        pauseBtn.style.display = 'none';
         stopBtn.style.display = 'none';
+        display.classList.remove('active');
         display.textContent = '';
+    }
+
+    function togglePresetMenu() {
+        const menu = document.getElementById('timer-preset-menu');
+        menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    function initializeTimer() {
+        const startBtn = document.getElementById('start-timer');
+        const pauseBtn = document.getElementById('pause-timer');
+        const stopBtn = document.getElementById('stop-timer');
+        const presetBtn = document.getElementById('timer-preset');
+        
+        if (startBtn && pauseBtn && stopBtn && presetBtn) {
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            stopBtn.addEventListener('click', stopTimer);
+            presetBtn.addEventListener('click', togglePresetMenu);
+            
+            // הוספת מאזינים לכפתורי הזמנים המוגדרים מראש
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const seconds = parseInt(btn.dataset.time);
+                    setTimeInputs(seconds);
+                    togglePresetMenu();
+                    startTimer();
+                });
+            });
+
+            // סגירת תפריט הזמנים המוגדרים מראש בלחיצה מחוץ לתפריט
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('timer-preset-menu');
+                const presetBtn = document.getElementById('timer-preset');
+                if (!menu.contains(e.target) && !presetBtn.contains(e.target)) {
+                    menu.style.display = 'none';
+                }
+            });
+        }
     }
 
     // Initialize timer when page loads
