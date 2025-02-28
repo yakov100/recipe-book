@@ -9,16 +9,28 @@
 html {
     font-family: var(--font-primary);
     scroll-behavior: smooth;
-  }
-  
-  body {
+    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+
+html::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+}
+
+body {
     margin: 0;
     padding: 0;
     background-size: cover;
     overflow-y: auto;
-  }
-  
-  .header {
+    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+
+body::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+}
+
+.header {
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -28,16 +40,16 @@ html {
     border-radius: 15px;
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  .header h1 {
+}
+
+.header h1 {
     margin: 0;
     font-size: 1.5em;
     text-align: center;
     flex-grow: 1;
-  }
-  
-  .menu-icon {
+}
+
+.menu-icon {
     width: 35px;
     height: 30px;
     position: relative;
@@ -48,18 +60,18 @@ html {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-  }
-  
-  .menu-icon div {
+}
+
+.menu-icon div {
     width: 100%;
     height: 4px;
     background-color: #333;
     border-radius: 3px;
     transition: 0.4s;
-  }
-  
-  /* סגנונות לתפריט הצד */
-  .side-menu {
+}
+
+/* סגנונות לתפריט הצד */
+.side-menu {
     height: 100%;
     width: 0;
     position: fixed;
@@ -70,48 +82,48 @@ html {
     overflow-x: hidden;
     transition: 0.5s;
     padding-top: 60px;
-  }
-  
-  .side-menu a {
+}
+
+.side-menu a {
     padding: 10px 20px;
     text-decoration: none;
     font-size: 1.2rem;
     color: #333;
     display: block;
     transition: 0.3s;
-  }
-  
-  .side-menu a:hover {
+}
+
+.side-menu a:hover {
     background-color: #f1f1f1;
-  }
-  
-  .side-menu .closebtn {
+}
+
+.side-menu .closebtn {
     position: absolute;
     top: 20px;
     left: 25px;
     font-size: 36px;
-  }
-  
-  /* סגנונות לבחירת מספר המתכונים בשורה */
-  .recipes-per-row {
+}
+
+/* סגנונות לבחירת מספר המתכונים בשורה */
+.recipes-per-row {
     display: flex;
     gap: 10px;
     padding: 10px 20px;
-  }
-  
-  .grid-icon {
+}
+
+.grid-icon {
     width: 40px;
     height: 40px;
     cursor: pointer;
     position: relative;
-  }
-  
-  .grid-icon canvas {
+}
+
+.grid-icon canvas {
     width: 100%;
     height: 100%;
-  }
-  
-  .grid-icon.active::after {
+}
+
+.grid-icon.active::after {
     content: '';
     position: absolute;
     top: -5px;
@@ -121,15 +133,21 @@ html {
     background-color: #5cb85c;
     border-radius: 50%;
     border: 2px solid white;
-  }
-  
-  .main {
+}
+
+.main {
     height: calc(100vh - 100px); /* Subtract header height and margin */
     overflow-y: auto;
     padding: 20px 0;
-  }
-  
-  .search-container {
+    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.main::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+}
+
+.search-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -141,16 +159,16 @@ html {
     border-radius: 15px;
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  .category-filter {
+}
+
+.category-filter {
     display: flex;
     gap: 10px;
     margin: 0 auto;
     flex-wrap: wrap;
-  }
-  
-  .category-button {
+}
+
+.category-button {
     padding: 10px;
     border-radius: 50%;
     border: none;
@@ -166,24 +184,24 @@ html {
     font-size: 0.7rem;
     transition: background-color 0.3s, transform 0.3s;
     overflow: hidden;
-  }
-  
-  .category-button:hover {
+}
+
+.category-button:hover {
     background-color: rgba(76, 174, 76, 1);
     transform: translateY(-3px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-  }
-  
-  .category-button span {
+}
+
+.category-button span {
     display: block;
     word-wrap: break-word;
     max-width: 50px;
     text-overflow: ellipsis;
     overflow: hidden;
     text-align: center;
-  }
-  
-  input[type="text"] {
+}
+
+input[type="text"] {
     width: 150px;
     padding: 10px;
     border-radius: 20px;
@@ -191,22 +209,22 @@ html {
     background-color: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(5px);
     transition: background-color 0.3s, box-shadow 0.3s;
-  }
-  
-  input[type="text"]:focus {
+}
+
+input[type="text"]:focus {
     background-color: rgba(255, 255, 255, 0.8);
     box-shadow: 0 0 10px rgba(76, 174, 76, 0.5);
     outline: none;
-  }
-  
-  .recipes-container {
+}
+
+.recipes-container {
     display: grid;
     grid-template-columns: repeat(var(--columns, 6), 1fr);
     gap: 20px;
     padding-inline: 20px;
-  }
-  
-  .recipe-card {
+}
+
+.recipe-card {
     position: relative;
     border-radius: 10px;
     overflow: hidden;
@@ -217,26 +235,26 @@ html {
     display: flex;
     flex-direction: column;
     background-color: rgba(255, 255, 255, 0.9);
-  }
+}
 
-  .recipe-card:hover {
+.recipe-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  }
+}
 
-  .recipe-card img {
+.recipe-card img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
     transition: transform 0.3s ease;
-  }
+}
 
-  .recipe-card:hover img {
+.recipe-card:hover img {
     transform: scale(1.05);
-  }
+}
 
-  .recipe-details {
+.recipe-details {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -247,9 +265,9 @@ html {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-  }
+}
 
-  .recipe-title-container {
+.recipe-title-container {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -258,33 +276,33 @@ html {
     text-align: center;
     padding: 0 0 0;
     width: 100%;
-  }
+}
 
-  .recipe-name {
+.recipe-name {
     margin: 0;
     font-size: 1rem;
     font-weight: bold;
     text-align: right;
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-  }
+}
 
-  .recipe-source {
+.recipe-source {
     font-size: 0.8rem;
     color: #666;
     text-align: left;
     display: flex;
     align-items: center;
     gap: 5px;
-  }
+}
 
-  .recipe-source::before {
+.recipe-source::before {
     content: "•";
     color: #666;
     display: inline-block;
     margin: 0 5px;
-  }
+}
 
-  .action-buttons-overlay {
+.action-buttons-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -295,13 +313,13 @@ html {
     justify-content: center;
     align-items: center;
     gap: 5px;
-  }
+}
 
-  .recipe-card:hover .action-buttons-overlay {
+.recipe-card:hover .action-buttons-overlay {
     display: flex;
-  }
+}
 
-  .action-btn {
+.action-btn {
     background-color: #7FD683 !important;
     border-radius: 50% !important;
     width: 40px !important;
@@ -314,18 +332,18 @@ html {
     align-items: center !important;
     justify-content: center !important;
     transition: transform 0.2s ease !important;
-  }
+}
 
-  .action-btn:hover {
+.action-btn:hover {
     transform: scale(1.1) !important;
     background-color: #90E594 !important;
-  }
+}
 
-  .action-btn i {
+.action-btn i {
     font-size: 1.2rem !important;
-  }
+}
 
-  .popup-overlay {
+.popup-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -336,9 +354,9 @@ html {
     justify-content: center;
     align-items: center;
     z-index: 1000;
-  }
-  
-  .popup-content {
+}
+
+.popup-content {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
@@ -347,9 +365,9 @@ html {
     max-width: 1200px;
     position: relative;
     overflow: auto;
-  }
-  
-  .close-btn {
+}
+
+.close-btn {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -358,10 +376,10 @@ html {
     font-size: 30px;
     cursor: pointer;
     color: #333;
-  }
-  
-  /* סגנונות לחלון אישור מחיקה */
-  .confirm-popup-content {
+}
+
+/* סגנונות לחלון אישור מחיקה */
+.confirm-popup-content {
     background-color: #fff;
     padding: 20px;
     border-radius: 15px;
@@ -370,41 +388,41 @@ html {
     width: 80%;
     position: relative;
     animation: fadeIn 0.3s ease-in-out;
-  }
-  
-  .confirm-popup-content button {
+}
+
+.confirm-popup-content button {
     margin: 10px;
     padding: 10px 20px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-size: 1rem;
-  }
-  
-  .confirm-popup-content button.confirm {
+}
+
+.confirm-popup-content button.confirm {
     background-color: #d9534f;
     color: white;
-  }
-  
-  .confirm-popup-content button.cancel {
+}
+
+.confirm-popup-content button.cancel {
     background-color: #4cae4c;
     color: white;
-  }
-  
-  /* אנימציית כניסה לחלון האישור */
-  @keyframes fadeIn {
+}
+
+/* אנימציית כניסה לחלון האישור */
+@keyframes fadeIn {
     from {
-      opacity: 0;
-      transform: translateY(-20px);
+        opacity: 0;
+        transform: translateY(-20px);
     }
     to {
-      opacity: 1;
-      transform: translateY(0);
+        opacity: 1;
+        transform: translateY(0);
     }
-  }
-  
-  /* סגנונות לתזכורת לגיבוי */
-  .backup-reminder {
+}
+
+/* סגנונות לתזכורת לגיבוי */
+.backup-reminder {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -417,25 +435,25 @@ html {
     align-items: center;
     gap: 10px;
     z-index: 1001;
-  }
-  
-  .backup-reminder button {
+}
+
+.backup-reminder button {
     background: none;
     border: none;
     color: white;
     font-size: 20px;
     cursor: pointer;
-  }
-  
-  /* סגנונות לכפתורי הפעולה ב-Popup */
-  .action-buttons {
+}
+
+/* סגנונות לכפתורי הפעולה ב-Popup */
+.action-buttons {
     display: flex;
     justify-content: center;
     gap: 2px;
     margin-top: 10px;
-  }
-  
-  .action-button {
+}
+
+.action-button {
     width: 40px;
     height: 40px;
     background-color: #5cb85c;
@@ -448,14 +466,14 @@ html {
     cursor: pointer;
     position: relative;
     opacity: 0.9;
-  }
-  
-  .action-button:hover {
+}
+
+.action-button:hover {
     background-color: #4cae4c;
     opacity: 1;
-  }
-  
-  .action-button::after {
+}
+
+.action-button::after {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 50px;
@@ -469,59 +487,59 @@ html {
     pointer-events: none;
     transition: opacity 0.3s;
     white-space: nowrap;
-  }
-  
-  .action-button:hover::after {
+}
+
+.action-button:hover::after {
     opacity: 1;
-  }
-  
-  .popup-content img.recipe-image {
+}
+
+.popup-content img.recipe-image {
     max-width: 100%;
     height: auto;
     border-radius: 8px;
     display: block;
     margin: 10px auto;
     max-height: 300px;
-  }
-  
-  /* סגנונות לכותרת המתכון ב-Popup */
-  .recipe-header {
+}
+
+/* סגנונות לכותרת המתכון ב-Popup */
+.recipe-header {
     display: flex;
     align-items: baseline;
     gap: 10px;
     margin-bottom: 20px;
-  }
+}
 
-  .recipe-source {
+.recipe-source {
     font-size: 0.9rem;
     color: #666;
     font-style: italic;
-  }
-  
-  .recipe-title {
+}
+
+.recipe-title {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-  }
-  
-  .recipe-title h2 {
+}
+
+.recipe-title h2 {
     margin: 0;
-  }
-  
-  .recipe-title .recipe-source {
+}
+
+.recipe-title .recipe-source {
     margin-right: 60px;
     font-size: 1rem;
     color: gray;
-  }
-  
-  .rating {
+}
+
+.rating {
     font-size: 1.5rem;
     color: gold;
     cursor: pointer;
-  }
-  
-  /* עיצוב טופס הוספת מתכון חדש */
-  .form-popup-content {
+}
+
+/* עיצוב טופס הוספת מתכון חדש */
+.form-popup-content {
     background: linear-gradient(135deg, #ffffff, #f8f9fa);
     padding: 30px;
     border-radius: 20px;
@@ -532,54 +550,54 @@ html {
     position: relative;
     max-height: 90vh;
     overflow-y: auto;
-  }
+}
 
-  #recipeForm {
+#recipeForm {
     display: flex;
     flex-direction: column;
     gap: 20px;
-  }
+}
 
-  #recipeForm h2 {
+#recipeForm h2 {
     color: #2c3e50;
     text-align: center;
     margin-bottom: 25px;
     font-size: 1.8em;
     font-weight: 600;
-  }
+}
 
-  #recipeForm input[type="text"],
-  #recipeForm input[type="url"],
-  #recipeForm textarea {
+#recipeForm input[type="text"],
+#recipeForm input[type="url"],
+#recipeForm textarea {
     padding: 12px 15px;
     border: 2px solid #e9ecef;
     border-radius: 12px;
     font-size: 1rem;
     transition: all 0.3s ease;
     background-color: #f8f9fa;
-  }
+}
 
-  #recipeForm input[type="text"]:focus,
-  #recipeForm input[type="url"]:focus,
-  #recipeForm textarea:focus {
+#recipeForm input[type="text"]:focus,
+#recipeForm input[type="url"]:focus,
+#recipeForm textarea:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
     outline: none;
     background-color: #ffffff;
-  }
+}
 
-  #recipeForm textarea {
+#recipeForm textarea {
     min-height: 120px;
     resize: vertical;
-  }
+}
 
-  #recipeForm label {
+#recipeForm label {
     font-weight: 500;
     color: #495057;
     margin-bottom: -15px;
-  }
+}
 
-  .file-upload-container {
+.file-upload-container {
     display: flex;
     gap: 10px;
     align-items: center;
@@ -587,14 +605,14 @@ html {
     padding: 15px;
     border-radius: 12px;
     border: 2px dashed #e9ecef;
-  }
+}
 
-  #recipeForm input[type="file"] {
+#recipeForm input[type="file"] {
     flex: 1;
     padding: 8px;
-  }
+}
 
-  #recipeForm button[type="submit"] {
+#recipeForm button[type="submit"] {
     background: var(--primary-color);
     color: white;
     padding: 15px 25px;
@@ -605,15 +623,15 @@ html {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 10px;
-  }
+}
 
-  #recipeForm button[type="submit"]:hover {
+#recipeForm button[type="submit"]:hover {
     background: var(--primary-color-dark);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
-  }
+}
 
-  #recipeForm button[type="button"] {
+#recipeForm button[type="button"] {
     background: #6c757d;
     color: white;
     padding: 8px 15px;
@@ -621,13 +639,13 @@ html {
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
-  }
+}
 
-  #recipeForm button[type="button"]:hover {
+#recipeForm button[type="button"]:hover {
     background: #5a6268;
-  }
+}
 
-  .close-btn {
+.close-btn {
     position: absolute;
     top: 15px;
     left: 15px;
@@ -637,28 +655,28 @@ html {
     cursor: pointer;
     color: #6c757d;
     transition: color 0.3s ease;
-  }
+}
 
-  .close-btn:hover {
+.close-btn:hover {
     color: #343a40;
-  }
+}
 
-  @media (max-width: 768px) {
+@media (max-width: 768px) {
     .form-popup-content {
-      padding: 20px;
-      width: 95%;
+        padding: 20px;
+        width: 95%;
     }
     
     #recipeForm {
-      gap: 15px;
+        gap: 15px;
     }
     
     #recipeForm h2 {
-      font-size: 1.5em;
+        font-size: 1.5em;
     }
-  }
-  
-  .recipe-notes {
+}
+
+.recipe-notes {
     background-color: #fffb8f; /* light yellow */
     border: 1px solid #f0e68c; /* khaki border */
     padding: 10px;
@@ -666,10 +684,10 @@ html {
     margin: 10px 0;
     font-family: 'Comic Sans MS', cursive, sans-serif;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-  }
-  
-  /* סגנונות לכרטיסיית המתכון המורחבת */
-  .recipe-full {
+}
+
+/* סגנונות לכרטיסיית המתכון המורחבת */
+.recipe-full {
     position: relative;
     background-size: cover;
     background-position: center;
@@ -678,75 +696,75 @@ html {
     width: 100%;
     height: 100%;
     margin: 0 auto;
-  }
-  
-  .recipe-content-overlay {
+}
+
+.recipe-content-overlay {
     background: rgba(255, 255, 255, 0.85);
     padding: 20px;
     min-height: 100%;
     width: 100%;
     box-sizing: border-box;
     backdrop-filter: blur(3px);
-  }
-  
-  .recipe-title {
+}
+
+.recipe-title {
     text-align: center;
     margin-bottom: 30px;
     font-size: 2em;
     color: #333;
-  }
-  
-  .recipe-flex-container {
+}
+
+.recipe-flex-container {
     display: flex;
     gap: 20px;
     direction: rtl;
     height: calc(100% - 60px); /* להשאיר מקום לכותרת */
-  }
-  
-  .recipe-right-side,
-  .recipe-left-side {
+}
+
+.recipe-right-side,
+.recipe-left-side {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
-  }
-  
-  .recipe-right-side {
+}
+
+.recipe-right-side {
     border-left: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  
-  .recipe-main-content {
+}
+
+.recipe-main-content {
     display: flex;
     flex-direction: column;
     gap: 20px;
-  }
-  
-  .ingredients-section,
-  .instructions-section {
+}
+
+.ingredients-section,
+.instructions-section {
     background: rgba(255, 255, 255, 0.8);
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 15px;
-  }
-  
-  .recipe-video {
+}
+
+.recipe-video {
     margin: 0;
     position: relative;
     padding-bottom: 56.25%; /* יחס 16:9 */
     height: 0;
     overflow: hidden;
     border-radius: 8px;
-  }
-  
-  .recipe-video iframe {
+}
+
+.recipe-video iframe {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     border-radius: 8px;
-  }
-  
-  .recipe-notes {
+}
+
+.recipe-notes {
     background-color: #fffb8f;
     border: 1px solid #f0e68c;
     padding: 15px;
@@ -754,17 +772,17 @@ html {
     margin: 0;
     font-family: 'Comic Sans MS', cursive, sans-serif;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-  }
-  
-  .action-buttons {
+}
+
+.action-buttons {
     display: flex;
     gap: 10px;
     justify-content: center;
     margin-top: auto;
-  }
-  
-  /* התאמה למסכים קטנים */
-  @media (max-width: 768px) {
+}
+
+/* התאמה למסכים קטנים */
+@media (max-width: 768px) {
     .popup-content {
         width: 95%;
         height: 95vh;
@@ -780,26 +798,26 @@ html {
         border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         margin-bottom: 15px;
     }
-  }
-  
-  .recipe-left-side {
+}
+
+.recipe-left-side {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
     display: flex;
     flex-direction: column;
-  }
-  
-  .recipe-video {
+}
+
+.recipe-video {
     margin: 0 0 30px 0; /* מרווח גדול יותר מתחת לסרטון */
     position: relative;
     padding-bottom: 56.25%;
     height: 0;
     overflow: hidden;
     border-radius: 8px;
-  }
-  
-  .recipe-notes {
+}
+
+.recipe-notes {
     background-color: #fffb8f;
     border: 1px solid #f0e68c;
     padding: 15px;
@@ -807,32 +825,32 @@ html {
     margin: 0 0 40px 0; /* מרווח גדול יותר מתחת להערות */
     font-family: 'Comic Sans MS', cursive, sans-serif;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-  }
-  
-  .action-buttons {
+}
+
+.action-buttons {
     display: flex;
     gap: 10px;
     justify-content: center;
     margin-top: auto;
     padding-top: 20px; /* מרווח נוסף מעל הכפתורים */
-  }
-  
-  .recipe-link {
+}
+
+.recipe-link {
     background: rgba(40, 167, 69, 0.1);
     border: 1px solid var(--primary-color);
     border-radius: 8px;
     padding: 15px;
     margin: 20px 0 30px 0;
-  }
+}
 
-  .recipe-link strong {
+.recipe-link strong {
     display: block;
     margin-bottom: 10px;
     color: var(--primary-color);
     font-size: 1.1rem;
-  }
+}
 
-  .recipe-link a {
+.recipe-link a {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -840,19 +858,19 @@ html {
     text-decoration: none;
     font-size: 1rem;
     word-break: break-all;
-  }
+}
 
-  .recipe-link a:before {
+.recipe-link a:before {
     content: '🔗';
     font-size: 1.2rem;
-  }
+}
 
-  .recipe-link a:hover {
+.recipe-link a:hover {
     color: var(--primary-color-dark);
     text-decoration: underline;
-  }
+}
 
-  .recipe-notes {
+.recipe-notes {
     background-color: #fffb8f; /* light yellow */
     border: 1px solid #f0e68c; /* khaki border */
     padding: 15px;
@@ -860,34 +878,34 @@ html {
     margin: 0;
     font-family: 'Comic Sans MS', cursive, sans-serif;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-  }
+}
 
-  .recipe-notes strong {
+.recipe-notes strong {
     display: block;
     margin-bottom: 10px;
     color: #b38600;
     font-size: 1.1rem;
-  }
+}
 
-  .recipe-rating {
+.recipe-rating {
     text-align: center;
     margin-bottom: 15px;
     font-size: 24px;
-  }
-  
-  .recipe-rating span {
+}
+
+.recipe-rating span {
     cursor: pointer;
     color: gold;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s;
-  }
-  
-  .recipe-rating span:hover {
-    transform: scale(1.2);
-  }
+}
 
-  /* Timer Styles */
-  .timer-container {
+.recipe-rating span:hover {
+    transform: scale(1.2);
+}
+
+/* Timer Styles */
+.timer-container {
     padding: 6px 12px;
     background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(33, 136, 56, 0.05));
     border-radius: 20px;
@@ -895,9 +913,9 @@ html {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-right: 20px;
     position: relative;
-  }
+}
 
-  .timer-display {
+.timer-display {
     font-family: var(--font-primary);
     font-size: 1rem;
     font-weight: bold;
@@ -905,21 +923,21 @@ html {
     min-width: 70px;
     text-align: center;
     margin: 0 8px;
-  }
+}
 
-  .timer-controls {
+.timer-controls {
     display: flex;
     align-items: center;
     gap: 4px;
-  }
+}
 
-  .timer-input-group {
+.timer-input-group {
     display: flex;
     align-items: center;
     gap: 2px;
-  }
+}
 
-  .timer-input {
+.timer-input {
     width: 35px;
     padding: 2px 4px;
     border: 1px solid var(--primary-color);
@@ -928,26 +946,26 @@ html {
     text-align: center;
     background-color: rgba(255, 255, 255, 0.9);
     transition: all 0.3s ease;
-  }
+}
 
-  .timer-separator {
+.timer-separator {
     color: var(--primary-color);
     font-weight: bold;
     margin: 0 1px;
-  }
+}
 
-  .timer-input:focus {
+.timer-input:focus {
     outline: none;
     border-color: var(--primary-color-dark);
     box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
-  }
+}
 
-  .timer-buttons {
+.timer-buttons {
     display: flex;
     gap: 6px;
-  }
+}
 
-  .timer-btn {
+.timer-btn {
     background-color: var(--primary-color);
     color: white;
     border: none;
@@ -960,18 +978,18 @@ html {
     align-items: center;
     justify-content: center;
     font-size: 0.9rem;
-  }
+}
 
-  .timer-btn:hover {
+.timer-btn:hover {
     background-color: var(--primary-color-dark);
     transform: translateY(-1px);
-  }
+}
 
-  .timer-btn:active {
+.timer-btn:active {
     transform: translateY(0);
-  }
+}
 
-  .timer-preset-menu {
+.timer-preset-menu {
     position: absolute;
     top: 100%;
     left: 0;
@@ -985,9 +1003,9 @@ html {
     flex-direction: column;
     gap: 4px;
     z-index: 1000;
-  }
+}
 
-  .preset-btn {
+.preset-btn {
     background: none;
     border: 1px solid var(--primary-color);
     border-radius: 4px;
@@ -996,51 +1014,51 @@ html {
     transition: all 0.2s ease;
     color: var(--primary-color);
     font-size: 0.9rem;
-  }
+}
 
-  .preset-btn:hover {
+.preset-btn:hover {
     background-color: var(--primary-color);
     color: white;
-  }
+}
 
-  /* Blinking animation for active timer */
-  @keyframes blink {
+/* Blinking animation for active timer */
+@keyframes blink {
     0% { opacity: 1; }
     50% { opacity: 0.5; }
     100% { opacity: 1; }
-  }
+}
 
-  .timer-display.active {
+.timer-display.active {
     animation: blink 1s infinite;
-  }
+}
 
-  /* Media query for mobile */
-  @media (max-width: 768px) {
+/* Media query for mobile */
+@media (max-width: 768px) {
     .timer-container {
-      margin-right: 10px;
-      padding: 4px 8px;
+        margin-right: 10px;
+        padding: 4px 8px;
     }
 
     .timer-display {
-      font-size: 0.9rem;
-      min-width: 60px;
+        font-size: 0.9rem;
+        min-width: 60px;
     }
 
     .timer-input {
-      width: 30px;
-      font-size: 0.8rem;
+        width: 30px;
+        font-size: 0.8rem;
     }
 
     .timer-btn {
-      padding: 3px 6px;
+        padding: 3px 6px;
     }
 
     .timer-preset-menu {
-      padding: 6px;
+        padding: 6px;
     }
 
     .preset-btn {
-      font-size: 0.8rem;
-      padding: 3px 6px;
+        font-size: 0.8rem;
+        padding: 3px 6px;
     }
-  }
+}
