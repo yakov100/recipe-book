@@ -291,16 +291,16 @@
         const overlayButtons = document.createElement('div');
         overlayButtons.className = 'action-buttons-overlay';
         overlayButtons.innerHTML = `
-           <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${actualIndex})" title="ערוך">
+           <button class="action-btn" onclick="event.stopPropagation(); editRecipe(${actualIndex})" data-tooltip="ערוך">
              <i class="fas fa-edit"></i>
            </button>
-           <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${actualIndex})" title="שתף">
+           <button class="action-btn" onclick="event.stopPropagation(); shareRecipe(${actualIndex})" data-tooltip="שתף">
              <i class="fas fa-share"></i>
            </button>
-           <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${actualIndex})" title="הורד">
+           <button class="action-btn" onclick="event.stopPropagation(); downloadRecipe(${actualIndex})" data-tooltip="הורד">
              <i class="fas fa-download"></i>
            </button>
-           <button class="action-btn" onclick="event.stopPropagation(); confirmDeleteRecipe(${actualIndex})" title="מחק">
+           <button class="action-btn" onclick="event.stopPropagation(); confirmDeleteRecipe(${actualIndex})" data-tooltip="מחק">
              <i class="fas fa-trash"></i>
            </button>
         `;
@@ -353,10 +353,18 @@
                 ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
                 ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
                 <div class="action-buttons">
-                  <button class="action-button" data-tooltip="ערוך" onclick="editRecipe(${index})">✎</button>
-                  <button class="action-button" data-tooltip="מחק" onclick="confirmDeleteRecipe(${index})">🗑</button>
-                  <button class="action-button" data-tooltip="הורד" onclick="downloadRecipe(${index})">⭳</button>
-                  <button class="action-button" data-tooltip="שתף" onclick="shareRecipe(${index})">⤤</button>
+                  <button class="action-btn" onclick="editRecipe(${index})" data-tooltip="ערוך">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="action-btn" onclick="confirmDeleteRecipe(${index})" data-tooltip="מחק">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                  <button class="action-btn" onclick="shareRecipe(${index})" data-tooltip="שתף">
+                    <i class="fas fa-share"></i>
+                  </button>
+                  <button class="action-btn" onclick="downloadRecipe(${index})" data-tooltip="הורד">
+                    <i class="fas fa-download"></i>
+                  </button>
                 </div>
               </div>
             </div>
