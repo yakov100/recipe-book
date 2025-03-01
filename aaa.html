@@ -97,10 +97,9 @@
         <textarea id="ingredients" placeholder="מצרכים"></textarea>
         <textarea id="instructions" placeholder="אופן ההכנה"></textarea>
         <label for="category">קטגוריה:</label>
-        <input type="text" id="category" list="categoryList" placeholder="הכנס קטגוריה או בחר קיימת">
-        <datalist id="categoryList">
-          <!-- הקטגוריות יתווספו דינמית -->
-        </datalist>
+        <select id="category" required>
+            <option value="" disabled selected>בחר קטגוריה</option>
+        </select>
         <textarea id="notes" placeholder="הערות"></textarea>
         <label for="recipeLink">קישור למתכון:</label>
         <input type="url" id="recipeLink" name="recipeLink" placeholder="https://">

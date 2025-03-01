@@ -8,8 +8,61 @@
     let backupReminderTimeout;
     let selectedCategory = '';
   
-    const defaultImages = {
+    // אובייקט המכיל את תמונות ברירת המחדל לפי קטגוריות
+    const defaultImagesByCategory = {
+        'לחמים': [
+            'assets/default-images/breads/1.jpg',
+            'assets/default-images/breads/2.jpg',
+            'assets/default-images/breads/3.jpg'
+        ],
+        'מרקים': [
+            'assets/default-images/soups/1.jpg',
+            'assets/default-images/soups/2.jpg',
+            'assets/default-images/soups/3.jpg'
+        ],
+        'מנה עיקרית': [
+            'assets/default-images/main-dishes/1.jpg',
+            'assets/default-images/main-dishes/2.jpg',
+            'assets/default-images/main-dishes/3.jpg'
+        ],
+        'קינוחים': [
+            'assets/default-images/desserts/1.jpg',
+            'assets/default-images/desserts/2.jpg',
+            'assets/default-images/desserts/3.jpg'
+        ],
+        'עוגות': [
+            'assets/default-images/cakes/1.jpg',
+            'assets/default-images/cakes/2.jpg',
+            'assets/default-images/cakes/3.jpg'
+        ],
+        'תוספות': [
+            'assets/default-images/sides/1.jpg',
+            'assets/default-images/sides/2.jpg',
+            'assets/default-images/sides/3.jpg'
+        ],
+        'סלטים': [
+            'assets/default-images/salads/1.jpg',
+            'assets/default-images/salads/2.jpg',
+            'assets/default-images/salads/3.jpg'
+        ]
     };
+  
+    // פונקציה שמחזירה תמונת ברירת מחדל אקראית לפי קטגוריה
+    function getRandomDefaultImageForCategory(category) {
+        if (category && defaultImagesByCategory[category]) {
+            const images = defaultImagesByCategory[category];
+            const randomIndex = Math.floor(Math.random() * images.length);
+            return images[randomIndex];
+        }
+        
+        // אם אין קטגוריה או שהקטגוריה לא קיימת, השתמש בתיקיית 'other'
+        const otherImages = [
+            'assets/default-images/other/1.jpg',
+            'assets/default-images/other/2.jpg',
+            'assets/default-images/other/3.jpg'
+        ];
+        return otherImages[Math.floor(Math.random() * otherImages.length)];
+    }
   
     function getYoutubeEmbed(videoUrl) {
         if (!videoUrl) return '';
@@ -86,8 +139,8 @@
           saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, recipeLink, image: resizedDataUrl, rating });
         });
       } else {
-        let image = defaultImages[category] || '';
-        if (editingIndex !== -1 && recipes[editingIndex].image && recipes[editingIndex].image !== defaultImages[recipes[editingIndex].category]) {
+        let image = getRandomDefaultImageForCategory(category);
+        if (editingIndex !== -1 && recipes[editingIndex].image && recipes[editingIndex].image !== getRandomDefaultImageForCategory(recipes[editingIndex].category)) {
           image = recipes[editingIndex].image;
         }
         saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, recipeLink, image, rating });
@@ -158,15 +211,38 @@
       return [...new Set(categories)];
     }
   
+    // פונקציה לעדכון רשימת הקטגוריות בטופס
     function updateCategoryList() {
-      const categories = getUniqueCategories();
-      const datalist = document.getElementById('categoryList');
-      datalist.innerHTML = '';
-      categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        datalist.appendChild(option);
-      });
+        const select = document.getElementById('category');
+        // שמירת הערך הנוכחי
+        const currentValue = select.value;
+        // ניקוי האפשרויות הקיימות
+        select.innerHTML = '<option value="" disabled>בחר קטגוריה</option>';
+        
+        // הוספת הקטגוריות המוגדרות מראש
+        const predefinedCategories = Object.keys(defaultImagesByCategory);
+        predefinedCategories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            select.appendChild(option);
+        });
+
+        // הוספת קטגוריות קיימות מהמתכונים
+        const existingCategories = [...new Set(recipes.map(recipe => recipe.category))];
+        existingCategories.forEach(category => {
+            if (category && !predefinedCategories.includes(category)) {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
+            }
+        });
+
+        // החזרת הערך הנוכחי אם הוא קיים
+        if (currentValue && predefinedCategories.includes(currentValue)) {
+            select.value = currentValue;
+        }
     }
   
     function updateCategoryButtons() {
@@ -379,8 +455,12 @@
       document.getElementById('popup').style.display = 'none';
     }
   
+    // עדכון הקטגוריות בעת פתיחת הטופס
     function openFormPopup() {
-      document.getElementById('formPopup').style.display = 'flex';
+        document.getElementById('formPopup').style.display = 'flex';
+        updateCategoryList();
+        editingIndex = -1;
+        document.getElementById('recipeForm').reset();
     }
   
     function closeFormPopup() {
