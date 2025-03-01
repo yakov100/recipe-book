@@ -119,59 +119,118 @@
   
     document.getElementById('recipeForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const name = document.getElementById('recipeName').value;
-      const source = document.getElementById('recipeSource').value || 'לא ידוע';
-      const ingredients = document.getElementById('ingredients').value;
-      const instructions = document.getElementById('instructions').value;
-      const category = document.getElementById('category').value || 'שונות';
-      const notes = document.getElementById('notes').value;
-      const videoUrl = document.getElementById('recipeVideo').value;
-      const recipeLink = document.getElementById('recipeLink').value;
-      const file = document.getElementById('image').files[0];
-  
-      let rating = 0;
-      if (editingIndex !== -1 && recipes[editingIndex].rating) {
-        rating = recipes[editingIndex].rating;
+      
+      // יצירת אובייקט המתכון
+      const recipeData = {
+        name: document.getElementById('recipeName').value,
+        source: document.getElementById('recipeSource').value || 'לא ידוע',
+        ingredients: document.getElementById('ingredients').value,
+        instructions: document.getElementById('instructions').value,
+        category: document.getElementById('category').value || 'שונות',
+        notes: document.getElementById('notes').value || '',
+        videoUrl: document.getElementById('recipeVideo').value || '',
+        recipeLink: document.getElementById('recipeLink').value || ''
+      };
+
+      // אם זה עריכה של מתכון קיים
+      if (editingIndex !== -1 && recipes[editingIndex]) {
+        // שמירת המידע הקיים
+        const existingRecipe = recipes[editingIndex];
+        recipeData.rating = existingRecipe.rating || 0;
+        
+        // אם לא הועלתה תמונה חדשה, נשמור את התמונה הקיימת
+        const file = document.getElementById('image').files[0];
+        if (!file) {
+          recipeData.image = existingRecipe.image;
+          saveRecipe(recipeData);
+          return;
+        }
       }
-  
+
+      // טיפול בתמונה חדשה
+      const file = document.getElementById('image').files[0];
       if (file) {
         resizeImage(file, 300, 300, (resizedDataUrl) => {
-          saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, recipeLink, image: resizedDataUrl, rating });
+          recipeData.image = resizedDataUrl;
+          saveRecipe(recipeData);
         });
       } else {
-        let image = getRandomDefaultImageForCategory(category);
-        if (editingIndex !== -1 && recipes[editingIndex].image && recipes[editingIndex].image !== getRandomDefaultImageForCategory(recipes[editingIndex].category)) {
-          image = recipes[editingIndex].image;
-        }
-        saveRecipe({ name, source, ingredients, instructions, category, notes, videoUrl, recipeLink, image, rating });
+        // אם אין תמונה חדשה ואין תמונה קיימת (מתכון חדש)
+        recipeData.image = getRandomDefaultImageForCategory(recipeData.category);
+        recipeData.rating = 0;
+        saveRecipe(recipeData);
       }
     });
-  
+
     function saveRecipe(recipe) {
-      // וודא שהמתכון תקין לפני השמירה
       if (!recipe || !recipe.name || !recipe.ingredients) {
         console.error('Invalid recipe:', recipe);
         alert('שגיאה: לא ניתן לשמור מתכון ללא שם או מצרכים');
         return;
       }
 
-      if (editingIndex === -1) {
-        recipes.push(recipe);
-      } else {
-        recipes[editingIndex] = recipe;
-      }
-
       try {
+        if (editingIndex === -1) {
+          // מתכון חדש
+          recipe.rating = 0;
+          recipes.push(recipe);
+        } else {
+          // עריכת מתכון קיים - שומרים על המידע הקיים
+          const existingRecipe = recipes[editingIndex];
+          recipes[editingIndex] = {
+            ...existingRecipe,  // שמירת כל המידע הקיים
+            ...recipe,          // עדכון המידע החדש
+            rating: existingRecipe.rating || 0  // שמירת הדירוג הקיים
+          };
+        }
+
         localStorage.setItem('recipes', JSON.stringify(recipes));
         updateCategoryList();
         updateCategoryButtons();
         displayRecipes(recipes);
-        closeFormPopup();
+        
+        // סגירת הטופס ואיפוס
+        document.getElementById('formPopup').style.display = 'none';
         document.getElementById('recipeForm').reset();
         editingIndex = -1;
+        
+        // החזרת כותרת הטופס למצב ההתחלתי
+        const formTitle = document.querySelector('.form-popup-content h2');
+        if (formTitle) {
+          formTitle.textContent = 'הוסף מתכון חדש';
+        }
       } catch (e) {
+        console.error('Error saving recipe:', e);
         alert('שגיאה: לא ניתן לשמור את הנתונים. המקום בדפדפן מלא.');
       }
+    }
+
+    function editRecipe(index) {
+      if (!recipes[index]) return;
+      
+      closePopup();  // סוגרים את חלון הצפייה במתכון
+      
+      const recipe = recipes[index];
+      editingIndex = index;
+
+      // עדכון כותרת הטופס
+      const formTitle = document.querySelector('.form-popup-content h2');
+      if (formTitle) {
+        formTitle.textContent = 'עריכת מתכון';
+      }
+
+      // מילוי כל השדות מהמתכון הקיים
+      document.getElementById('recipeName').value = recipe.name || '';
+      document.getElementById('recipeSource').value = recipe.source || '';
+      document.getElementById('ingredients').value = recipe.ingredients || '';
+      document.getElementById('instructions').value = recipe.instructions || '';
+      document.getElementById('category').value = recipe.category || 'שונות';
+      document.getElementById('notes').value = recipe.notes || '';
+      document.getElementById('recipeVideo').value = recipe.videoUrl || '';
+      document.getElementById('recipeLink').value = recipe.recipeLink || '';
+
+      // פתיחת הטופס
+      document.getElementById('formPopup').style.display = 'flex';
     }
   
     function resizeImage(file, maxWidth, maxHeight, callback) {
@@ -469,22 +528,6 @@
       editingIndex = -1;
     }
   
-    function editRecipe(index) {
-      const recipe = recipes[index];
-      document.getElementById('recipeName').value = recipe.name;
-      document.getElementById('recipeSource').value = recipe.source;
-      document.getElementById('ingredients').value = recipe.ingredients;
-      document.getElementById('instructions').value = recipe.instructions;
-      document.getElementById('category').value = recipe.category;
-      document.getElementById('notes').value = recipe.notes;
-      document.getElementById('recipeVideo').value = recipe.videoUrl;
-      document.getElementById('recipeLink').value = recipe.recipeLink;
-      document.getElementById('image').value = '';
-      editingIndex = index;
-      closePopup();
-      openFormPopup();
-    }
-  
     function confirmDeleteRecipe(index) {
       const confirmPopup = document.getElementById('confirmPopup');
       confirmPopup.style.display = 'flex';
@@ -529,16 +572,10 @@
                       max-width: 100%;
                       height: auto;
                       border-radius: 8px;
+                      display: block;
+                      margin: 10px auto;
                   }
-                  h1 {
-                      font-size: 1.5em;
-                      margin-bottom: 20px;
-                  }
-                  p {
-                      margin: 10px 0;
-                  }
-                  ul.ingredients-list, ul.instructions-list {
-                      margin: 10px 0;
+                  ul {
                       padding-left: 20px;
                   }
               </style>
@@ -548,11 +585,11 @@
               ${recipe.image ? `<img src="${recipe.image}" alt="תמונה של ${recipe.name}">` : ''}
               <p><strong>קטגוריה:</strong> ${recipe.category}</p>
               <p><strong>מצרכים:</strong></p>
-              <ul class="ingredients-list">
+              <ul>
                   ${recipe.ingredients.split('\n').map(ingredient => `<li>${ingredient}</li>`).join('')}
               </ul>
               <p><strong>הוראות:</strong></p>
-              <ul class="instructions-list">
+              <ul>
                   ${recipe.instructions.split('\n').map(instruction => `<li>${instruction}</li>`).join('')}
               </ul>
               ${recipe.videoUrl ? `<div class="recipe-video">
@@ -725,16 +762,10 @@
                         max-width: 100%;
                         height: auto;
                         border-radius: 8px;
+                        display: block;
+                        margin: 10px auto;
                     }
-                    h1 {
-                        font-size: 1.5em;
-                        margin-bottom: 20px;
-                    }
-                    p {
-                        margin: 10px 0;
-                    }
-                    ul.ingredients-list, ul.instructions-list {
-                        margin: 10px 0;
+                    ul {
                         padding-left: 20px;
                     }
                 </style>
