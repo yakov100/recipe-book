@@ -18,11 +18,11 @@
     <div class="timer-container">
       <div class="timer-controls">
         <div class="timer-input-group">
-          <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
+          <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
           <span class="timer-separator">:</span>
           <input type="number" id="timer-minutes" min="0" max="59" value="1" class="timer-input" placeholder="ד">
           <span class="timer-separator">:</span>
-          <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
+          <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
         </div>
         <div class="timer-display" id="timer-display"></div>
         <div class="timer-buttons">
@@ -92,12 +92,12 @@
       <button class="close-btn" onclick="closeFormPopup()">&times;</button>
       <form id="recipeForm">
         <h2>הוסף מתכון חדש</h2>
-        <input type="text" id="recipeName" placeholder="שם המתכון" required>
+        <input type="text" id="recipeName" placeholder="שם המתכון">
         <input type="text" id="recipeSource" placeholder="מקור המתכון">
-        <textarea id="ingredients" placeholder="מצרכים" required></textarea>
-        <textarea id="instructions" placeholder="אופן ההכנה" required></textarea>
+        <textarea id="ingredients" placeholder="מצרכים"></textarea>
+        <textarea id="instructions" placeholder="אופן ההכנה"></textarea>
         <label for="category">קטגוריה:</label>
-        <input type="text" id="category" list="categoryList" placeholder="הכנס קטגוריה או בחר קיימת" required>
+        <input type="text" id="category" list="categoryList" placeholder="הכנס קטגוריה או בחר קיימת">
         <datalist id="categoryList">
           <!-- הקטגוריות יתווספו דינמית -->
         </datalist>

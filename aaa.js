@@ -899,9 +899,9 @@
     }
 
     function getTimeInSeconds() {
-        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
-        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
         const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
+        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
+        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
         return (hours * 3600) + (minutes * 60) + seconds;
     }
 
@@ -910,9 +910,9 @@
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
         
-        document.getElementById('timer-hours').value = hours;
-        document.getElementById('timer-minutes').value = minutes;
         document.getElementById('timer-seconds').value = seconds;
+        document.getElementById('timer-minutes').value = minutes;
+        document.getElementById('timer-hours').value = hours;
     }
 
     function startTimer() {
