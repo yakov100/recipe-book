@@ -573,11 +573,24 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         const importedRecipes = JSON.parse(e.target.result);
-        recipes = importedRecipes;
+        
+        // מיזוג המתכונים החדשים עם הקיימים
+        // בדיקה האם המתכון כבר קיים לפי שם
+        importedRecipes.forEach(newRecipe => {
+          const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
+          if (existingRecipeIndex === -1) {
+            // אם המתכון לא קיים, נוסיף אותו
+            recipes.push(newRecipe);
+          }
+        });
+
         localStorage.setItem('recipes', JSON.stringify(recipes));
         updateCategoryList();
         updateCategoryButtons();
         displayRecipes(recipes);
+        
+        // הודעה למשתמש
+        alert(`יובאו ${importedRecipes.length} מתכונים בהצלחה. מתכונים חדשים נוספו למאגר הקיים.`);
       };
       reader.readAsText(file);
     }
