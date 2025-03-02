@@ -323,9 +323,9 @@ body::before {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
     display: none;
     justify-content: center;
     align-items: center;
@@ -333,140 +333,15 @@ body::before {
 }
 
 .popup-content {
-    background-color: rgba(255, 255, 255, 0.98);
+    background: white;
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    height: 90vh;
     max-width: 1200px;
     position: relative;
-    overflow: auto;
-}
-
-.close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 30px;
-    cursor: pointer;
-    color: #333;
-}
-
-/* סגנונות לחלון אישור מחיקה */
-.confirm-popup-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 15px;
-    text-align: center;
-    max-width: 400px;
-    width: 80%;
-    position: relative;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-.confirm-popup-content button {
-    margin: 10px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-.confirm-popup-content button.confirm {
-    background-color: #d9534f;
-    color: white;
-}
-
-.confirm-popup-content button.cancel {
-    background-color: #4cae4c;
-    color: white;
-}
-
-/* אנימציית כניסה לחלון האישור */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* סגנונות לתזכורת לגיבוי */
-.backup-reminder {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background-color: #f0ad4e;
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 1001;
-}
-
-.backup-reminder button {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-/* סגנונות לכפתורי הפעולה ב-Popup */
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 2px;
-    margin-top: 10px;
-}
-
-.action-button {
-    width: 40px;
-    height: 40px;
-    background-color: #5cb85c;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    position: relative;
-    opacity: 0.9;
-}
-
-.action-button:hover {
-    background-color: #4cae4c;
-    opacity: 1;
-}
-
-.action-button::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 5px;
-    border-radius: 4px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-    white-space: nowrap;
-}
-
-.action-button:hover::after {
-    opacity: 1;
+    max-height: 90vh;
+    overflow-y: auto;
+    background-color: rgba(255, 255, 255, 0.98);
 }
 
 .popup-content img.recipe-image {
@@ -703,6 +578,7 @@ body::before {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
+    width: 50%; /* להבטיח שכל צד תופס בדיוק חצי */
 }
 
 .recipe-right-side {
@@ -717,19 +593,28 @@ body::before {
 
 .ingredients-section,
 .instructions-section {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.7);
     padding: 15px;
     border-radius: 8px;
-    margin-bottom: 15px;
+}
+
+.ingredients-list,
+.instructions-list {
+    list-style-position: inside;
+    padding-right: 20px;
+}
+
+.ingredients-list li,
+.instructions-list li {
+    margin-bottom: 8px;
 }
 
 .recipe-video {
-    margin: 0;
     position: relative;
+    width: 100%;
     padding-bottom: 56.25%; /* יחס 16:9 */
     height: 0;
-    overflow: hidden;
-    border-radius: 8px;
+    margin: 15px 0;
 }
 
 .recipe-video iframe {
@@ -741,14 +626,27 @@ body::before {
     border-radius: 8px;
 }
 
-.recipe-notes {
-    background-color: #fffb8f;
-    border: 1px solid #f0e68c;
+.recipe-link {
+    background: rgba(255, 255, 255, 0.7);
     padding: 15px;
     border-radius: 8px;
-    margin: 0;
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    word-break: break-all;
+}
+
+.recipe-link a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.recipe-link a:hover {
+    text-decoration: underline;
+}
+
+.recipe-notes {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 15px;
+    border-radius: 8px;
+    white-space: pre-wrap;
 }
 
 .action-buttons {
@@ -872,6 +770,22 @@ body::before {
 
 .recipe-rating span:hover {
     transform: scale(1.2);
+}
+
+.recipe-rating {
+    font-size: 24px;
+    color: gold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+.recipe-rating span {
+    transition: color 0.3s ease;
+}
+
+.recipe-rating span:hover {
+    color: #ffd700;
 }
 
 /* Timer Styles */

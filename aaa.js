@@ -1170,7 +1170,7 @@
           recipes[editingIndex] = {
             ...existingRecipe,  // שמירת כל המידע הקיים
             ...recipe,          // עדכון המידע החדש
-            rating: existingRecipe.rating || 0  // שמירת הדירוג הקיים
+            rating: editingIndex >= 0 ? recipes[editingIndex].rating || 0 : 0  // שמירת הדירוג הקיים
           };
         }
 
@@ -1246,10 +1246,10 @@
         instructions,
         category,
         notes,
-        rating: 0,
+        rating: editingIndex >= 0 ? recipes[editingIndex].rating || 0 : 0,
         image: imageData,
-        link: recipeLink,
-        video: recipeVideo
+        recipeLink,
+        videoUrl: recipeVideo
       };
 
       if (editingIndex >= 0) {
