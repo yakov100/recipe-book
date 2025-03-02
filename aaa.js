@@ -193,12 +193,15 @@
         card.onclick = () => showRecipe(actualIndex);
 
         // תמונת המתכון
+        const img = document.createElement('img');
         if (recipe.image) {
-          const img = document.createElement('img');
           img.src = recipe.image;
-          img.alt = recipe.name;
-          card.appendChild(img);
+        } else {
+          // אם אין תמונה, השתמש בתמונת ברירת מחדל לפי הקטגוריה
+          img.src = getRandomDefaultImageForCategory(recipe.category);
         }
+        img.alt = recipe.name;
+        card.appendChild(img);
 
         // פרטי המתכון
         const cardContent = document.createElement('div');
