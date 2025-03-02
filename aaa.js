@@ -172,6 +172,43 @@
         return '';
     }
 
+    async function importRecipes(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const importedRecipes = JSON.parse(e.target.result);
+          
+          // מיזוג המתכונים החדשים עם הקיימים
+          importedRecipes.forEach(newRecipe => {
+            // וודא שאין מפתח id קיים בעת ייבוא
+            if (newRecipe.id !== undefined) {
+              delete newRecipe.id;
+            }
+            // וודא שיש תמונה תקינה או תמונת ברירת מחדל
+            if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
+              newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
+            }
+            const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
+            if (existingRecipeIndex === -1) {
+              recipes.push(newRecipe);
+            }
+          });
+
+          await saveRecipesToDB(recipes);
+          updateCategoryList();
+          updateCategoryButtons();
+          displayRecipes(recipes);
+          
+          alert(`יובאו ${importedRecipes.length} מתכונים בהצלחה`);
+        } catch (e) {
+          console.error('Error importing recipes:', e);
+          alert('שגיאה בייבוא המתכונים. נא לוודא שהקובץ תקין ולנסות שוב.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
     function displayRecipes(recipesToShow) {
       const container = document.getElementById('recipesContainer');
       container.innerHTML = '';
@@ -199,35 +236,15 @@
 
         // תמונת המתכון
         const img = document.createElement('img');
-        if (recipe.image) {
+        if (recipe.image && recipe.image.startsWith('data:image')) {
           img.src = recipe.image;
         } else {
-          // אם אין תמונה, השתמש בתמונת ברירת מחדל לפי הקטגוריה
           img.src = getRandomDefaultImageForCategory(recipe.category);
+          // שמור את התמונה החדשה במתכון
+          recipe.image = img.src;
         }
         img.alt = recipe.name;
         card.appendChild(img);
-
-        // פרטי המתכון
-        const cardContent = document.createElement('div');
-        cardContent.className = 'recipe-details';
-        
-        // הוספת שם המתכון ומקור המתכון
-        const titleContainer = document.createElement('div');
-        titleContainer.className = 'recipe-title-container';
-        
-        const recipeName = document.createElement('h2');
-        recipeName.className = 'recipe-name';
-        recipeName.textContent = recipe.name;
-        titleContainer.appendChild(recipeName);
-        
-        const recipeSource = document.createElement('p');
-        recipeSource.className = 'recipe-source';
-        recipeSource.textContent = recipe.source || 'לא ידוע';
-        titleContainer.appendChild(recipeSource);
-        
-        cardContent.appendChild(titleContainer);
-        card.appendChild(cardContent);
 
         // Create overlay container for action buttons on hover
         const overlayButtons = document.createElement('div');
@@ -553,6 +570,10 @@
             // וודא שאין מפתח id קיים בעת ייבוא
             if (newRecipe.id !== undefined) {
               delete newRecipe.id;
+            }
+            // וודא שיש תמונה תקינה או תמונת ברירת מחדל
+            if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
+              newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
             const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
             if (existingRecipeIndex === -1) {
@@ -1025,6 +1046,38 @@
             });
         }
     }
+
+    // פונקציה לשינוי גודל התמונה
+    function resizeImage(file, maxWidth, maxHeight, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width *= ratio;
+                    height *= ratio;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const dataUrl = canvas.toDataURL(file.type);
+                callback(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    window.resizeImage = resizeImage;
 
     function filterRecipes() {
       const searchName = document.getElementById('searchName').value.toLowerCase().trim();
