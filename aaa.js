@@ -408,11 +408,11 @@
               ${recipe.image ? `<img src="${recipe.image}" alt="תמונה של ${recipe.name}">` : ''}
               <p><strong>קטגוריה:</strong> ${recipe.category}</p>
               <p><strong>מצרכים:</strong></p>
-              <ul>
+              <ul class="ingredients-list">
                   ${recipe.ingredients.split('\n').map(ingredient => `<li>${ingredient}</li>`).join('')}
               </ul>
               <p><strong>הוראות:</strong></p>
-              <ul>
+              <ul class="instructions-list">
                   ${recipe.instructions.split('\n').map(instruction => `<li>${instruction}</li>`).join('')}
               </ul>
               ${recipe.videoUrl ? `<div class="recipe-video">
@@ -504,10 +504,14 @@
     }
 
     function exportRecipes() {
+      const today = new Date();
+      const dateStr = today.getFullYear() + '-' + 
+                     String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                     String(today.getDate()).padStart(2, '0');
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(recipes));
       const downloadAnchorNode = document.createElement('a');
       downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", "recipes.json");
+      downloadAnchorNode.setAttribute("download", `גיבוי-מתכונים-${dateStr}.json`);
       document.body.appendChild(downloadAnchorNode);
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
