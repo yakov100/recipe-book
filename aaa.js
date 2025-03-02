@@ -118,16 +118,6 @@
             'assets/default-images/main-dishes/2.jpg',
             'assets/default-images/main-dishes/3.jpg'
         ],
-        'קינוחים': [
-            'assets/default-images/desserts/1.jpg',
-            'assets/default-images/desserts/2.jpg',
-            'assets/default-images/desserts/3.jpg'
-        ],
-        'עוגות': [
-            'assets/default-images/cakes/1.jpg',
-            'assets/default-images/cakes/2.jpg',
-            'assets/default-images/cakes/3.jpg'
-        ],
         'תוספות': [
             'assets/default-images/sides/1.jpg',
             'assets/default-images/sides/2.jpg',
@@ -137,6 +127,21 @@
             'assets/default-images/salads/1.jpg',
             'assets/default-images/salads/2.jpg',
             'assets/default-images/salads/3.jpg'
+        ],
+        'שונות': [
+            'assets/default-images/other/1.jpg',
+            'assets/default-images/other/2.jpg',
+            'assets/default-images/other/3.jpg'
+        ],
+        'עוגות': [
+            'assets/default-images/cakes/1.jpg',
+            'assets/default-images/cakes/2.jpg',
+            'assets/default-images/cakes/3.jpg'
+        ],
+        'קינוחים': [
+            'assets/default-images/desserts/1.jpg',
+            'assets/default-images/desserts/2.jpg',
+            'assets/default-images/desserts/3.jpg'
         ]
     };
 
@@ -319,26 +324,38 @@
     // עדכון הקטגוריות בעת פתיחת הטופס
     function openFormPopup() {
         document.getElementById('formPopup').style.display = 'flex';
+        document.getElementById('newCategory').style.display = 'none';
+        document.getElementById('toggleNewCategory').textContent = '+ קטגוריה חדשה';
+        document.getElementById('category').style.display = 'block';
+        
+        // איפוס הטופס
+        document.getElementById('recipeForm').reset();
+        editingIndex = -1;
+        
+        // עדכון רשימת הקטגוריות
         const select = document.getElementById('category');
-        const newCategoryInput = document.getElementById('newCategory');
-        const toggleButton = document.getElementById('toggleNewCategory');
-
-        // איפוס מצב שדה הקטגוריה
-        select.style.display = 'block';
-        newCategoryInput.style.display = 'none';
-        toggleButton.textContent = '+ קטגוריה חדשה';
-        select.required = true;
-        newCategoryInput.required = false;
-        newCategoryInput.value = '';
-
-        // מילוי רשימת הקטגוריות
         select.innerHTML = '<option value="" disabled selected>בחר קטגוריה</option>';
-        const categories = getUniqueCategories();
-        categories.forEach(category => {
+        
+        // הקטגוריות הקבועות
+        const fixedCategories = ['לחמים', 'מרקים', 'מנה עיקרית', 'תוספות', 'סלטים', 'שונות', 'עוגות', 'קינוחים'];
+        
+        // הוספת הקטגוריות הקבועות
+        fixedCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category;
             select.appendChild(option);
+        });
+        
+        // הוספת קטגוריות נוספות מהמתכונים הקיימים
+        const existingCategories = [...new Set(recipes.map(recipe => recipe.category))];
+        existingCategories.forEach(category => {
+            if (category && !fixedCategories.includes(category)) {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                select.appendChild(option);
+            }
         });
     }
 
@@ -1054,10 +1071,10 @@
         // שמירת הערך הנוכחי
         const currentValue = select.value;
         // ניקוי האפשרויות הקיימות
-        select.innerHTML = '<option value="" disabled>בחר קטגוריה</option>';
+        select.innerHTML = '<option value="" disabled selected>בחר קטגוריה</option>';
         
-        // הוספת הקטגוריות המוגדרות מראש
-        const predefinedCategories = Object.keys(defaultImagesByCategory);
+        // הוספת הקטגוריות המוגדרות מראש בסדר הרצוי
+        const predefinedCategories = ['לחמים', 'מרקים', 'מנה עיקרית', 'תוספות', 'סלטים', 'שונות', 'עוגות', 'קינוחים'];
         predefinedCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
@@ -1077,7 +1094,7 @@
         });
 
         // החזרת הערך הנוכחי אם הוא קיים
-        if (currentValue && predefinedCategories.includes(currentValue)) {
+        if (currentValue) {
             select.value = currentValue;
         }
     }
