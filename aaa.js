@@ -259,8 +259,10 @@
       const popup = document.getElementById('popup');
       const popupBody = document.getElementById('popupBody');
       
+      popup.classList.add('visible');
+      
       popupBody.innerHTML = `
-        <div class="recipe-full" ${recipe.image ? `style="background-image: url('${recipe.image}')"` : ''}>
+        <div class="recipe-full" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('${recipe.image || getRandomDefaultImageForCategory(recipe.category)}');">
           <div class="recipe-content-overlay">
             <div class="recipe-header">
               <h2 class="recipe-title">${recipe.name}</h2>
@@ -318,7 +320,9 @@
     }
 
     function closePopup() {
-      document.getElementById('popup').style.display = 'none';
+      const popup = document.getElementById('popup');
+      popup.classList.remove('visible');
+      popup.style.display = 'none';
     }
 
     // עדכון הקטגוריות בעת פתיחת הטופס
