@@ -316,9 +316,27 @@
     // עדכון הקטגוריות בעת פתיחת הטופס
     function openFormPopup() {
         document.getElementById('formPopup').style.display = 'flex';
-        updateCategoryList();
-        editingIndex = -1;
-        document.getElementById('recipeForm').reset();
+        const select = document.getElementById('category');
+        const newCategoryInput = document.getElementById('newCategory');
+        const toggleButton = document.getElementById('toggleNewCategory');
+
+        // איפוס מצב שדה הקטגוריה
+        select.style.display = 'block';
+        newCategoryInput.style.display = 'none';
+        toggleButton.textContent = '+ קטגוריה חדשה';
+        select.required = true;
+        newCategoryInput.required = false;
+        newCategoryInput.value = '';
+
+        // מילוי רשימת הקטגוריות
+        select.innerHTML = '<option value="" disabled selected>בחר קטגוריה</option>';
+        const categories = getUniqueCategories();
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            select.appendChild(option);
+        });
     }
 
     function closeFormPopup() {
@@ -1156,77 +1174,94 @@
     document.getElementById('recipeForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
-      // יצירת אובייקט המתכון
-      const recipeData = {
-        name: document.getElementById('recipeName').value,
-        source: document.getElementById('recipeSource').value || 'לא ידוע',
-        ingredients: document.getElementById('ingredients').value,
-        instructions: document.getElementById('instructions').value,
-        category: document.getElementById('category').value || 'שונות',
-        notes: document.getElementById('notes').value || '',
-        videoUrl: document.getElementById('recipeVideo').value || '',
-        recipeLink: document.getElementById('recipeLink').value || ''
-      };
-
-      // אם זה עריכה של מתכון קיים
-      if (editingIndex !== -1 && recipes[editingIndex]) {
-        // שמירת המידע הקיים
-        const existingRecipe = recipes[editingIndex];
-        recipeData.rating = existingRecipe.rating || 0;
-        
-        // אם לא הועלתה תמונה חדשה, נשמור את התמונה הקיימת
-        const file = document.getElementById('image').files[0];
-        if (!file) {
-          recipeData.image = existingRecipe.image;
-          await saveRecipe(recipeData);
+      const name = document.getElementById('recipeName').value;
+      const source = document.getElementById('recipeSource').value;
+      const ingredients = document.getElementById('ingredients').value;
+      const instructions = document.getElementById('instructions').value;
+      const notes = document.getElementById('notes').value;
+      const recipeLink = document.getElementById('recipeLink').value;
+      const recipeVideo = document.getElementById('recipeVideo').value;
+      const imageFile = document.getElementById('image').files[0];
+      
+      // בדיקת הקטגוריה - מהשדה הרגיל או מהשדה החדש
+      let category;
+      const newCategoryInput = document.getElementById('newCategory');
+      if (newCategoryInput.style.display === 'block') {
+        category = newCategoryInput.value.trim();
+        if (!category) {
+          alert('נא להזין שם קטגוריה');
+          return;
+        }
+      } else {
+        category = document.getElementById('category').value;
+        if (!category) {
+          alert('נא לבחור קטגוריה');
           return;
         }
       }
 
-      // טיפול בתמונה חדשה
-      const file = document.getElementById('image').files[0];
-      if (file) {
-        resizeImage(file, 300, 300, async (resizedDataUrl) => {
-          recipeData.image = resizedDataUrl;
-          await saveRecipe(recipeData);
-        });
-      } else {
-        // אם אין תמונה חדשה ואין תמונה קיימת (מתכון חדש)
-        recipeData.image = getRandomDefaultImageForCategory(recipeData.category);
-        recipeData.rating = 0;
-        await saveRecipe(recipeData);
+      if (!name) {
+        alert('נא להזין שם מתכון');
+        return;
       }
+
+      let imageData = null;
+      if (imageFile) {
+        await new Promise(resolve => {
+          resizeImage(imageFile, 800, 800, function(dataUrl) {
+            imageData = dataUrl;
+            resolve();
+          });
+        });
+      }
+
+      const recipe = {
+        name,
+        source,
+        ingredients,
+        instructions,
+        category,
+        notes,
+        rating: 0,
+        image: imageData,
+        link: recipeLink,
+        video: recipeVideo
+      };
+
+      if (editingIndex >= 0) {
+        recipes[editingIndex] = { ...recipes[editingIndex], ...recipe };
+        editingIndex = -1;
+      } else {
+        recipes.push(recipe);
+      }
+
+      await saveRecipesToDB(recipes);
+      displayRecipes(recipes);
+      updateCategoryList();
+      updateCategoryButtons();
+      closeFormPopup();
     });
 
-    function resizeImage(file, maxWidth, maxHeight, callback) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-          let width = img.width;
-          let height = img.height;
-  
-          if (width > height) {
-            if (width > maxWidth) {
-              height = Math.round(height * (maxWidth / width));
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width = Math.round(width * (maxHeight / height));
-              height = maxHeight;
-            }
-          }
-  
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          callback(canvas.toDataURL('image/jpeg', 0.7));
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+    function toggleCategoryInput() {
+        const select = document.getElementById('category');
+        const newCategoryInput = document.getElementById('newCategory');
+        const toggleButton = document.getElementById('toggleNewCategory');
+
+        if (newCategoryInput.style.display === 'none') {
+            select.style.display = 'none';
+            newCategoryInput.style.display = 'block';
+            toggleButton.textContent = 'חזור לרשימת הקטגוריות';
+            select.required = false;
+            newCategoryInput.required = true;
+        } else {
+            select.style.display = 'block';
+            newCategoryInput.style.display = 'none';
+            toggleButton.textContent = '+ קטגוריה חדשה';
+            select.required = true;
+            newCategoryInput.required = false;
+            newCategoryInput.value = '';
+        }
     }
+
+    window.toggleCategoryInput = toggleCategoryInput;
 })();

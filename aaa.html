@@ -97,9 +97,13 @@
         <textarea id="ingredients" placeholder="מצרכים"></textarea>
         <textarea id="instructions" placeholder="אופן ההכנה"></textarea>
         <label for="category">קטגוריה:</label>
-        <select id="category" required>
-            <option value="" disabled selected>בחר קטגוריה</option>
-        </select>
+        <div class="category-input-container">
+            <select id="category" required>
+                <option value="" disabled selected>בחר קטגוריה</option>
+            </select>
+            <input type="text" id="newCategory" placeholder="או הוסף קטגוריה חדשה" style="display: none;">
+            <button type="button" id="toggleNewCategory" onclick="toggleCategoryInput()">+ קטגוריה חדשה</button>
+        </div>
         <textarea id="notes" placeholder="הערות"></textarea>
         <label for="recipeLink">קישור למתכון:</label>
         <input type="url" id="recipeLink" name="recipeLink" placeholder="https://">

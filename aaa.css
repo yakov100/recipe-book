@@ -1137,3 +1137,35 @@ select#category option {
     border-radius: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+
+.category-input-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.category-input-container select,
+.category-input-container input {
+    flex: 1;
+}
+
+#toggleNewCategory {
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+#toggleNewCategory:hover {
+    background-color: #45a049;
+}
+
+#newCategory {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
