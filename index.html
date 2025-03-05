@@ -53,10 +53,10 @@
   <!-- תפריט הצד -->
   <div id="sideMenu" class="side-menu">
     <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">&times;</a>
-    <a href="#" onclick="openFormPopup(); closeMenu();">הוסף מתכון</a>
-    <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורד את כל המתכונים</a>
-    <a href="#" onclick="exportRecipes(); closeMenu();">ייצא ל-JSON</a>
-    <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">ייבא מ-JSON</a>
+    <a href="#" onclick="openFormPopup(); closeMenu();">הוספת מתכון</a>
+    <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורדת כל המתכונים</a>
+    <a href="#" onclick="exportRecipes(); closeMenu();">גיבוי ל-JSON</a>
+    <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">יבוא מ-JSON</a>
     <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
     <hr>
     <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
@@ -91,7 +91,7 @@
     <div class="form-popup-content">
       <button class="close-btn" onclick="closeFormPopup()">&times;</button>
       <form id="recipeForm">
-        <h2>הוסף מתכון חדש</h2>
+        <h2>הוספת מתכון חדש</h2>
         <input type="text" id="recipeName" placeholder="שם המתכון">
         <input type="text" id="recipeSource" placeholder="מקור המתכון">
         <textarea id="ingredients" placeholder="מצרכים"></textarea>
@@ -114,7 +114,7 @@
           <button type="button" onclick="document.getElementById('ocrImage').click()">OCR</button>
         </div>
         <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
-        <button type="submit">שמור מתכון</button>
+        <button type="submit">שמירת מתכון</button>
       </form>
     </div>
   </div>

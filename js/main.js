@@ -1282,7 +1282,7 @@
         // החזרת כותרת הטופס למצב ההתחלתי
         const formTitle = document.querySelector('.form-popup-content h2');
         if (formTitle) {
-          formTitle.textContent = 'הוסף מתכון חדש';
+          formTitle.textContent = 'הוספת מתכון חדש';
         }
       } catch (e) {
         console.error('Error saving recipe:', e);
