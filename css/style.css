@@ -200,7 +200,7 @@ body::before {
     left: 0;
     right: 0;
     padding: 10px 20px;
-    background: rgba(0, 0, 0, 0.7);
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.4));
     display: flex;
     align-items: center;
     justify-content: space-between;
