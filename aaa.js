@@ -904,6 +904,7 @@
 
     // Timer functionality
     let timerInterval;
+    let currentBeepInterval;
     let timerPaused = false;
     let pausedTimeRemaining = 0;
 
@@ -975,20 +976,30 @@
 
             if (remaining === 0) {
                 clearInterval(timerInterval);
-                // צפצוף מספר פעמים
+                // צפצוף למשך דקה - צליל נעים יותר
                 let beepCount = 0;
-                const beepInterval = setInterval(() => {
-                    if (beepCount < 5) {
-                        beep(200, 440, 0.3, 'square');
+                const totalBeeps = 30; // פחות צפצופים עם הפסקות ארוכות יותר
+                currentBeepInterval = setInterval(() => {
+                    if (beepCount < totalBeeps) {
+                        beep(800, 330, 0.2, 'sine'); // צליל ארוך יותר, תדר נמוך יותר, גל סינוס
                         beepCount++;
                     } else {
-                        clearInterval(beepInterval);
+                        clearInterval(currentBeepInterval);
+                        currentBeepInterval = null;
+                        // רק כשהצפצוף מסתיים, נסתיר את כפתור העצירה
+                        startBtn.style.display = 'flex';
+                        pauseBtn.style.display = 'none';
+                        stopBtn.style.display = 'none';
+                        display.classList.remove('active');
+                        display.textContent = '';
                     }
-                }, 400);
+                }, 2000); // הפסקה של 2 שניות בין הצפצופים
 
+                // כשהטיימר מסתיים, נציג את כפתור ההתחלה ונסתיר את כפתור ההשהיה
                 startBtn.style.display = 'flex';
                 pauseBtn.style.display = 'none';
-                stopBtn.style.display = 'none';
+                // נשאיר את כפתור העצירה מוצג כדי שאפשר יהיה לעצור את הצפצוף
+                stopBtn.style.display = 'flex';
                 display.classList.remove('active');
                 display.textContent = '';
                 return;
@@ -1019,6 +1030,11 @@
         const display = document.getElementById('timer-display');
 
         clearInterval(timerInterval);
+        if (currentBeepInterval) {
+            clearInterval(currentBeepInterval);
+            currentBeepInterval = null;
+        }
+
         timerPaused = false;
         pausedTimeRemaining = 0;
 
@@ -1150,8 +1166,10 @@
         // ניקוי האפשרויות הקיימות
         select.innerHTML = '<option value="" disabled selected>בחר קטגוריה</option>';
         
-        // הוספת הקטגוריות המוגדרות מראש בסדר הרצוי
+        // הקטגוריות המוגדרות מראש
         const predefinedCategories = ['לחמים', 'מרקים', 'מנה עיקרית', 'תוספות', 'סלטים', 'שונות', 'עוגות', 'קינוחים'];
+        
+        // הוספת הקטגוריות המוגדרות מראש
         predefinedCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
