@@ -246,6 +246,26 @@
         img.alt = recipe.name;
         card.appendChild(img);
 
+        // Create recipe info overlay
+        const infoOverlay = document.createElement('div');
+        infoOverlay.className = 'recipe-info-overlay';
+        
+        // Add recipe name
+        const recipeName = document.createElement('h3');
+        recipeName.className = 'recipe-name';
+        recipeName.textContent = recipe.name;
+        infoOverlay.appendChild(recipeName);
+        
+        // Add recipe source if exists
+        if (recipe.source) {
+            const recipeSource = document.createElement('p');
+            recipeSource.className = 'recipe-source';
+            recipeSource.textContent = recipe.source;
+            infoOverlay.appendChild(recipeSource);
+        }
+        
+        card.appendChild(infoOverlay);
+
         // Create overlay container for action buttons on hover
         const overlayButtons = document.createElement('div');
         overlayButtons.className = 'action-buttons-overlay';
