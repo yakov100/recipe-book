@@ -1330,6 +1330,9 @@
             resolve();
           });
         });
+      } else if (editingIndex >= 0 && recipes[editingIndex].image) {
+        // אם אין תמונה חדשה ואנחנו במצב עריכה, נשמור את התמונה הקיימת
+        imageData = recipes[editingIndex].image;
       }
 
       const recipe = {
