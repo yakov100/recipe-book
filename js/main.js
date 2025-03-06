@@ -1051,36 +1051,34 @@
     }
 
     function initializeTimer() {
-        const startBtn = document.getElementById('start-timer');
-        const pauseBtn = document.getElementById('pause-timer');
-        const stopBtn = document.getElementById('stop-timer');
-        const presetBtn = document.getElementById('timer-preset');
+        const startButton = document.getElementById('start-timer');
+        const pauseButton = document.getElementById('pause-timer');
+        const stopButton = document.getElementById('stop-timer');
+        const presetButton = document.getElementById('timer-preset');
+        const showTimerButton = document.getElementById('show-timer-btn');
+        const timerContainer = document.querySelector('.timer-container');
 
-        if (startBtn && pauseBtn && stopBtn && presetBtn) {
-            startBtn.addEventListener('click', startTimer);
-            pauseBtn.addEventListener('click', pauseTimer);
-            stopBtn.addEventListener('click', stopTimer);
-            presetBtn.addEventListener('click', togglePresetMenu);
+        // טיימר טוגל
+        showTimerButton.addEventListener('click', () => {
+            const isVisible = timerContainer.style.display !== 'none';
+            timerContainer.style.display = isVisible ? 'none' : 'block';
+            showTimerButton.style.display = isVisible ? 'flex' : 'none';
+        });
 
-            // הוספת מאזינים לכפתורי הזמנים המוגדרים מראש
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const seconds = parseInt(btn.dataset.time);
-                    setTimeInputs(seconds);
-                    togglePresetMenu();
-                    startTimer();
-                });
+        // אתחול הטיימר
+        startButton.addEventListener('click', startTimer);
+        pauseButton.addEventListener('click', pauseTimer);
+        stopButton.addEventListener('click', stopTimer);
+        presetButton.addEventListener('click', togglePresetMenu);
+
+        // הגדרת זמנים מראש
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const seconds = parseInt(btn.dataset.time);
+                setTimeInputs(seconds);
+                document.getElementById('timer-preset-menu').style.display = 'none';
             });
-
-            // סגירת תפריט הזמנים המוגדרים מראש בלחיצה מחוץ לתפריט
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('timer-preset-menu');
-                const presetBtn = document.getElementById('timer-preset');
-                if (!menu.contains(e.target) && !presetBtn.contains(e.target)) {
-                    menu.style.display = 'none';
-                }
-            });
-        }
+        });
     }
 
     // פונקציה לשינוי גודל התמונה

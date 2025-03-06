@@ -73,6 +73,32 @@ body::before {
     flex-grow: 1;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-btn {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.header-btn:hover {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
 .menu-icon {
     width: 35px;
     height: 30px;

@@ -15,37 +15,42 @@
         <div></div>
     </button>
     <h1>ספר המתכונים שלי</h1>
-    <div class="timer-container">
-      <div class="timer-controls">
-        <div class="timer-input-group">
-          <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
-          <span class="timer-separator">:</span>
-          <input type="number" id="timer-minutes" min="0" max="59" value="1" class="timer-input" placeholder="ד">
-          <span class="timer-separator">:</span>
-          <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
+    <div class="header-controls">
+      <button id="show-timer-btn" class="header-btn" title="טיימר">
+        <i class="fas fa-bell"></i>
+      </button>
+      <div class="timer-container" style="display: none;">
+        <div class="timer-controls">
+          <div class="timer-input-group">
+            <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
+            <span class="timer-separator">:</span>
+            <input type="number" id="timer-minutes" min="0" max="59" value="1" class="timer-input" placeholder="ד">
+            <span class="timer-separator">:</span>
+            <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
+          </div>
+          <div class="timer-display" id="timer-display"></div>
+          <div class="timer-buttons">
+            <button id="start-timer" class="timer-btn" title="התחל">
+              <i class="fas fa-play fa-xs"></i>
+            </button>
+            <button id="pause-timer" class="timer-btn" title="השהה" style="display: none;">
+              <i class="fas fa-pause fa-xs"></i>
+            </button>
+            <button id="stop-timer" class="timer-btn" title="עצור" style="display: none;">
+              <i class="fas fa-stop fa-xs"></i>
+            </button>
+            <button id="timer-preset" class="timer-btn" title="זמנים מוגדרים מראש">
+              <i class="fas fa-clock fa-xs"></i>
+            </button>
+          </div>
         </div>
-        <div class="timer-display" id="timer-display"></div>
-        <div class="timer-buttons">
-          <button id="start-timer" class="timer-btn" title="התחל">
-            <i class="fas fa-play fa-xs"></i>
-          </button>
-          <button id="pause-timer" class="timer-btn" title="השהה" style="display: none;">
-            <i class="fas fa-pause fa-xs"></i>
-          </button>
-          <button id="stop-timer" class="timer-btn" title="עצור" style="display: none;">
-            <i class="fas fa-stop fa-xs"></i>
-          </button>
-          <button id="timer-preset" class="timer-btn" title="זמנים מוגדרים מראש">
-            <i class="fas fa-clock fa-xs"></i>
-          </button>
+        <div id="timer-preset-menu" class="timer-preset-menu" style="display: none;">
+          <button class="preset-btn" data-time="300">5 דקות</button>
+          <button class="preset-btn" data-time="600">10 דקות</button>
+          <button class="preset-btn" data-time="900">15 דקות</button>
+          <button class="preset-btn" data-time="1800">30 דקות</button>
+          <button class="preset-btn" data-time="3600">שעה</button>
         </div>
-      </div>
-      <div id="timer-preset-menu" class="timer-preset-menu" style="display: none;">
-        <button class="preset-btn" data-time="300">5 דקות</button>
-        <button class="preset-btn" data-time="600">10 דקות</button>
-        <button class="preset-btn" data-time="900">15 דקות</button>
-        <button class="preset-btn" data-time="1800">30 דקות</button>
-        <button class="preset-btn" data-time="3600">שעה</button>
       </div>
     </div>
   </header>
