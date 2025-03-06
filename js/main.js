@@ -178,9 +178,10 @@
       reader.onload = async function(e) {
         try {
           const importedRecipes = JSON.parse(e.target.result);
+          let newRecipesCount = 0;
           
           // מיזוג המתכונים החדשים עם הקיימים
-          importedRecipes.forEach(newRecipe => {
+          for (const newRecipe of importedRecipes) {
             // וודא שאין מפתח id קיים בעת ייבוא
             if (newRecipe.id !== undefined) {
               delete newRecipe.id;
@@ -189,18 +190,39 @@
             if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
               newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
-            const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
-            if (existingRecipeIndex === -1) {
+            
+            // בדיקת כפילויות מתקדמת - בודק אם מתכון זהה כבר קיים
+            const isDuplicate = recipes.some(existingRecipe => {
+              // בדיקת שם
+              if (existingRecipe.name !== newRecipe.name) return false;
+              
+              // בדיקת מצרכים - האם הם זהים ב-100%
+              const existingIngredients = existingRecipe.ingredients || '';
+              const newIngredients = newRecipe.ingredients || '';
+              if (existingIngredients !== newIngredients) return false;
+              
+              // בדיקת אופן הכנה - האם הוא זהה ב-100%
+              const existingInstructions = existingRecipe.instructions || '';
+              const newInstructions = newRecipe.instructions || '';
+              if (existingInstructions !== newInstructions) return false;
+              
+              // אם הגענו לכאן, המתכון זהה ב-100%
+              return true;
+            });
+            
+            // הוספת המתכון רק אם הוא לא קיים
+            if (!isDuplicate) {
               recipes.push(newRecipe);
+              newRecipesCount++;
             }
-          });
+          }
 
           await saveRecipesToDB(recipes);
           updateCategoryList();
           updateCategoryButtons();
           displayRecipes(recipes);
           
-          alert(`יובאו ${importedRecipes.length} מתכונים בהצלחה`);
+          alert(`יובאו ${newRecipesCount} מתכונים חדשים בהצלחה`);
         } catch (e) {
           console.error('Error importing recipes:', e);
           alert('שגיאה בייבוא המתכונים. נא לוודא שהקובץ תקין ולנסות שוב.');
@@ -584,9 +606,10 @@
       reader.onload = async function(e) {
         try {
           const importedRecipes = JSON.parse(e.target.result);
+          let newRecipesCount = 0;
           
           // מיזוג המתכונים החדשים עם הקיימים
-          importedRecipes.forEach(newRecipe => {
+          for (const newRecipe of importedRecipes) {
             // וודא שאין מפתח id קיים בעת ייבוא
             if (newRecipe.id !== undefined) {
               delete newRecipe.id;
@@ -595,18 +618,39 @@
             if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
               newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
-            const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
-            if (existingRecipeIndex === -1) {
+            
+            // בדיקת כפילויות מתקדמת - בודק אם מתכון זהה כבר קיים
+            const isDuplicate = recipes.some(existingRecipe => {
+              // בדיקת שם
+              if (existingRecipe.name !== newRecipe.name) return false;
+              
+              // בדיקת מצרכים - האם הם זהים ב-100%
+              const existingIngredients = existingRecipe.ingredients || '';
+              const newIngredients = newRecipe.ingredients || '';
+              if (existingIngredients !== newIngredients) return false;
+              
+              // בדיקת אופן הכנה - האם הוא זהה ב-100%
+              const existingInstructions = existingRecipe.instructions || '';
+              const newInstructions = newRecipe.instructions || '';
+              if (existingInstructions !== newInstructions) return false;
+              
+              // אם הגענו לכאן, המתכון זהה ב-100%
+              return true;
+            });
+            
+            // הוספת המתכון רק אם הוא לא קיים
+            if (!isDuplicate) {
               recipes.push(newRecipe);
+              newRecipesCount++;
             }
-          });
+          }
 
           await saveRecipesToDB(recipes);
           updateCategoryList();
           updateCategoryButtons();
           displayRecipes(recipes);
           
-          alert(`יובאו ${importedRecipes.length} מתכונים בהצלחה`);
+          alert(`יובאו ${newRecipesCount} מתכונים חדשים בהצלחה`);
         } catch (e) {
           console.error('Error importing recipes:', e);
           alert('שגיאה בייבוא המתכונים. נא לוודא שהקובץ תקין ולנסות שוב.');
