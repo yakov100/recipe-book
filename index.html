@@ -17,7 +17,7 @@
 </head>
 <body>
     <header class="header">
-        <button class="menu-icon" onclick="openMenu()">
+        <button class="menu-icon" id="menuButton">
             <div></div>
             <div></div>
             <div></div>
@@ -59,17 +59,17 @@
     </header>
 
     <div id="sideMenu" class="side-menu">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">&times;</a>
-        <a href="#" onclick="openFormPopup(); closeMenu();">הוסף מתכון</a>
-        <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורד את כל המתכונים</a>
-        <a href="#" onclick="exportRecipes(); closeMenu();">ייצא ל-JSON</a>
-        <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">ייבא מ-JSON</a>
-        <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
+        <a href="javascript:void(0)" class="closebtn" id="closeMenuBtn">&times;</a>
+        <a href="#" id="addRecipeBtn">הוסף מתכון</a>
+        <a href="#" id="downloadRecipesBtn">הורד את כל המתכונים</a>
+        <a href="#" id="exportRecipesBtn">ייצא ל-JSON</a>
+        <a href="#" id="importRecipesBtn">ייבא מ-JSON</a>
+        <input type="file" id="importJson" accept=".json" style="display: none;">
         <hr>
         <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
         <div class="recipes-per-row">
-            <div class="grid-icon" id="grid6" onclick="setRecipesPerRow(6); closeMenu();"></div>
-            <div class="grid-icon" id="grid8" onclick="setRecipesPerRow(8); closeMenu();"></div>
+            <div class="grid-icon" id="grid6"></div>
+            <div class="grid-icon" id="grid8"></div>
         </div>
     </div>
 
