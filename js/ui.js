@@ -1,17 +1,15 @@
-export function setupUI() {
-    setupMenu();
-    setupGrid();
-    setupSearch();
+// Export the menu functions to make them globally available
+export function openMenu() {
+    document.getElementById('sideMenu').style.width = '250px';
 }
 
-function setupMenu() {
-    window.openMenu = () => {
-        document.getElementById('sideMenu').style.width = '250px';
-    };
+export function closeMenu() {
+    document.getElementById('sideMenu').style.width = '0';
+}
 
-    window.closeMenu = () => {
-        document.getElementById('sideMenu').style.width = '0';
-    };
+export function setupUI() {
+    setupGrid();
+    setupSearch();
 }
 
 function setupGrid() {
