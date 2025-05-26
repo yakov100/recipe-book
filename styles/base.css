@@ -1,0 +1,43 @@
+/* Base styles */
+:root {
+    --primary-color: #28a745;
+    --primary-color-dark: #218838;
+    --font-primary: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-secondary: 'Heebo', sans-serif;
+}
+
+html {
+    font-family: var(--font-primary);
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    background-color: #f9f9f9;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    background-image: url('../assets/images/cooking-background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 0;
+    pointer-events: none;
+}
