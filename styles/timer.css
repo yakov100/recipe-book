@@ -1,0 +1,43 @@
+/* Timer styles */
+.timer-container {
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(33, 136, 56, 0.05));
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-right: 20px;
+    position: relative;
+}
+
+.timer-display {
+    font-family: var(--font-primary);
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    min-width: 70px;
+    text-align: center;
+    margin: 0 8px;
+}
+
+.timer-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.timer-input-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.timer-input {
+    width: 35px;
+    padding: 2px 4px;
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
