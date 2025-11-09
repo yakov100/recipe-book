@@ -23,7 +23,7 @@ body {
     margin: 0;
     padding: 0;
     position: relative;
-    background-image: url('../assets/images/cookbook-background.png');
+    background-image: url('/assets/images/cookbook-background.png');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
