@@ -1,8 +1,13 @@
 # IDE and Editor files
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
+
+# Downloads and dependencies
+Downloads/
+node_modules/
 
 # OS generated files
 .DS_Store

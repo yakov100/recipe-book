@@ -1,89 +1,163 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ספר המתכונים שלי</title>
-    <link rel="stylesheet" href="styles/base.css">
-    <link rel="stylesheet" href="styles/layout.css">
-    <link rel="stylesheet" href="styles/menu.css">
-    <link rel="stylesheet" href="styles/recipe-card.css">
-    <link rel="stylesheet" href="styles/recipe-details.css">
-    <link rel="stylesheet" href="styles/buttons.css">
-    <link rel="stylesheet" href="styles/timer.css">
-    <link rel="stylesheet" href="styles/forms.css">
-    <link rel="stylesheet" href="styles/media.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ספר המתכונים שלי</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <header class="header">
-        <button class="menu-icon" id="menuButton">
-            <div></div>
-            <div></div>
-            <div></div>
-        </button>
-        <h1>ספר המתכונים שלי</h1>
-        <div class="timer-container">
-            <div class="timer-controls">
-                <div class="timer-input-group">
-                    <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
-                    <span class="timer-separator">:</span>
-                    <input type="number" id="timer-minutes" min="0" max="59" value="1" class="timer-input" placeholder="ד">
-                    <span class="timer-separator">:</span>
-                    <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
-                </div>
-                <div class="timer-display" id="timer-display"></div>
-                <div class="timer-buttons">
-                    <button id="start-timer" class="timer-btn" title="התחל">
-                        <i class="fas fa-play fa-xs"></i>
-                    </button>
-                    <button id="pause-timer" class="timer-btn" title="השהה" style="display: none;">
-                        <i class="fas fa-pause fa-xs"></i>
-                    </button>
-                    <button id="stop-timer" class="timer-btn" title="עצור" style="display: none;">
-                        <i class="fas fa-stop fa-xs"></i>
-                    </button>
-                    <button id="timer-preset" class="timer-btn" title="זמנים מוגדרים מראש">
-                        <i class="fas fa-clock fa-xs"></i>
-                    </button>
-                </div>
-            </div>
-            <div id="timer-preset-menu" class="timer-preset-menu" style="display: none;">
-                <button class="preset-btn" data-time="300">5 דקות</button>
-                <button class="preset-btn" data-time="600">10 דקות</button>
-                <button class="preset-btn" data-time="900">15 דקות</button>
-                <button class="preset-btn" data-time="1800">30 דקות</button>
-                <button class="preset-btn" data-time="3600">שעה</button>
-            </div>
+  <header class="header">
+    <button class="menu-icon" onclick="openMenu()">
+        <div></div>
+        <div></div>
+        <div></div>
+    </button>
+    <h1>ספר המתכונים שלי</h1>
+    <div class="header-controls">
+      <button id="show-timer-btn" class="header-btn" title="טיימר">
+        <i class="fas fa-bell"></i>
+      </button>
+      <div class="timer-container" style="display: none;">
+        <div class="timer-controls">
+          <div class="timer-input-group">
+            <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
+            <span class="timer-separator">:</span>
+            <input type="number" id="timer-minutes" min="0" max="59" value="1" class="timer-input" placeholder="ד">
+            <span class="timer-separator">:</span>
+            <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
+          </div>
+          <div class="timer-display" id="timer-display"></div>
+          <div class="timer-buttons">
+            <button id="start-timer" class="timer-btn" title="התחל">
+              <i class="fas fa-play fa-xs"></i>
+            </button>
+            <button id="pause-timer" class="timer-btn" title="השהה" style="display: none;">
+              <i class="fas fa-pause fa-xs"></i>
+            </button>
+            <button id="stop-timer" class="timer-btn" title="עצור" style="display: none;">
+              <i class="fas fa-stop fa-xs"></i>
+            </button>
+            <button id="timer-preset" class="timer-btn" title="זמנים מוגדרים מראש">
+              <i class="fas fa-clock fa-xs"></i>
+            </button>
+          </div>
         </div>
-    </header>
-
-    <div id="sideMenu" class="side-menu">
-        <a href="javascript:void(0)" class="closebtn" id="closeMenuBtn">&times;</a>
-        <a href="#" id="addRecipeBtn">הוסף מתכון</a>
-        <a href="#" id="downloadRecipesBtn">הורד את כל המתכונים</a>
-        <a href="#" id="exportRecipesBtn">ייצא ל-JSON</a>
-        <a href="#" id="importRecipesBtn">ייבא מ-JSON</a>
-        <input type="file" id="importJson" accept=".json" style="display: none;">
-        <hr>
-        <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
-        <div class="recipes-per-row">
-            <div class="grid-icon" id="grid6"></div>
-            <div class="grid-icon" id="grid8"></div>
+        <div id="timer-preset-menu" class="timer-preset-menu" style="display: none;">
+          <button class="preset-btn" data-time="300">5 דקות</button>
+          <button class="preset-btn" data-time="600">10 דקות</button>
+          <button class="preset-btn" data-time="900">15 דקות</button>
+          <button class="preset-btn" data-time="1800">30 דקות</button>
+          <button class="preset-btn" data-time="3600">שעה</button>
         </div>
+      </div>
     </div>
+  </header>
 
-    <main class="main">
-        <div class="search-container">
-            <div class="category-filter" id="categoryFilter"></div>
-            <input type="text" id="searchName" placeholder="חפש לפי שם" oninput="filterRecipes()">
-            <input type="text" id="searchIngredients" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
-            <div class="filter-rating" id="filterRating"></div>
+  <!-- תפריט הצד -->
+  <div id="sideMenu" class="side-menu">
+    <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">&times;</a>
+    <a href="#" onclick="openFormPopup(); closeMenu();">הוספת מתכון</a>
+    <a href="#" onclick="openAiChat(); closeMenu();">שיחה עם AI</a>
+    <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורדת כל המתכונים</a>
+    <a href="#" onclick="exportRecipes(); closeMenu();">גיבוי ל-JSON</a>
+    <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">יבוא מ-JSON</a>
+    <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
+    <hr>
+    <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
+    <div class="recipes-per-row">
+      <div class="grid-icon" id="grid6" onclick="setRecipesPerRow(6); closeMenu();"></div>
+      <div class="grid-icon" id="grid8" onclick="setRecipesPerRow(8); closeMenu();"></div>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="search-container">
+      <div class="category-filter" id="categoryFilter">
+        <!-- כפתורי הקטגוריות יתווספו דינמית -->
+      </div>
+      <input type="text" id="searchName" placeholder="חפש לפי שם" oninput="filterRecipes()">
+      <input type="text" id="searchIngredients" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
+      <div class="filter-rating" id="filterRating"></div>
+    </div>
+    <div class="recipes-container" id="recipesContainer"></div>
+  </main>
+
+  <!-- חלון המתכון -->
+  <div class="popup-overlay" id="popup">
+    <div class="popup-content">
+      <button class="close-btn" onclick="closePopup()">&times;</button>
+      <div id="popupBody"></div>
+    </div>
+  </div>
+
+  <!-- חלון הוספת מתכון -->
+  <div class="popup-overlay" id="formPopup" style="display: none;">
+    <div class="form-popup-content">
+      <button class="close-btn" onclick="closeFormPopup()">&times;</button>
+      <form id="recipeForm">
+        <h2>הוספת מתכון חדש</h2>
+        <input type="text" id="recipeName" placeholder="שם המתכון">
+        <input type="text" id="recipeSource" placeholder="מקור המתכון">
+        <textarea id="ingredients" placeholder="מצרכים"></textarea>
+        <textarea id="instructions" placeholder="אופן ההכנה"></textarea>
+        <label for="category">קטגוריה:</label>
+        <div class="category-input-container">
+            <select id="category" required>
+                <option value="" disabled selected>בחר קטגוריה</option>
+            </select>
+            <input type="text" id="newCategory" placeholder="או הוסף קטגוריה חדשה" style="display: none;">
+            <button type="button" id="toggleNewCategory" onclick="toggleCategoryInput()">+ קטגוריה חדשה</button>
         </div>
-        <div class="recipes-container" id="recipesContainer"></div>
-    </main>
+        <textarea id="notes" placeholder="הערות"></textarea>
+        <label for="recipeLink">קישור למתכון:</label>
+        <input type="url" id="recipeLink" name="recipeLink" placeholder="https://">
+        <label for="recipeVideo">קישור לסרטון YouTube:</label>
+        <input type="url" id="recipeVideo" name="recipeVideo" placeholder="https://www.youtube.com/watch?v=">
+        <div class="file-upload-container">
+          <input type="file" id="image" accept="image/*">
+          <button type="button" onclick="document.getElementById('ocrImage').click()">OCR</button>
+        </div>
+        <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
+        <button type="submit">שמירת מתכון</button>
+      </form>
+    </div>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
-    <script src="js/app.js" type="module"></script>
+  <!-- תזכורת לגיבוי -->
+  <div class="backup-reminder" id="backupReminder" style="display: none;">
+    <span>זמן לגיבוי! לא גיביתם את המתכונים שלכם מזה זמן רב.</span>
+    <button onclick="closeBackupReminder()">×</button>
+  </div>
+
+  <!-- פאנל צ'אט AI -->
+  <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
+    <div class="ai-chat-panel">
+      <div class="ai-chat-header">
+        <h3>שיחה עם AI</h3>
+        <button class="close-btn" onclick="closeAiChat()" title="סגור">&times;</button>
+      </div>
+      <div class="ai-chat-messages" id="aiChatMessages"></div>
+      <div class="ai-chat-input-row">
+        <input type="text" id="aiChatInput" placeholder="כתוב הודעה – חפש מתכונים, ספר מתכון, או פשוט שאל אותי..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+        <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- חלון אישור מחיקה -->
+  <div class="popup-overlay" id="confirmPopup" style="display: none;">
+    <div class="confirm-popup-content">
+      <h3>האם ברצונך למחוק את המתכון?</h3>
+      <button class="confirm" onclick="deleteRecipe()">מחק</button>
+      <button class="cancel" onclick="closeConfirmPopup()">בטל</button>
+    </div>
+  </div>
+
+  <!-- ספריה חיצונית ל-OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
