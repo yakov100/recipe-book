@@ -167,7 +167,21 @@
             console.error('שגיאה בטעינת מתכונים:', error);
             recipes = [];
             displayRecipes([]);
+            updateCategoryList();
+            updateCategoryButtons();
+            var fr = document.getElementById('filterRating');
+            if (fr) fr.innerHTML = generateFilterStars();
+            setupBackupReminder(null);
+            setRecipesPerRow(6);
+            drawGridIcons();
+            applyTimerVisibility(false);
+            initializeTimer();
+            setupPopupCloseOnOverlayClick();
             handleInitialRoute();
+            window.addEventListener('popstate', function() {
+                var p = document.getElementById('popup');
+                if (p && p.style.display === 'flex') closePopup();
+            });
         }
     }
 
