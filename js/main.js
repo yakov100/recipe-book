@@ -1036,11 +1036,15 @@
         d.textContent = m.content || '';
         el.appendChild(d);
       });
+      el.scrollTop = el.scrollHeight;
     }
 
     function openAiChat() {
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'flex';
+      if (aiChatMessages.length === 0) {
+        aiChatMessages.push({ role: 'assistant', content: 'שלום! אני כאן כדי לעזור עם מתכונים. תכתוב לי מה תרצה – לחפש מתכון, לקבל רעיונות, או לספר מתכון ואוסיף אותו עבורך. במה אוכל לעזור?' });
+      }
       renderAiChatMessages();
       document.getElementById('aiChatInput').value = '';
       document.getElementById('aiChatInput').focus();
