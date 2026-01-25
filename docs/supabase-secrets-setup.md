@@ -51,3 +51,19 @@ https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions
 | `GEMINI_API_KEY`         | **כן**       | [Google AI Studio](https://aistudio.google.com/apikey) → Create API Key |
 | `SUPABASE_SERVICE_ROLE_KEY` | בדרך כלל לא (כבר זמין) | אם בכל זאת: **Project Settings** → **API** → service_role → Reveal |
 | `SUPABASE_URL`           | לא (כבר זמין) | - |
+
+---
+
+## "לא עובד"? – מה לבדוק
+
+1. **מה בדיוק לא עובד?**  
+   - **מתכונים לא נטענים** → בעיה ב-Supabase (טבלת `recipes`, RLS) או בחיבור.  
+   - **צ'אט AI** → רוב הסיכויים: `GEMINI_API_KEY` חסר או שגוי. כעת האתר מציג את הודעת השגיאה מהשרת – קרא מה כתוב בתשובת ה-AI.
+
+2. **הודעות נפוצות בצ'אט**  
+   - *"נא להגדיר GEMINI_API_KEY ב-Supabase Secrets"* → הוסף את המפתח [בדף ה-Secrets](https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions).  
+   - *"לא ניתן להתחבר ל-AI"* → בעיית רשת או CORS; נסה דפדפן/רשת אחרת.  
+   - *"לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות"* → Gemini דחה את הבקשה; ייתכן שמפתח לא תקין או שחסמת במדיניות.
+
+3. **אחרי שינוי ב-Secrets**  
+   הענק ל-Edge Function כמה דקות להתעדכן. אם צריך, הרץ שוב "Deploy" ל-`recipe-ai`.
