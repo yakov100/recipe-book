@@ -230,6 +230,7 @@ body::before {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    z-index: 1;
 }
 
 .recipe-name {
@@ -301,10 +302,19 @@ body::before {
     justify-content: center;
     align-items: center;
     backdrop-filter: blur(3px);
+    z-index: 2;
+    pointer-events: auto;
 }
 
 .recipe-card:hover .action-buttons-overlay {
     display: flex;
+}
+
+/* במכשירי מגע – תמיד להציג את כפתורי הפעולה (hover לא עובד) */
+@media (hover: none) {
+    .recipe-card .action-buttons-overlay {
+        display: flex !important;
+    }
 }
 
 /* סגנונות משותפים לכל כפתורי הפעולה */
@@ -324,6 +334,8 @@ body::before {
     position: relative;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
     backdrop-filter: blur(5px) !important;
+    pointer-events: auto !important;
+    touch-action: manipulation; /* מונע עיכוב double-tap במגע */
 }
 
 .action-btn:hover, .action-button:hover {
