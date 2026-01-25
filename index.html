@@ -59,6 +59,7 @@
   <div id="sideMenu" class="side-menu">
     <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">&times;</a>
     <a href="#" onclick="openFormPopup(); closeMenu();">הוספת מתכון</a>
+    <a href="#" onclick="openAiChat(); closeMenu();">שיחה עם AI</a>
     <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורדת כל המתכונים</a>
     <a href="#" onclick="exportRecipes(); closeMenu();">גיבוי ל-JSON</a>
     <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">יבוא מ-JSON</a>
@@ -130,6 +131,21 @@
     <button onclick="closeBackupReminder()">×</button>
   </div>
 
+  <!-- פאנל צ'אט AI -->
+  <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
+    <div class="ai-chat-panel">
+      <div class="ai-chat-header">
+        <h3>שיחה עם AI</h3>
+        <button class="close-btn" onclick="closeAiChat()" title="סגור">&times;</button>
+      </div>
+      <div class="ai-chat-messages" id="aiChatMessages"></div>
+      <div class="ai-chat-input-row">
+        <input type="text" id="aiChatInput" placeholder="חפש מתכונים, או הזן מתכון להוספה..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+        <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </div>
+
   <!-- חלון אישור מחיקה -->
   <div class="popup-overlay" id="confirmPopup" style="display: none;">
     <div class="confirm-popup-content">
@@ -141,6 +157,7 @@
 
   <!-- ספריה חיצונית ל-OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
