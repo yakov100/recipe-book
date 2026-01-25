@@ -1,4 +1,6 @@
 {
+  "buildCommand": "",
+  "installCommand": "",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/recipe", "destination": "/index.html" },
