@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Digital Recipe Book",
   "type": "module",
-  "engines": { "node": ">=18" },
+  "engines": { "node": "20.x" },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
