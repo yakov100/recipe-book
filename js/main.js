@@ -6,11 +6,11 @@
     let aiChatMessages = [];
     let aiChatAbortController = null;
 
-    // קונפיגורציית Supabase – החלף ב-URL ו־Key של הפרויקט שלך אם צריך
-    const SUPABASE_URL = 'https://nklwzunoipplfkysaztl.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
+    // קונפיגורציית Supabase מתוך .env (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+    const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY;
     const _supa = (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
-    const supabase = (_supa && typeof _supa.createClient === 'function')
+    const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY && _supa && typeof _supa.createClient === 'function')
         ? _supa.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
         : null;
 

@@ -1,6 +1,6 @@
 {
-  "buildCommand": "",
-  "outputDirectory": ".",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/recipe", "destination": "/index.html" },
     { "source": "/recipe/:path*", "destination": "/index.html" }
