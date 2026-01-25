@@ -6,9 +6,9 @@
     let aiChatMessages = [];
     let aiChatAbortController = null;
 
-    // קונפיגורציית Supabase מתוך .env (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
-    const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL;
-    const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY;
+    // Supabase: .env ב-dev/build, fallback כש-Vite לא רץ (Vercel static)
+    const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://nklwzunoipplfkysaztl.supabase.co';
+    const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'REDACTED_SUPABASE_ANON_KEY';
     const _supa = (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
     const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY && _supa && typeof _supa.createClient === 'function')
         ? _supa.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
