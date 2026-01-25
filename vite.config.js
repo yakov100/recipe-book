@@ -11,5 +11,5 @@ export default defineConfig({
   },
   publicDir: false,
   root: '.',
-  base: './'
+  base: '/'
 });
