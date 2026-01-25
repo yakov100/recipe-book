@@ -1,8 +1,6 @@
 {
-  "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
   "rewrites": [
     { "source": "/recipe", "destination": "/index.html" },
     { "source": "/recipe/:path*", "destination": "/index.html" }
