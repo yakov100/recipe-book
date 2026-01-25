@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
@@ -64,7 +65,7 @@ Deno.serve(async (req: Request) => {
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) {
     return new Response(
-      JSON.stringify({ reply: "לא ניתן לתקשר עם ה-AI. נא להגדיר GEMINI_API_KEY ב-Supabase Secrets.", recipeIds: [], suggestedRecipe: null }),
+      JSON.stringify({ reply: "לא ניתן לתקשר עם ה-AI. נא להגדיר GEMINI_API_KEY ב-Supabase Secrets.", recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
       { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
@@ -76,13 +77,30 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  const messages = (Array.isArray(body?.messages) ? body.messages : []).slice(0, 50);
-  const recipes = Array.isArray(body?.recipes) ? body.recipes : [];
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabaseAdmin = supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey) : null;
 
+  let recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[];
+  if (supabaseAdmin) {
+    const { data: recipesFromDb } = await supabaseAdmin.from("recipes").select("id, name, category, ingredients, instructions, rating").order("created_at", { ascending: true });
+    recipes = (recipesFromDb || []).map((r: { id: string; name?: string; category?: string; ingredients?: string; instructions?: string; rating?: number }) => ({
+      id: r.id,
+      name: r.name || "",
+      category: r.category || "שונות",
+      ingredients: (r.ingredients || "").slice(0, 250),
+      instructions: (r.instructions || "").slice(0, 250),
+      rating: r.rating ?? 0
+    }));
+  } else {
+    recipes = Array.isArray(body?.recipes) ? body.recipes : [];
+  }
+
+  const messages = (Array.isArray(body?.messages) ? body.messages : []).slice(0, 50);
   const contents = buildContents(messages, recipes);
   if (contents.length === 0) {
     return new Response(
-      JSON.stringify({ reply: "לא התקבלו הודעות.", recipeIds: [], suggestedRecipe: null }),
+      JSON.stringify({ reply: "לא התקבלו הודעות.", recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
       { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
@@ -105,7 +123,7 @@ Deno.serve(async (req: Request) => {
     const t = await res.text();
     console.error("Gemini error", res.status, t);
     return new Response(
-      JSON.stringify({ reply: "לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות.", recipeIds: [], suggestedRecipe: null }),
+      JSON.stringify({ reply: "לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות.", recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
       { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
@@ -114,7 +132,7 @@ Deno.serve(async (req: Request) => {
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
     return new Response(
-      JSON.stringify({ reply: "לא התקבלה תשובה מ-AI.", recipeIds: [], suggestedRecipe: null }),
+      JSON.stringify({ reply: "לא התקבלה תשובה מ-AI.", recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
       { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
@@ -130,8 +148,26 @@ Deno.serve(async (req: Request) => {
   const recipeIds = Array.isArray(parsed?.recipeIds) ? parsed.recipeIds : [];
   const suggestedRecipe = parsed?.suggestedRecipe && typeof parsed.suggestedRecipe === "object" ? parsed.suggestedRecipe : undefined;
 
+  let insertedRecipeId: string | null = null;
+  if (suggestedRecipe && supabaseAdmin) {
+    const row = {
+      name: suggestedRecipe.name || "",
+      source: suggestedRecipe.source || null,
+      ingredients: suggestedRecipe.ingredients || "",
+      instructions: suggestedRecipe.instructions || "",
+      category: suggestedRecipe.category || "שונות",
+      notes: null,
+      recipe_link: null,
+      video_url: null,
+      image: null,
+      rating: 0
+    };
+    const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
+    if (!error && inserted?.id) insertedRecipeId = inserted.id;
+  }
+
   return new Response(
-    JSON.stringify({ reply, recipeIds, suggestedRecipe: suggestedRecipe || null }),
+    JSON.stringify({ reply, recipeIds, suggestedRecipe: suggestedRecipe || null, insertedRecipeId }),
     { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
   );
 });
