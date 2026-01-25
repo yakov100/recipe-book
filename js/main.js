@@ -11,9 +11,20 @@ import { createClient } from '@supabase/supabase-js';
     // Supabase: .env ב-dev/build, fallback בפריסה
     const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://nklwzunoipplfkysaztl.supabase.co';
     const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
-    const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
-        ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-        : null;
+
+    // יצירת Supabase client עם טיפול בשגיאות
+    let supabase = null;
+    try {
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+            supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                auth: {
+                    detectSessionInUrl: false // מונע שגיאות מ-hash ריק ב-URL
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Failed to create Supabase client:', e);
+    }
 
     function recipeToRow(r) {
         return {
