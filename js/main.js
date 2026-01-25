@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
 (() => {
     let recipes = [];
@@ -7,24 +7,6 @@ import { createClient } from '@supabase/supabase-js';
     let backupReminderTimeout;
     let aiChatMessages = [];
     let aiChatAbortController = null;
-
-    // Supabase: .env ב-dev/build, fallback בפריסה
-    const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://nklwzunoipplfkysaztl.supabase.co';
-    const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'REDACTED_SUPABASE_ANON_KEY';
-
-    // יצירת Supabase client עם טיפול בשגיאות
-    let supabase = null;
-    try {
-        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-            supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                auth: {
-                    detectSessionInUrl: false // מונע שגיאות מ-hash ריק ב-URL
-                }
-            });
-        }
-    } catch (e) {
-        console.error('Failed to create Supabase client:', e);
-    }
 
     function recipeToRow(r) {
         return {
@@ -1132,10 +1114,10 @@ import { createClient } from '@supabase/supabase-js';
       var msgsEl = document.getElementById('aiChatMessages');
       if (msgsEl) msgsEl.appendChild(loading);
 
-      var url = SUPABASE_URL + '/functions/v1/recipe-ai';
+      var url = supabaseUrl + '/functions/v1/recipe-ai';
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + supabaseAnonKey },
         body: JSON.stringify({ messages: aiChatMessages, recipes: compactRecipes(recipes) }),
         signal: aiChatAbortController.signal
       })
