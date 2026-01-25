@@ -868,7 +868,7 @@
     function setupBackupReminder(lastBackupFromDb) {
       const now = new Date().getTime();
       const twoWeeks = 14 * 24 * 60 * 60 * 1000;
-      const lastBackup = lastBackupFromDb != null ? lastBackupFromDb : (() => { const v = localStorage.getItem('lastBackup'); return v ? parseInt(v, 10) : null; })();
+      const lastBackup = lastBackupFromDb != null ? lastBackupFromDb : null;
 
       if (!lastBackup || now - lastBackup > twoWeeks) showBackupReminder();
 
@@ -1075,6 +1075,7 @@
       if (ov) ov.style.display = 'none';
     }
 
+    // Fallback when Edge Function did not insert to DB: fill form for user to edit and save.
     function applySuggestedRecipe(suggestedRecipe) {
       if (!suggestedRecipe || typeof suggestedRecipe !== 'object') return;
       closeAiChat();
@@ -1126,22 +1127,33 @@
         body: JSON.stringify({ messages: aiChatMessages, recipes: compactRecipes(recipes) }),
         signal: aiChatAbortController.signal
       })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
+        .then(function(res) { return res.json().then(function(data) { return { res: res, data: data }; }); })
+        .then(async function(_ref) {
+          var res = _ref.res;
+          var data = _ref.data;
           var loadEl = document.getElementById('aiChatLoading');
           if (loadEl) loadEl.remove();
           if (sendBtn) sendBtn.disabled = false;
 
-          var reply = (data && data.reply) ? data.reply : 'לא התקבלה תשובה.';
+          var reply = (data && data.reply) ? data.reply : (data && data.error) ? data.error : 'לא התקבלה תשובה.';
+          if (!reply && res && !res.ok) reply = 'שגיאה מהשרת (' + (res.status || '') + '). נא לבדוק GEMINI_API_KEY ב-Supabase Secrets.';
           aiChatMessages.push({ role: 'assistant', content: reply });
           renderAiChatMessages();
 
           var recipeIds = (data && Array.isArray(data.recipeIds)) ? data.recipeIds : [];
-          if (recipeIds.length > 0) {
+          if (data && data.insertedRecipeId) {
+            closeAiChat();
+            recipes = await loadRecipesFromDB();
+            if (!Array.isArray(recipes)) recipes = [];
+            displayRecipes(recipes);
+            updateCategoryList();
+            updateCategoryButtons();
+            var idx = recipes.findIndex(function(r) { return r && r.id === data.insertedRecipeId; });
+            if (idx >= 0) showRecipe(idx);
+          } else if (recipeIds.length > 0) {
             var filtered = recipes.filter(function(r) { return r.id && recipeIds.indexOf(r.id) !== -1; });
             displayRecipes(filtered);
-          }
-          if (data && data.suggestedRecipe) {
+          } else if (data && data.suggestedRecipe) {
             applySuggestedRecipe(data.suggestedRecipe);
           }
         })
@@ -1197,6 +1209,7 @@
     let currentBeepInterval;
     let timerPaused = false;
     let pausedTimeRemaining = 0;
+    let timerEndTime = 0;
 
     function beep(duration, frequency, volume, type) {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1255,14 +1268,14 @@
         stopBtn.style.display = 'flex';
         display.classList.add('active');
 
-        const endTime = Date.now() + (timerPaused ? pausedTimeRemaining : totalSeconds * 1000);
+        timerEndTime = Date.now() + (timerPaused ? pausedTimeRemaining : totalSeconds * 1000);
         timerPaused = false;
         pausedTimeRemaining = 0;
 
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
             const now = Date.now();
-            const remaining = Math.max(0, endTime - now);
+            const remaining = Math.max(0, timerEndTime - now);
 
             if (remaining === 0) {
                 clearInterval(timerInterval);
@@ -1306,7 +1319,7 @@
 
         clearInterval(timerInterval);
         timerPaused = true;
-        pausedTimeRemaining = (Date.now() - startTime);
+        pausedTimeRemaining = Math.max(0, timerEndTime - Date.now());
 
         startBtn.style.display = 'flex';
         pauseBtn.style.display = 'none';
