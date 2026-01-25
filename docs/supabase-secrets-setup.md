@@ -63,7 +63,10 @@ https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions
 2. **הודעות נפוצות בצ'אט**  
    - *"נא להגדיר GEMINI_API_KEY ב-Supabase Secrets"* → הוסף את המפתח [בדף ה-Secrets](https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions).  
    - *"לא ניתן להתחבר ל-AI"* → בעיית רשת או CORS; נסה דפדפן/רשת אחרת.  
-   - *"לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות"* → Gemini דחה את הבקשה; ייתכן שמפתח לא תקין או שחסמת במדיניות.
+   - *"מפתח ה-API של Gemini לא תקף או חסר"* → הוסף או עדכן GEMINI_API_KEY [בדף ה-Secrets](https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions); צור מפתח ב-[Google AI Studio](https://aistudio.google.com/apikey).  
+   - *"אין הרשאה לשימוש ב-Gemini"* → המפתח חסום או מוגבל; בדוק הגבלות ב-Google AI Studio.  
+   - *"חרגת ממכסת הבקשות"* → חכה כמה דקות ונסה שוב.  
+   - *"לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות"* → שגיאה כללית מ-Gemini; בדוק לוגי ה-Edge Function ב-Supabase.
 
 3. **אחרי שינוי ב-Secrets**  
    הענק ל-Edge Function כמה דקות להתעדכן. אם צריך, הרץ שוב "Deploy" ל-`recipe-ai`.

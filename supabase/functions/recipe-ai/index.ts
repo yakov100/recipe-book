@@ -34,6 +34,42 @@ const RESPONSE_SCHEMA = {
   required: [ "reply" ]
 };
 
+/** ממיר שגיאת Gemini להודעה ברורה למשתמש. */
+function geminiErrorToReply(status: number, bodyText: string): string {
+  let statusStr = "";
+  let code: number | undefined;
+  try {
+    const j = JSON.parse(bodyText || "{}");
+    const err = j?.error;
+    if (err && typeof err === "object") {
+      code = typeof err.code === "number" ? err.code : undefined;
+      statusStr = (typeof err.status === "string" ? err.status : "") || "";
+    }
+  } catch {
+    /* נשאר עם ברירת המחדל */
+  }
+  const c = code ?? status;
+  const s = (statusStr || "").toUpperCase();
+
+  if (c === 401 || s === "UNAUTHENTICATED") {
+    return "מפתח ה-API של Gemini לא תקף או חסר. נא להגדיר GEMINI_API_KEY ב-Supabase Secrets (הגדרות → Edge Functions → Secrets).";
+  }
+  if (c === 403 || s === "PERMISSION_DENIED") {
+    return "אין הרשאה לשימוש ב-Gemini – ייתכן שהמפתח חסום או מוגבל בהגדרות Google. נא לבדוק ב-Google AI Studio.";
+  }
+  if (c === 429 || s === "RESOURCE_EXHAUSTED") {
+    return "חרגת ממכסת הבקשות ל-Gemini. נסה שוב אחרי כמה דקות.";
+  }
+  if (c === 404 || s === "NOT_FOUND") {
+    return "מודל Gemini לא זמין. ייתכן ששם המודל השתנה – נא לבדוק את הקוד.";
+  }
+  if (c === 400 || s === "INVALID_ARGUMENT") {
+    return "שגיאה בבקשה ל-Gemini. נא לבדוק את לוגי ה-Edge Function ב-Supabase.";
+  }
+
+  return "לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות (GEMINI_API_KEY ב-Supabase Secrets). אם ההגדרות נראות תקינות, בדוק את לוגי ה-Edge Function.";
+}
+
 function buildContents(
   messages: { role: string; content: string }[],
   recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]
@@ -122,8 +158,9 @@ Deno.serve(async (req: Request) => {
   if (!res.ok) {
     const t = await res.text();
     console.error("Gemini error", res.status, t);
+    const reply = geminiErrorToReply(res.status, t);
     return new Response(
-      JSON.stringify({ reply: "לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות.", recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
+      JSON.stringify({ reply, recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
       { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
     );
   }
