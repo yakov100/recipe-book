@@ -3,71 +3,134 @@
     let editingIndex = -1;
     let selectedCategory = null;
     let backupReminderTimeout;
+    let aiChatMessages = [];
+    let aiChatAbortController = null;
 
-    // אתחול מסד הנתונים
-    const db = new Promise((resolve, reject) => {
-        const request = indexedDB.open('RecipeDB', 1);
-        
-        request.onerror = (event) => {
-            console.error('שגיאה בפתיחת מסד הנתונים:', event.target.error);
-            reject(event.target.error);
+    // קונפיגורציית Supabase – החלף ב-URL ו־Key של הפרויקט שלך אם צריך
+    const SUPABASE_URL = 'https://nklwzunoipplfkysaztl.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
+    const _supa = (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
+    const supabase = (_supa && typeof _supa.createClient === 'function')
+        ? _supa.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
+
+    function recipeToRow(r) {
+        return {
+            name: r.name,
+            source: r.source || null,
+            ingredients: r.ingredients || '',
+            instructions: r.instructions || '',
+            category: r.category || 'שונות',
+            notes: r.notes || null,
+            rating: r.rating ?? 0,
+            image: r.image || null,
+            recipe_link: r.recipeLink || null,
+            video_url: r.videoUrl || null
         };
-        
-        request.onsuccess = (event) => {
-            console.log('מסד הנתונים נפתח בהצלחה');
-            resolve(event.target.result);
-        };
-        
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('recipes')) {
-                db.createObjectStore('recipes', { keyPath: 'id', autoIncrement: true });
-            }
-        };
-    });
-
-    // שמירת מתכונים
-    async function saveRecipesToDB(recipesToSave) {
-        const database = await db;
-        const transaction = database.transaction(['recipes'], 'readwrite');
-        const store = transaction.objectStore('recipes');
-
-        return new Promise((resolve, reject) => {
-            // מחיקת כל המתכונים הקיימים
-            store.clear().onsuccess = () => {
-                let savedCount = 0;
-                
-                recipesToSave.forEach((recipe) => {
-                    // וודא שאין מפתח id קיים בעת ייבוא
-                    if (recipe.id !== undefined) {
-                        delete recipe.id;
-                    }
-                    const request = store.add(recipe);
-                    request.onsuccess = () => {
-                        savedCount++;
-                        if (savedCount === recipesToSave.length) {
-                            resolve();
-                        }
-                    };
-                    request.onerror = () => reject(request.error);
-                });
-            };
-
-            transaction.onerror = () => reject(transaction.error);
-        });
     }
 
-    // טעינת מתכונים
+    function rowToRecipe(row) {
+        return {
+            id: row.id,
+            name: row.name,
+            source: row.source,
+            ingredients: row.ingredients,
+            instructions: row.instructions,
+            category: row.category,
+            notes: row.notes,
+            rating: row.rating,
+            image: row.image,
+            recipeLink: row.recipe_link,
+            videoUrl: row.video_url
+        };
+    }
+
+    // שמירת מתכונים ל-Supabase
+    async function saveRecipesToDB(recipesToSave) {
+        if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
+
+        const idsToKeep = recipesToSave.map(r => r.id).filter(Boolean);
+
+        // מחיקת רשומות שנמחקו מהמערך
+        const { data: existing } = await supabase.from('recipes').select('id');
+        const toDelete = (existing || []).filter(e => !idsToKeep.includes(e.id)).map(e => e.id);
+        for (const id of toDelete) {
+            await supabase.from('recipes').delete().eq('id', id);
+        }
+
+        for (const recipe of recipesToSave) {
+            const row = recipeToRow(recipe);
+            if (recipe.id) {
+                await supabase.from('recipes').update(row).eq('id', recipe.id);
+            } else {
+                const { data, error } = await supabase.from('recipes').insert(row).select('id').single();
+                if (error) throw error;
+                recipe.id = data.id;
+            }
+        }
+    }
+
+    // טעינת מתכונים מ-Supabase
     async function loadRecipesFromDB() {
-        const database = await db;
-        const transaction = database.transaction(['recipes'], 'readonly');
-        const store = transaction.objectStore('recipes');
-        
-        return new Promise((resolve, reject) => {
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
+        if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
+
+        const { data, error } = await supabase
+            .from('recipes')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+        return (data || []).map(rowToRecipe);
+    }
+
+    // טעינת והגדרת ההגדרות (מחליף localStorage)
+    async function loadSettings() {
+        if (!supabase) return { lastBackup: null, recipesPerRow: 6, timerVisible: false };
+
+        const { data } = await supabase.from('recipe_book_settings').select('key, value');
+        const m = (data || []).reduce((a, r) => { a[r.key] = r.value; return a; }, {});
+
+        // מיגרציה: lastBackup מ-localStorage ל-DB
+        if (m.lastBackup == null) {
+            const v = localStorage.getItem('lastBackup');
+            if (v) {
+                const num = parseInt(v, 10);
+                if (!isNaN(num)) { m.lastBackup = num; await saveSetting('lastBackup', num); localStorage.removeItem('lastBackup'); }
+            }
+        }
+
+        return {
+            lastBackup: m.lastBackup ?? null,
+            recipesPerRow: m.recipesPerRow || 6,
+            timerVisible: m.timerVisible === true
+        };
+    }
+
+    async function saveSetting(key, value) {
+        if (!supabase) return;
+        await supabase.from('recipe_book_settings').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    }
+
+    function applyTimerVisibility(visible) {
+        const tc = document.querySelector('.timer-container');
+        const btn = document.getElementById('show-timer-btn');
+        if (!tc || !btn) return;
+        if (visible) { tc.style.display = 'block'; btn.style.display = 'none'; }
+        else { tc.style.display = 'none'; btn.style.display = 'flex'; }
+    }
+
+    function getRecipeIdFromPath() {
+        const p = (typeof location !== 'undefined' && location.pathname) ? location.pathname : '';
+        if (!p || !p.startsWith('/recipe/')) return null;
+        const id = p.slice('/recipe/'.length).split('/')[0].trim();
+        return id || null;
+    }
+
+    function handleInitialRoute() {
+        const id = getRecipeIdFromPath();
+        if (!id) return;
+        const index = recipes.findIndex(function(r) { return r && r.id === id; });
+        if (index >= 0) showRecipe(index);
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -82,22 +145,29 @@
     async function loadRecipesAndDisplay() {
         try {
             recipes = await loadRecipesFromDB();
-            if (!Array.isArray(recipes)) {
-                recipes = [];
-            }
+            if (!Array.isArray(recipes)) recipes = [];
+            const settings = await loadSettings();
+
             displayRecipes(recipes);
             updateCategoryList();
             updateCategoryButtons();
             document.getElementById('filterRating').innerHTML = generateFilterStars();
-            setupBackupReminder();
-            setRecipesPerRow(6);
+            setupBackupReminder(settings.lastBackup);
+            setRecipesPerRow(settings.recipesPerRow || 6);
             drawGridIcons();
+            applyTimerVisibility(settings.timerVisible);
             initializeTimer();
             setupPopupCloseOnOverlayClick();
+            handleInitialRoute();
+            window.addEventListener('popstate', function() {
+              var p = document.getElementById('popup');
+              if (p && p.style.display === 'flex') closePopup();
+            });
         } catch (error) {
             console.error('שגיאה בטעינת מתכונים:', error);
             recipes = [];
             displayRecipes([]);
+            handleInitialRoute();
         }
     }
 
@@ -178,9 +248,10 @@
       reader.onload = async function(e) {
         try {
           const importedRecipes = JSON.parse(e.target.result);
+          let newRecipesCount = 0;
           
           // מיזוג המתכונים החדשים עם הקיימים
-          importedRecipes.forEach(newRecipe => {
+          for (const newRecipe of importedRecipes) {
             // וודא שאין מפתח id קיים בעת ייבוא
             if (newRecipe.id !== undefined) {
               delete newRecipe.id;
@@ -189,18 +260,39 @@
             if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
               newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
-            const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
-            if (existingRecipeIndex === -1) {
+            
+            // בדיקת כפילויות מתקדמת - בודק אם מתכון זהה כבר קיים
+            const isDuplicate = recipes.some(existingRecipe => {
+              // בדיקת שם
+              if (existingRecipe.name !== newRecipe.name) return false;
+              
+              // בדיקת מצרכים - האם הם זהים ב-100%
+              const existingIngredients = existingRecipe.ingredients || '';
+              const newIngredients = newRecipe.ingredients || '';
+              if (existingIngredients !== newIngredients) return false;
+              
+              // בדיקת אופן הכנה - האם הוא זהה ב-100%
+              const existingInstructions = existingRecipe.instructions || '';
+              const newInstructions = newRecipe.instructions || '';
+              if (existingInstructions !== newInstructions) return false;
+              
+              // אם הגענו לכאן, המתכון זהה ב-100%
+              return true;
+            });
+            
+            // הוספת המתכון רק אם הוא לא קיים
+            if (!isDuplicate) {
               recipes.push(newRecipe);
+              newRecipesCount++;
             }
-          });
+          }
 
           await saveRecipesToDB(recipes);
           updateCategoryList();
           updateCategoryButtons();
           displayRecipes(recipes);
           
-          alert(`יובאו ${importedRecipes.length} מתכונים בהצלחה`);
+          alert(`יובאו ${newRecipesCount} מתכונים חדשים בהצלחה`);
         } catch (e) {
           console.error('Error importing recipes:', e);
           alert('שגיאה בייבוא המתכונים. נא לוודא שהקובץ תקין ולנסות שוב.');
@@ -343,6 +435,9 @@
                   <button class="action-btn" onclick="shareRecipe(${index})" data-tooltip="שתף">
                     <i class="fas fa-share"></i>
                   </button>
+                  <button class="action-btn" onclick="copyRecipeLink(${index})" data-tooltip="העתק קישור">
+                    <i class="fas fa-link"></i>
+                  </button>
                   <button class="action-btn" onclick="downloadRecipe(${index})" data-tooltip="הורד">
                     <i class="fas fa-download"></i>
                   </button>
@@ -354,12 +449,31 @@
       `;
       
       popup.style.display = 'flex';
+      if (recipe && recipe.id && typeof history !== 'undefined' && history.pushState) {
+        history.pushState({}, '', '/recipe/' + recipe.id);
+      }
     }
 
     function closePopup() {
       const popup = document.getElementById('popup');
+      if (typeof location !== 'undefined' && location.pathname && location.pathname.startsWith('/recipe/') && typeof history !== 'undefined' && history.replaceState) {
+        history.replaceState({}, '', '/');
+      }
       popup.classList.remove('visible');
       popup.style.display = 'none';
+    }
+
+    function copyRecipeLink(index) {
+      if (!recipes[index] || !recipes[index].id) {
+        alert('לא ניתן להעתיק קישור למתכון שלא נשמר.');
+        return;
+      }
+      var url = (typeof window !== 'undefined' && window.location && window.location.origin ? window.location.origin : '') + '/recipe/' + recipes[index].id;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() { alert('הקישור הועתק'); }).catch(function() { alert('הקישור: ' + url); });
+      } else {
+        alert('הקישור: ' + url);
+      }
     }
 
     // עדכון הקטגוריות בעת פתיחת הטופס
@@ -584,9 +698,10 @@
       reader.onload = async function(e) {
         try {
           const importedRecipes = JSON.parse(e.target.result);
+          let newRecipesCount = 0;
           
           // מיזוג המתכונים החדשים עם הקיימים
-          importedRecipes.forEach(newRecipe => {
+          for (const newRecipe of importedRecipes) {
             // וודא שאין מפתח id קיים בעת ייבוא
             if (newRecipe.id !== undefined) {
               delete newRecipe.id;
@@ -595,18 +710,39 @@
             if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
               newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
-            const existingRecipeIndex = recipes.findIndex(r => r.name === newRecipe.name);
-            if (existingRecipeIndex === -1) {
+            
+            // בדיקת כפילויות מתקדמת - בודק אם מתכון זהה כבר קיים
+            const isDuplicate = recipes.some(existingRecipe => {
+              // בדיקת שם
+              if (existingRecipe.name !== newRecipe.name) return false;
+              
+              // בדיקת מצרכים - האם הם זהים ב-100%
+              const existingIngredients = existingRecipe.ingredients || '';
+              const newIngredients = newRecipe.ingredients || '';
+              if (existingIngredients !== newIngredients) return false;
+              
+              // בדיקת אופן הכנה - האם הוא זהה ב-100%
+              const existingInstructions = existingRecipe.instructions || '';
+              const newInstructions = newRecipe.instructions || '';
+              if (existingInstructions !== newInstructions) return false;
+              
+              // אם הגענו לכאן, המתכון זהה ב-100%
+              return true;
+            });
+            
+            // הוספת המתכון רק אם הוא לא קיים
+            if (!isDuplicate) {
               recipes.push(newRecipe);
+              newRecipesCount++;
             }
-          });
+          }
 
           await saveRecipesToDB(recipes);
           updateCategoryList();
           updateCategoryButtons();
           displayRecipes(recipes);
           
-          alert(`יובאו ${importedRecipes.length} מתכונים בהצלחה`);
+          alert(`יובאו ${newRecipesCount} מתכונים חדשים בהצלחה`);
         } catch (e) {
           console.error('Error importing recipes:', e);
           alert('שגיאה בייבוא המתכונים. נא לוודא שהקובץ תקין ולנסות שוב.');
@@ -701,6 +837,9 @@
           text: `${recipe.name} - ${recipe.source}`,
           files: [file]
         };
+        if (recipe.id && typeof window !== 'undefined' && window.location && window.location.origin) {
+          shareData.url = window.location.origin + '/recipe/' + recipe.id;
+        }
 
         navigator.share(shareData).then(() => {
           console.log('Shared successfully');
@@ -712,16 +851,17 @@
       }
     }
 
-    function setupBackupReminder() {
-      const lastBackup = localStorage.getItem('lastBackup');
+    function setupBackupReminder(lastBackupFromDb) {
       const now = new Date().getTime();
       const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+      const lastBackup = lastBackupFromDb != null ? lastBackupFromDb : (() => { const v = localStorage.getItem('lastBackup'); return v ? parseInt(v, 10) : null; })();
 
-      if (!lastBackup || now - lastBackup > twoWeeks) {
-        showBackupReminder();
-      }
+      if (!lastBackup || now - lastBackup > twoWeeks) showBackupReminder();
 
-      backupReminderTimeout = setTimeout(setupBackupReminder, twoWeeks);
+      backupReminderTimeout = setTimeout(async () => {
+        const s = await loadSettings();
+        setupBackupReminder(s.lastBackup);
+      }, twoWeeks);
     }
 
     function showBackupReminder() {
@@ -729,10 +869,10 @@
       backupReminder.style.display = 'flex';
     }
 
-    function closeBackupReminder() {
+    async function closeBackupReminder() {
       const backupReminder = document.getElementById('backupReminder');
       backupReminder.style.display = 'none';
-      localStorage.setItem('lastBackup', new Date().getTime());
+      await saveSetting('lastBackup', new Date().getTime());
       clearTimeout(backupReminderTimeout);
     }
 
@@ -825,6 +965,7 @@
       document.getElementById('grid6').classList.remove('active');
       document.getElementById('grid8').classList.remove('active');
       document.getElementById('grid' + number).classList.add('active');
+      saveSetting('recipesPerRow', number);
     }
 
     // ציור אייקוני הגריד
@@ -856,17 +997,148 @@
 
     // פונקציה לסגירת חלונות בעת לחיצה על ה-overlay
     function setupPopupCloseOnOverlayClick() {
-      const popups = ['popup', 'formPopup', 'confirmPopup'];
+      const popups = ['popup', 'formPopup', 'confirmPopup', 'aiChatOverlay'];
       popups.forEach(popupId => {
         const popup = document.getElementById(popupId);
+        if (!popup) return;
         popup.addEventListener('click', function(event) {
           if (event.target === popup) {
             if (popupId === 'popup') closePopup();
             if (popupId === 'formPopup') closeFormPopup();
             if (popupId === 'confirmPopup') closeConfirmPopup();
+            if (popupId === 'aiChatOverlay') closeAiChat();
           }
         });
       });
+    }
+
+    // --- צ'אט AI ---
+    function compactRecipes(list) {
+      return (list || []).map(function(r) {
+        return {
+          id: r.id,
+          name: r.name || '',
+          category: r.category || 'שונות',
+          ingredients: (r.ingredients || '').slice(0, 250),
+          instructions: (r.instructions || '').slice(0, 250),
+          rating: r.rating ?? 0
+        };
+      });
+    }
+
+    function renderAiChatMessages() {
+      const el = document.getElementById('aiChatMessages');
+      if (!el) return;
+      el.innerHTML = '';
+      aiChatMessages.forEach(function(m) {
+        const d = document.createElement('div');
+        d.className = 'ai-chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+        d.textContent = m.content || '';
+        el.appendChild(d);
+      });
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function openAiChat() {
+      var ov = document.getElementById('aiChatOverlay');
+      if (ov) ov.style.display = 'flex';
+      if (aiChatMessages.length === 0) {
+        aiChatMessages.push({ role: 'assistant', content: 'שלום! אני כאן כדי לעזור עם מתכונים. תכתוב לי מה תרצה – לחפש מתכון, לקבל רעיונות, או לספר מתכון ואוסיף אותו עבורך. במה אוכל לעזור?' });
+      }
+      renderAiChatMessages();
+      document.getElementById('aiChatInput').value = '';
+      document.getElementById('aiChatInput').focus();
+      var sendBtn = document.getElementById('aiChatSend');
+      if (sendBtn) sendBtn.disabled = false;
+    }
+
+    function closeAiChat() {
+      if (aiChatAbortController) {
+        aiChatAbortController.abort();
+        aiChatAbortController = null;
+      }
+      var ov = document.getElementById('aiChatOverlay');
+      if (ov) ov.style.display = 'none';
+    }
+
+    function applySuggestedRecipe(suggestedRecipe) {
+      if (!suggestedRecipe || typeof suggestedRecipe !== 'object') return;
+      closeAiChat();
+      openFormPopup();
+      document.getElementById('recipeName').value = suggestedRecipe.name || '';
+      document.getElementById('recipeSource').value = suggestedRecipe.source || '';
+      document.getElementById('ingredients').value = suggestedRecipe.ingredients || '';
+      document.getElementById('instructions').value = suggestedRecipe.instructions || '';
+      var cat = suggestedRecipe.category || 'שונות';
+      var sel = document.getElementById('category');
+      if (sel) {
+        if (![].slice.call(sel.options).some(function(o) { return o.value === cat; })) {
+          var opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          sel.appendChild(opt);
+        }
+        sel.value = cat;
+      }
+    }
+
+    function sendAiMessage() {
+      var input = document.getElementById('aiChatInput');
+      var sendBtn = document.getElementById('aiChatSend');
+      var msg = (input && input.value) ? input.value.trim() : '';
+      if (!msg) return;
+
+      if (aiChatAbortController) {
+        aiChatAbortController.abort();
+      }
+      aiChatAbortController = new AbortController();
+
+      aiChatMessages.push({ role: 'user', content: msg });
+      if (input) input.value = '';
+      renderAiChatMessages();
+      if (sendBtn) sendBtn.disabled = true;
+
+      var loading = document.createElement('div');
+      loading.className = 'ai-chat-msg loading';
+      loading.id = 'aiChatLoading';
+      loading.textContent = 'מחפש...';
+      var msgsEl = document.getElementById('aiChatMessages');
+      if (msgsEl) msgsEl.appendChild(loading);
+
+      var url = SUPABASE_URL + '/functions/v1/recipe-ai';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+        body: JSON.stringify({ messages: aiChatMessages, recipes: compactRecipes(recipes) }),
+        signal: aiChatAbortController.signal
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var loadEl = document.getElementById('aiChatLoading');
+          if (loadEl) loadEl.remove();
+          if (sendBtn) sendBtn.disabled = false;
+
+          var reply = (data && data.reply) ? data.reply : 'לא התקבלה תשובה.';
+          aiChatMessages.push({ role: 'assistant', content: reply });
+          renderAiChatMessages();
+
+          var recipeIds = (data && Array.isArray(data.recipeIds)) ? data.recipeIds : [];
+          if (recipeIds.length > 0) {
+            var filtered = recipes.filter(function(r) { return r.id && recipeIds.indexOf(r.id) !== -1; });
+            displayRecipes(filtered);
+          }
+          if (data && data.suggestedRecipe) {
+            applySuggestedRecipe(data.suggestedRecipe);
+          }
+        })
+        .catch(function(err) {
+          if (err && err.name === 'AbortError') return;
+          var loadEl = document.getElementById('aiChatLoading');
+          if (loadEl) loadEl.remove();
+          if (sendBtn) sendBtn.disabled = false;
+          aiChatMessages.push({ role: 'assistant', content: 'לא ניתן להתחבר ל-AI. נא לבדוק חיבור וכו\'.' });
+          renderAiChatMessages();
+        });
     }
 
     // פונקציות לפתיחת וסגירת תפריט הצד
@@ -888,6 +1160,7 @@
     window.closeConfirmPopup = closeConfirmPopup;
     window.downloadRecipe = downloadRecipe;
     window.shareRecipe = shareRecipe;
+    window.copyRecipeLink = copyRecipeLink;
     window.closeBackupReminder = closeBackupReminder;
     window.filterRecipes = filterRecipes;
     window.filterByCategory = filterByCategory;
@@ -901,6 +1174,9 @@
     window.openMenu = openMenu;
     window.closeMenu = closeMenu;
     window.setRecipesPerRow = setRecipesPerRow;
+    window.openAiChat = openAiChat;
+    window.closeAiChat = closeAiChat;
+    window.sendAiMessage = sendAiMessage;
 
     // Timer functionality
     let timerInterval;
@@ -1051,36 +1327,35 @@
     }
 
     function initializeTimer() {
-        const startBtn = document.getElementById('start-timer');
-        const pauseBtn = document.getElementById('pause-timer');
-        const stopBtn = document.getElementById('stop-timer');
-        const presetBtn = document.getElementById('timer-preset');
+        const startButton = document.getElementById('start-timer');
+        const pauseButton = document.getElementById('pause-timer');
+        const stopButton = document.getElementById('stop-timer');
+        const presetButton = document.getElementById('timer-preset');
+        const showTimerButton = document.getElementById('show-timer-btn');
+        const timerContainer = document.querySelector('.timer-container');
 
-        if (startBtn && pauseBtn && stopBtn && presetBtn) {
-            startBtn.addEventListener('click', startTimer);
-            pauseBtn.addEventListener('click', pauseTimer);
-            stopBtn.addEventListener('click', stopTimer);
-            presetBtn.addEventListener('click', togglePresetMenu);
+        // טיימר טוגל
+        showTimerButton.addEventListener('click', () => {
+            const isVisible = timerContainer.style.display !== 'none';
+            timerContainer.style.display = isVisible ? 'none' : 'block';
+            showTimerButton.style.display = isVisible ? 'flex' : 'none';
+            saveSetting('timerVisible', !isVisible);
+        });
 
-            // הוספת מאזינים לכפתורי הזמנים המוגדרים מראש
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const seconds = parseInt(btn.dataset.time);
-                    setTimeInputs(seconds);
-                    togglePresetMenu();
-                    startTimer();
-                });
+        // אתחול הטיימר
+        startButton.addEventListener('click', startTimer);
+        pauseButton.addEventListener('click', pauseTimer);
+        stopButton.addEventListener('click', stopTimer);
+        presetButton.addEventListener('click', togglePresetMenu);
+
+        // הגדרת זמנים מראש
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const seconds = parseInt(btn.dataset.time);
+                setTimeInputs(seconds);
+                document.getElementById('timer-preset-menu').style.display = 'none';
             });
-
-            // סגירת תפריט הזמנים המוגדרים מראש בלחיצה מחוץ לתפריט
-            document.addEventListener('click', (e) => {
-                const menu = document.getElementById('timer-preset-menu');
-                const presetBtn = document.getElementById('timer-preset');
-                if (!menu.contains(e.target) && !presetBtn.contains(e.target)) {
-                    menu.style.display = 'none';
-                }
-            });
-        }
+        });
     }
 
     // פונקציה לשינוי גודל התמונה
@@ -1282,7 +1557,7 @@
         // החזרת כותרת הטופס למצב ההתחלתי
         const formTitle = document.querySelector('.form-popup-content h2');
         if (formTitle) {
-          formTitle.textContent = 'הוסף מתכון חדש';
+          formTitle.textContent = 'הוספת מתכון חדש';
         }
       } catch (e) {
         console.error('Error saving recipe:', e);
@@ -1332,6 +1607,9 @@
             resolve();
           });
         });
+      } else if (editingIndex >= 0 && recipes[editingIndex].image) {
+        // אם אין תמונה חדשה ואנחנו במצב עריכה, נשמור את התמונה הקיימת
+        imageData = recipes[editingIndex].image;
       }
 
       const recipe = {
