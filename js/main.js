@@ -153,10 +153,14 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             initializeTimer();
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
-            window.addEventListener('popstate', function() {
-              var p = document.getElementById('popup');
-              if (p && p.style.display === 'flex') closePopup();
-            });
+            // הוסף event listener רק פעם אחת כדי למנוע הוספה חוזרת
+            if (!window.popstateHandlerAdded) {
+              window.addEventListener('popstate', function() {
+                var p = document.getElementById('popup');
+                if (p && p.style.display === 'flex') closePopup();
+              });
+              window.popstateHandlerAdded = true;
+            }
         } catch (error) {
             console.error('שגיאה בטעינת מתכונים:', error);
             recipes = [];
@@ -172,10 +176,14 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             initializeTimer();
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
-            window.addEventListener('popstate', function() {
+            // הוסף event listener רק פעם אחת כדי למנוע הוספה חוזרת
+            if (!window.popstateHandlerAdded) {
+              window.addEventListener('popstate', function() {
                 var p = document.getElementById('popup');
                 if (p && p.style.display === 'flex') closePopup();
-            });
+              });
+              window.popstateHandlerAdded = true;
+            }
         }
     }
 
@@ -378,9 +386,26 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const img = document.createElement('img');
         img.src = fixImagePath(recipe.image, recipe.category);
         img.alt = recipe.name;
+        let errorCount = 0;
         img.onerror = function() {
+          errorCount++;
           // אם התמונה נכשלה בטעינה, השתמש בתמונת ברירת מחדל
-          this.src = getRandomDefaultImageForCategory(recipe.category);
+          // אבל רק פעם אחת כדי למנוע לולאה אינסופית
+          if (errorCount === 1) {
+            const fallbackImage = getRandomDefaultImageForCategory(recipe.category);
+            // בדוק שהתמונה החדשה שונה מהקודמת כדי למנוע לולאה
+            if (this.src !== fallbackImage) {
+              this.src = fallbackImage;
+            } else {
+              // אם גם תמונת ברירת המחדל נכשלה, השתמש בתמונה ריקה או תמונת placeholder
+              this.style.display = 'none';
+              this.onerror = null; // עצור את הלולאה
+            }
+          } else {
+            // אם כבר ניסינו פעם אחת, עצור את הלולאה
+            this.style.display = 'none';
+            this.onerror = null;
+          }
         };
         card.appendChild(img);
 
