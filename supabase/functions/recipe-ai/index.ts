@@ -5,15 +5,35 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemi
 
 const CATEGORIES = ["לחמים", "מרקים", "מנה עיקרית", "תוספות", "סלטים", "שונות", "עוגות", "קינוחים"];
 
-const SYSTEM = `אתה מנהל **שיחה מתמשכת** עם המשתמש על מתכונים. ענה תמיד בעברית, בצורה ידידותית ושיחהית. זכור את ההקשר מההודעות הקודמות, התייחס למה שנאמר, ושאל שאלות המשך כשמתאים.
+const SYSTEM = `אתה עוזר מתכונים בעברית. ענה תמיד בצורה ידידותית ושיחתית.
 
 יש לך שתי אפשרויות:
 
-1) **הצעת מתכונים**: כשהמשתמש מבקש מתכון, המלצה, רעיון (למשל: עוגת גבינה, מתכון קל בשרי, משהו עם ביצים) – הצע רק מתכונים מהרשימה שנשלחה לך (recipes). החזר ב-JSON: reply (טקסט תשובה ידידותי) ו-recipeIds (מערך של id מהרשימה שמתאימים). אם אין התאמות – reply הסבר ו-recipeIds מערך ריק.
+1) **חיפוש מתכונים**: כשהמשתמש מחפש מתכון קיים – החזר recipeIds עם המתאימים מהרשימה.
 
-2) **הוספת מתכון**: כשהמשתמש מתאר מתכון להוספה (הוסף מתכון, רושם מתכון, כתוב מתכון, וכיו"ב) – חלץ מהטקסט: name, ingredients (טקסט עם שורות), instructions (טקסט עם שורות), category (חובה – בחר אחת מ: ${CATEGORIES.join(", ")}), source (אם ציין מקור). החזר reply (למשל: "הכנתי את המתכון, תוכל לערוך ולשמור") ו-suggestedRecipe עם השדות. אם חסר מידע – הערך null באותו שדה; category חייב להיות מאחת הרשימה.
+2) **הוספת מתכון חדש**: כשהמשתמש אומר "הוסף מתכון", "רשום מתכון", "תכניס מתכון" או מתאר מתכון חדש – חלץ את הפרטים והחזר suggestedRecipe.
 
-תמיד החזר JSON בלבד בעל המבנה: { "reply": string, "recipeIds"?: string[], "suggestedRecipe"?: { "name": string, "ingredients": string, "instructions": string, "category": string, "source"?: string } }`;
+**חשוב מאוד להוספת מתכון:**
+- name: שם המתכון (חובה)
+- ingredients: רשימת המצרכים שהמשתמש נתן, כל מצרך בשורה חדשה (חובה - לעולם לא להחזיר null!)
+- instructions: הוראות ההכנה שהמשתמש נתן, כל שלב בשורה חדשה (חובה - לעולם לא להחזיר null!)
+- category: קטגוריה אחת מ: ${CATEGORIES.join(", ")} (חובה)
+- source: מקור המתכון אם צוין
+
+**דוגמה:**
+משתמש: "מתכון לפיצה: בצק מלח 4 כוסות סוכר, ההוראות זה לערבב הכל ולשים על הראש"
+תשובה:
+{
+  "reply": "הוספתי את המתכון לפיצה!",
+  "suggestedRecipe": {
+    "name": "פיצה",
+    "ingredients": "בצק\\nמלח\\n4 כוסות סוכר",
+    "instructions": "לערבב הכל\\nלשים על הראש",
+    "category": "מנה עיקרית"
+  }
+}
+
+תמיד החזר JSON בלבד.`;
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -26,9 +46,10 @@ const RESPONSE_SCHEMA = {
         name: { type: "string" },
         ingredients: { type: "string" },
         instructions: { type: "string" },
-        category: { type: "string" },
+        category: { type: "string", enum: CATEGORIES },
         source: { type: "string" }
-      }
+      },
+      required: ["name", "ingredients", "instructions", "category"]
     }
   },
   required: [ "reply" ]
@@ -114,8 +135,19 @@ Deno.serve(async (req: Request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  // Try built-in SUPABASE_SERVICE_ROLE_KEY first, then custom SERVICE_ROLE_KEY as fallback
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "";
   const supabaseAdmin = supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey) : null;
+
+  console.log("Environment check:", {
+    hasSupabaseUrl: !!supabaseUrl,
+    hasServiceKey: !!serviceKey,
+    hasSupabaseAdmin: !!supabaseAdmin
+  });
+
+  if (!serviceKey) {
+    console.warn("No service key found. Tried SUPABASE_SERVICE_ROLE_KEY and SERVICE_ROLE_KEY. Recipe insertion will be disabled.");
+  }
 
   let recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[];
   if (supabaseAdmin) {
@@ -186,25 +218,41 @@ Deno.serve(async (req: Request) => {
   const suggestedRecipe = parsed?.suggestedRecipe && typeof parsed.suggestedRecipe === "object" ? parsed.suggestedRecipe : undefined;
 
   let insertedRecipeId: string | null = null;
-  if (suggestedRecipe && supabaseAdmin) {
-    const row = {
-      name: suggestedRecipe.name || "",
-      source: suggestedRecipe.source || null,
-      ingredients: suggestedRecipe.ingredients || "",
-      instructions: suggestedRecipe.instructions || "",
-      category: suggestedRecipe.category || "שונות",
-      notes: null,
-      recipe_link: null,
-      video_url: null,
-      image: null,
-      rating: 0
-    };
-    const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
-    if (!error && inserted?.id) insertedRecipeId = inserted.id;
+  let insertionError: string | null = null;
+
+  if (suggestedRecipe) {
+    if (!supabaseAdmin) {
+      console.error("Cannot insert recipe: supabaseAdmin is null (SUPABASE_SERVICE_ROLE_KEY not set)");
+      insertionError = "לא ניתן להוסיף מתכון אוטומטית - חסרה הגדרת SUPABASE_SERVICE_ROLE_KEY. המתכון יוצג בטופס לשמירה ידנית.";
+    } else {
+      const row = {
+        name: suggestedRecipe.name || "",
+        source: suggestedRecipe.source || null,
+        ingredients: suggestedRecipe.ingredients || "",
+        instructions: suggestedRecipe.instructions || "",
+        category: suggestedRecipe.category || "שונות",
+        notes: null,
+        recipe_link: null,
+        video_url: null,
+        image: null,
+        rating: 0
+      };
+      const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
+      if (error) {
+        console.error("Failed to insert recipe:", error);
+        insertionError = `שגיאה בהוספת המתכון: ${error.message}. המתכון יוצג בטופס לשמירה ידנית.`;
+      } else if (inserted?.id) {
+        insertedRecipeId = inserted.id;
+        console.log("Recipe inserted successfully:", insertedRecipeId);
+      }
+    }
   }
 
+  // If insertion failed, append error info to reply
+  const finalReply = insertionError ? `${reply}\n\n⚠️ ${insertionError}` : reply;
+
   return new Response(
-    JSON.stringify({ reply, recipeIds, suggestedRecipe: suggestedRecipe || null, insertedRecipeId }),
+    JSON.stringify({ reply: finalReply, recipeIds, suggestedRecipe: suggestedRecipe || null, insertedRecipeId }),
     { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
   );
 });

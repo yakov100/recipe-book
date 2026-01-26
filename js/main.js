@@ -1237,6 +1237,76 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         });
     }
 
+    // --- הקלטה קולית ---
+    var voiceRecognition = null;
+    var isRecording = false;
+
+    function toggleVoiceRecording() {
+      if (isRecording) {
+        stopVoiceRecording();
+      } else {
+        startVoiceRecording();
+      }
+    }
+
+    function startVoiceRecording() {
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('הדפדפן שלך לא תומך בהקלטה קולית. נסה Chrome או Edge.');
+        return;
+      }
+
+      voiceRecognition = new SpeechRecognition();
+      voiceRecognition.lang = 'he-IL'; // עברית
+      voiceRecognition.continuous = true;
+      voiceRecognition.interimResults = true;
+
+      voiceRecognition.onresult = function(event) {
+        var transcript = '';
+        for (var i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        document.getElementById('aiChatInput').value = transcript;
+      };
+
+      voiceRecognition.onerror = function(event) {
+        console.error('Voice recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          alert('אנא אשר גישה למיקרופון בדפדפן.');
+        }
+        stopVoiceRecording();
+      };
+
+      voiceRecognition.onend = function() {
+        stopVoiceRecording();
+      };
+
+      voiceRecognition.start();
+      isRecording = true;
+      updateVoiceButton(true);
+    }
+
+    function stopVoiceRecording() {
+      if (voiceRecognition) {
+        voiceRecognition.stop();
+        voiceRecognition = null;
+      }
+      isRecording = false;
+      updateVoiceButton(false);
+    }
+
+    function updateVoiceButton(recording) {
+      var btn = document.getElementById('aiChatVoice');
+      if (!btn) return;
+      if (recording) {
+        btn.classList.add('recording');
+        btn.innerHTML = '<i class="fas fa-stop"></i>';
+      } else {
+        btn.classList.remove('recording');
+        btn.innerHTML = '<i class="fas fa-microphone"></i>';
+      }
+    }
+
     // פונקציות לפתיחת וסגירת תפריט הצד
     function openMenu() {
       document.getElementById('sideMenu').style.width = '250px';
@@ -1273,6 +1343,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     window.openAiChat = openAiChat;
     window.closeAiChat = closeAiChat;
     window.sendAiMessage = sendAiMessage;
+    window.toggleVoiceRecording = toggleVoiceRecording;
 
     // Timer functionality
     let timerInterval;
