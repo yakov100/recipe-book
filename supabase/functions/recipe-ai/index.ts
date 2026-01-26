@@ -70,11 +70,13 @@ async function generateRecipeImage(recipeName: string, category: string): Promis
 
 const SYSTEM = `אתה עוזר מתכונים בעברית. ענה תמיד בצורה ידידותית ושיחתית.
 
-יש לך שתי אפשרויות:
+יש לך שלוש אפשרויות:
 
 1) **חיפוש מתכונים**: כשהמשתמש מחפש מתכון קיים – החזר recipeIds עם המתאימים מהרשימה.
 
 2) **הוספת מתכון חדש**: כשהמשתמש אומר "הוסף מתכון", "רשום מתכון", "תכניס מתכון" או מתאר מתכון חדש – חלץ את הפרטים והחזר suggestedRecipe.
+
+3) **החלפת תמונה**: כשהמשתמש אומר "תחליף תמונה", "תמונה חדשה", "החלף את התמונה של", "צור תמונה חדשה ל" – מצא את המתכון ברשימה והחזר regenerateImageForRecipeId עם ה-id של המתכון.
 
 **חשוב מאוד להוספת מתכון:**
 - name: שם המתכון (חובה)
@@ -83,7 +85,7 @@ const SYSTEM = `אתה עוזר מתכונים בעברית. ענה תמיד ב�
 - category: קטגוריה אחת מ: ${CATEGORIES.join(", ")} (חובה)
 - source: מקור המתכון אם צוין
 
-**דוגמה:**
+**דוגמה להוספת מתכון:**
 משתמש: "מתכון לפיצה: בצק מלח 4 כוסות סוכר, ההוראות זה לערבב הכל ולשים על הראש"
 תשובה:
 {
@@ -94,6 +96,14 @@ const SYSTEM = `אתה עוזר מתכונים בעברית. ענה תמיד ב�
     "instructions": "לערבב הכל\\nלשים על הראש",
     "category": "מנה עיקרית"
   }
+}
+
+**דוגמה להחלפת תמונה:**
+משתמש: "תחליף את התמונה של שקשוקה"
+תשובה:
+{
+  "reply": "מייצר תמונה חדשה לשקשוקה...",
+  "regenerateImageForRecipeId": "abc123"
 }
 
 תמיד החזר JSON בלבד.`;
@@ -113,7 +123,8 @@ const RESPONSE_SCHEMA = {
         source: { type: "string" }
       },
       required: ["name", "ingredients", "instructions", "category"]
-    }
+    },
+    regenerateImageForRecipeId: { type: "string" }
   },
   required: [ "reply" ]
 };
@@ -269,7 +280,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let parsed: { reply?: string; recipeIds?: string[]; suggestedRecipe?: { name: string; ingredients: string; instructions: string; category: string; source?: string } };
+  let parsed: { reply?: string; recipeIds?: string[]; suggestedRecipe?: { name: string; ingredients: string; instructions: string; category: string; source?: string }; regenerateImageForRecipeId?: string };
   try {
     parsed = JSON.parse(text);
   } catch {
@@ -279,6 +290,7 @@ Deno.serve(async (req: Request) => {
   const reply = parsed?.reply ?? "לא התקבלה תשובה.";
   const recipeIds = Array.isArray(parsed?.recipeIds) ? parsed.recipeIds : [];
   const suggestedRecipe = parsed?.suggestedRecipe && typeof parsed.suggestedRecipe === "object" ? parsed.suggestedRecipe : undefined;
+  const regenerateImageForRecipeId = parsed?.regenerateImageForRecipeId || null;
 
   let insertedRecipeId: string | null = null;
   let insertionError: string | null = null;
@@ -316,6 +328,29 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Handle image regeneration request
+  let regeneratedImage: string | null = null;
+  if (regenerateImageForRecipeId && supabaseAdmin) {
+    // Find the recipe to get its name and category
+    const targetRecipe = recipes.find(r => r.id === regenerateImageForRecipeId);
+    if (targetRecipe) {
+      console.log("Regenerating image for recipe:", targetRecipe.name);
+      regeneratedImage = await generateRecipeImage(targetRecipe.name, targetRecipe.category || "שונות");
+      if (regeneratedImage) {
+        // Update the recipe in DB
+        const { error } = await supabaseAdmin
+          .from("recipes")
+          .update({ image: regeneratedImage })
+          .eq("id", regenerateImageForRecipeId);
+        if (error) {
+          console.error("Failed to update recipe image:", error);
+        } else {
+          console.log("Recipe image updated successfully");
+        }
+      }
+    }
+  }
+
   // Add generated image to suggestedRecipe for client-side use
   const suggestedRecipeWithImage = suggestedRecipe ? { ...suggestedRecipe, image: generatedImage } : null;
 
@@ -323,7 +358,14 @@ Deno.serve(async (req: Request) => {
   const finalReply = insertionError ? `${reply}\n\n⚠️ ${insertionError}` : reply;
 
   return new Response(
-    JSON.stringify({ reply: finalReply, recipeIds, suggestedRecipe: suggestedRecipeWithImage, insertedRecipeId }),
+    JSON.stringify({
+      reply: finalReply,
+      recipeIds,
+      suggestedRecipe: suggestedRecipeWithImage,
+      insertedRecipeId,
+      regenerateImageForRecipeId: regeneratedImage ? regenerateImageForRecipeId : null,
+      regeneratedImage
+    }),
     { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
   );
 });
