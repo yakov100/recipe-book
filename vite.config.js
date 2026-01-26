@@ -7,13 +7,28 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Plugin to fix manifest.json path in HTML
+// Plugin to fix manifest.json path in HTML after build
 const fixManifestPathPlugin = () => {
   return {
     name: 'fix-manifest-path',
-    transformIndexHtml(html) {
-      // Replace hashed manifest path with root manifest.json
-      return html.replace(/\/assets\/manifest-[^"']+\.json/g, '/manifest.json');
+    closeBundle() {
+      const indexPath = path.join(__dirname, 'dist', 'index.html');
+      try {
+        if (fs.existsSync(indexPath)) {
+          let html = fs.readFileSync(indexPath, 'utf8');
+          const originalHtml = html;
+          // Replace hashed manifest path with root manifest.json
+          html = html.replace(/\/assets\/manifest-[^"']+\.json/g, '/manifest.json');
+          
+          if (html !== originalHtml) {
+            fs.writeFileSync(indexPath, html, 'utf8');
+            console.log('✅ Fixed manifest.json path in index.html');
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️  Could not fix manifest path:', error.message);
+        // Don't fail the build
+      }
     }
   };
 };
