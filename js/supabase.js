@@ -27,22 +27,30 @@ const keyOkResult = keyOk(rawKey);
 console.log('[Supabase Init] urlOk result:', urlOkResult);
 console.log('[Supabase Init] keyOk result:', keyOkResult);
 
-let supabaseUrl = urlOk(rawUrl) ? rawUrl.trim() : FALLBACK_URL;
+// Always use fallback if rawUrl is invalid - ensure we never have undefined/empty URL
+let supabaseUrl = FALLBACK_URL;
+if (urlOk(rawUrl)) {
+    supabaseUrl = rawUrl.trim();
+} else {
+    console.warn('[Supabase Init] rawUrl invalid, using fallback. rawUrl was:', rawUrl, 'type:', typeof rawUrl);
+}
+
 let supabaseAnonKey = keyOk(rawKey) ? rawKey : FALLBACK_ANON_KEY;
 
 console.log('[Supabase Init] Final supabaseUrl:', supabaseUrl);
 console.log('[Supabase Init] Final supabaseAnonKey exists:', !!supabaseAnonKey);
 
-// Final validation - ensure supabaseUrl is always valid before createClient
+// Final validation - ensure supabaseUrl is always valid before createClient (double check)
 if (!supabaseUrl || typeof supabaseUrl !== 'string' || !supabaseUrl.startsWith('https://')) {
-    console.warn('[Supabase Init] Invalid supabaseUrl detected, forcing fallback:', supabaseUrl);
+    console.error('[Supabase Init] CRITICAL: supabaseUrl still invalid after fallback! Forcing FALLBACK_URL');
     supabaseUrl = FALLBACK_URL;
 }
 
 let supabase = null;
 try {
     if (supabaseUrl && supabaseAnonKey) {
-        console.log('[Supabase Init] Creating client with URL:', supabaseUrl.substring(0, 30) + '...');
+        const urlPreview = supabaseUrl && typeof supabaseUrl === 'string' ? supabaseUrl.substring(0, 30) + '...' : 'INVALID';
+        console.log('[Supabase Init] Creating client with URL:', urlPreview);
         supabase = createClient(supabaseUrl, supabaseAnonKey, {
             auth: { detectSessionInUrl: false }
         });
