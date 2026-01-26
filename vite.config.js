@@ -9,7 +9,8 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets'
   },
-  publicDir: false,
+  // חשוב: publicDir צריך להיות 'assets' כדי ש-Vite יעתיק את התמונות ל-dist
+  publicDir: 'assets',
   root: '.',
   base: '/'
 });

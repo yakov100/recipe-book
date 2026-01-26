@@ -199,49 +199,50 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     // אובייקט המכיל את תמונות ברירת המחדל לפי קטגוריות
     // שימוש ב-basePath כדי שיעבדו גם ב-GitHub Pages (תת-תיקייה)
+    // ב-Vercel (עם Vite build), התמונות מועתקות מ-assets ל-dist ישירות, אז הנתיב הוא /default-images/...
     const getDefaultImagesByCategory = () => {
         const bp = basePath || '';
         const prefix = bp ? bp + '/' : '';
         return {
             'לחמים': [
-                `${prefix}assets/default-images/breads/1.jpg`,
-                `${prefix}assets/default-images/breads/2.jpg`,
-                `${prefix}assets/default-images/breads/3.jpg`
+                `${prefix}default-images/breads/1.jpg`,
+                `${prefix}default-images/breads/2.jpg`,
+                `${prefix}default-images/breads/3.jpg`
             ],
             'מרקים': [
-                `${prefix}assets/default-images/soups/1.jpg`,
-                `${prefix}assets/default-images/soups/2.jpg`,
-                `${prefix}assets/default-images/soups/3.jpg`
+                `${prefix}default-images/soups/1.jpg`,
+                `${prefix}default-images/soups/2.jpg`,
+                `${prefix}default-images/soups/3.jpg`
             ],
             'מנה עיקרית': [
-                `${prefix}assets/default-images/main-dishes/1.jpg`,
-                `${prefix}assets/default-images/main-dishes/2.jpg`,
-                `${prefix}assets/default-images/main-dishes/3.jpg`
+                `${prefix}default-images/main-dishes/1.jpg`,
+                `${prefix}default-images/main-dishes/2.jpg`,
+                `${prefix}default-images/main-dishes/3.jpg`
             ],
             'תוספות': [
-                `${prefix}assets/default-images/sides/1.jpg`,
-                `${prefix}assets/default-images/sides/2.jpg`,
-                `${prefix}assets/default-images/sides/3.jpg`
+                `${prefix}default-images/sides/1.jpg`,
+                `${prefix}default-images/sides/2.jpg`,
+                `${prefix}default-images/sides/3.jpg`
             ],
             'סלטים': [
-                `${prefix}assets/default-images/salads/1.jpg`,
-                `${prefix}assets/default-images/salads/2.jpg`,
-                `${prefix}assets/default-images/salads/3.jpg`
+                `${prefix}default-images/salads/1.jpg`,
+                `${prefix}default-images/salads/2.jpg`,
+                `${prefix}default-images/salads/3.jpg`
             ],
             'שונות': [
-                `${prefix}assets/default-images/other/1.jpg`,
-                `${prefix}assets/default-images/other/2.jpg`,
-                `${prefix}assets/default-images/other/3.jpg`
+                `${prefix}default-images/other/1.jpg`,
+                `${prefix}default-images/other/2.jpg`,
+                `${prefix}default-images/other/3.jpg`
             ],
             'עוגות': [
-                `${prefix}assets/default-images/cakes/1.jpg`,
-                `${prefix}assets/default-images/cakes/2.jpg`,
-                `${prefix}assets/default-images/cakes/3.jpg`
+                `${prefix}default-images/cakes/1.jpg`,
+                `${prefix}default-images/cakes/2.jpg`,
+                `${prefix}default-images/cakes/3.jpg`
             ],
             'קינוחים': [
-                `${prefix}assets/default-images/desserts/1.jpg`,
-                `${prefix}assets/default-images/desserts/2.jpg`,
-                `${prefix}assets/default-images/desserts/3.jpg`
+                `${prefix}default-images/desserts/1.jpg`,
+                `${prefix}default-images/desserts/2.jpg`,
+                `${prefix}default-images/desserts/3.jpg`
             ]
         };
     };
@@ -259,9 +260,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const bp = basePath || '';
         const prefix = bp ? bp + '/' : '';
         const otherImages = [
-            `${prefix}assets/default-images/other/1.jpg`,
-            `${prefix}assets/default-images/other/2.jpg`,
-            `${prefix}assets/default-images/other/3.jpg`
+            `${prefix}default-images/other/1.jpg`,
+            `${prefix}default-images/other/2.jpg`,
+            `${prefix}default-images/other/3.jpg`
         ];
         return otherImages[Math.floor(Math.random() * otherImages.length)];
     }
@@ -283,12 +284,18 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         }
         
         // אם זה נתיב מוחלט שמתחיל ב-/, הוסף basePath
-        if (imagePath.startsWith('/assets/') || imagePath.startsWith('/')) {
+        if (imagePath.startsWith('/default-images/') || 
+            imagePath.startsWith('/assets/') || 
+            imagePath.startsWith('/')) {
             return bp + imagePath;
         }
         
-        // אם זה נתיב יחסי שמתחיל ב-assets/, שנה אותו למוחלט עם basePath
-        if (imagePath.startsWith('assets/')) {
+        // אם זה נתיב יחסי שמתחיל ב-assets/ או default-images/, שנה אותו למוחלט עם basePath
+        if (imagePath.startsWith('assets/default-images/')) {
+            // המר מ-assets/default-images/ ל-default-images/ (כי ב-Vite build זה מועתק ישירות)
+            return prefix + imagePath.replace('assets/', '');
+        }
+        if (imagePath.startsWith('assets/') || imagePath.startsWith('default-images/')) {
             return prefix + imagePath;
         }
         
