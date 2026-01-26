@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "",
+  "installCommand": "npm install",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/recipe", "destination": "/index.html" },
