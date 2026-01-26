@@ -526,6 +526,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                   <button class="action-btn" onclick="downloadRecipe(${index})" data-tooltip="הורד">
                     <i class="fas fa-download"></i>
                   </button>
+                  <button class="action-btn" onclick="regenerateImage(${index})" data-tooltip="צור תמונה חדשה">
+                    <i class="fas fa-image"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -558,6 +561,66 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         navigator.clipboard.writeText(url).then(function() { alert('הקישור הועתק'); }).catch(function() { alert('הקישור: ' + url); });
       } else {
         alert('הקישור: ' + url);
+      }
+    }
+
+    async function regenerateImage(index) {
+      const recipe = recipes[index];
+      if (!recipe || !recipe.id) {
+        alert('לא ניתן לחדש תמונה למתכון שלא נשמר.');
+        return;
+      }
+
+      // Show loading state
+      const actionButtons = document.querySelectorAll('.action-btn');
+      actionButtons.forEach(btn => btn.disabled = true);
+
+      // Create loading indicator
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'regenerateLoading';
+      loadingDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px 40px; border-radius: 10px; z-index: 10000; font-size: 18px;';
+      loadingDiv.textContent = 'מייצר תמונה חדשה...';
+      document.body.appendChild(loadingDiv);
+
+      try {
+        const url = supabaseUrl + '/functions/v1/regenerate-image';
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + supabaseAnonKey
+          },
+          body: JSON.stringify({
+            recipeId: recipe.id,
+            recipeName: recipe.name,
+            category: recipe.category
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.image) {
+          // Update local recipe data
+          recipes[index].image = data.image;
+
+          // Refresh the display
+          displayRecipes(recipes);
+          showRecipe(index);
+
+          alert('התמונה עודכנה בהצלחה!');
+        } else {
+          alert('שגיאה ביצירת תמונה: ' + (data.error || 'שגיאה לא ידועה'));
+        }
+      } catch (error) {
+        console.error('Error regenerating image:', error);
+        alert('שגיאה ביצירת תמונה. נסה שוב.');
+      } finally {
+        // Remove loading indicator
+        const loading = document.getElementById('regenerateLoading');
+        if (loading) loading.remove();
+
+        // Re-enable buttons
+        actionButtons.forEach(btn => btn.disabled = false);
       }
     }
 
@@ -1224,6 +1287,15 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             updateCategoryButtons();
             var idx = recipes.findIndex(function(r) { return r && r.id === data.insertedRecipeId; });
             if (idx >= 0) showRecipe(idx);
+          } else if (data && data.regenerateImageForRecipeId && data.regeneratedImage) {
+            // Handle image regeneration from AI
+            closeAiChat();
+            var idx = recipes.findIndex(function(r) { return r && r.id === data.regenerateImageForRecipeId; });
+            if (idx >= 0) {
+              recipes[idx].image = data.regeneratedImage;
+              displayRecipes(recipes);
+              showRecipe(idx);
+            }
           } else if (recipeIds.length > 0) {
             var filtered = recipes.filter(function(r) { return r.id && recipeIds.indexOf(r.id) !== -1; });
             displayRecipes(filtered);
@@ -1348,6 +1420,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     window.closeAiChat = closeAiChat;
     window.sendAiMessage = sendAiMessage;
     window.toggleVoiceRecording = toggleVoiceRecording;
+    window.regenerateImage = regenerateImage;
 
     // Timer functionality
     let timerInterval;
