@@ -1,10 +1,8 @@
 const CACHE_NAME = 'recipe-book-v1';
+// Cache only essential files that always exist
 const urlsToCache = [
   '/',
   '/index.html',
-  '/css/style.css',
-  '/js/main.js',
-  '/js/supabase.js',
   '/manifest.json',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
   'https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js'
@@ -16,7 +14,18 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Cache opened');
-        return cache.addAll(urlsToCache);
+        // Try to cache files, but don't fail if some are missing
+        return Promise.allSettled(
+          urlsToCache.map(url => 
+            cache.add(url).catch(err => {
+              console.warn(`Failed to cache ${url}:`, err.message);
+              return null;
+            })
+          )
+        );
+      })
+      .then(() => {
+        console.log('Cache installation completed');
       })
       .catch((err) => {
         console.error('Cache installation failed:', err);
