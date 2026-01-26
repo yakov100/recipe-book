@@ -7,6 +7,16 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     let backupReminderTimeout;
     let aiChatMessages = [];
     let aiChatAbortController = null;
+    
+    // קביעת base path - עבור GitHub Pages (/recipe-book) או שורש (/)
+    const getBasePath = () => {
+        // בדוק אם אנחנו ב-GitHub Pages (הנתיב מכיל /recipe-book)
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/recipe-book')) {
+            return '/recipe-book';
+        }
+        return '';
+    };
+    const basePath = getBasePath();
 
     function recipeToRow(r) {
         return {
@@ -188,49 +198,54 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     // אובייקט המכיל את תמונות ברירת המחדל לפי קטגוריות
-    // שימוש בנתיבים מוחלטים (מתחילים ב-/) כדי שיעבדו גם ב-GitHub Pages
-    const defaultImagesByCategory = {
-        'לחמים': [
-            '/assets/default-images/breads/1.jpg',
-            '/assets/default-images/breads/2.jpg',
-            '/assets/default-images/breads/3.jpg'
-        ],
-        'מרקים': [
-            '/assets/default-images/soups/1.jpg',
-            '/assets/default-images/soups/2.jpg',
-            '/assets/default-images/soups/3.jpg'
-        ],
-        'מנה עיקרית': [
-            '/assets/default-images/main-dishes/1.jpg',
-            '/assets/default-images/main-dishes/2.jpg',
-            '/assets/default-images/main-dishes/3.jpg'
-        ],
-        'תוספות': [
-            '/assets/default-images/sides/1.jpg',
-            '/assets/default-images/sides/2.jpg',
-            '/assets/default-images/sides/3.jpg'
-        ],
-        'סלטים': [
-            '/assets/default-images/salads/1.jpg',
-            '/assets/default-images/salads/2.jpg',
-            '/assets/default-images/salads/3.jpg'
-        ],
-        'שונות': [
-            '/assets/default-images/other/1.jpg',
-            '/assets/default-images/other/2.jpg',
-            '/assets/default-images/other/3.jpg'
-        ],
-        'עוגות': [
-            '/assets/default-images/cakes/1.jpg',
-            '/assets/default-images/cakes/2.jpg',
-            '/assets/default-images/cakes/3.jpg'
-        ],
-        'קינוחים': [
-            '/assets/default-images/desserts/1.jpg',
-            '/assets/default-images/desserts/2.jpg',
-            '/assets/default-images/desserts/3.jpg'
-        ]
+    // שימוש ב-basePath כדי שיעבדו גם ב-GitHub Pages (תת-תיקייה)
+    const getDefaultImagesByCategory = () => {
+        const bp = basePath || '';
+        const prefix = bp ? bp + '/' : '';
+        return {
+            'לחמים': [
+                `${prefix}assets/default-images/breads/1.jpg`,
+                `${prefix}assets/default-images/breads/2.jpg`,
+                `${prefix}assets/default-images/breads/3.jpg`
+            ],
+            'מרקים': [
+                `${prefix}assets/default-images/soups/1.jpg`,
+                `${prefix}assets/default-images/soups/2.jpg`,
+                `${prefix}assets/default-images/soups/3.jpg`
+            ],
+            'מנה עיקרית': [
+                `${prefix}assets/default-images/main-dishes/1.jpg`,
+                `${prefix}assets/default-images/main-dishes/2.jpg`,
+                `${prefix}assets/default-images/main-dishes/3.jpg`
+            ],
+            'תוספות': [
+                `${prefix}assets/default-images/sides/1.jpg`,
+                `${prefix}assets/default-images/sides/2.jpg`,
+                `${prefix}assets/default-images/sides/3.jpg`
+            ],
+            'סלטים': [
+                `${prefix}assets/default-images/salads/1.jpg`,
+                `${prefix}assets/default-images/salads/2.jpg`,
+                `${prefix}assets/default-images/salads/3.jpg`
+            ],
+            'שונות': [
+                `${prefix}assets/default-images/other/1.jpg`,
+                `${prefix}assets/default-images/other/2.jpg`,
+                `${prefix}assets/default-images/other/3.jpg`
+            ],
+            'עוגות': [
+                `${prefix}assets/default-images/cakes/1.jpg`,
+                `${prefix}assets/default-images/cakes/2.jpg`,
+                `${prefix}assets/default-images/cakes/3.jpg`
+            ],
+            'קינוחים': [
+                `${prefix}assets/default-images/desserts/1.jpg`,
+                `${prefix}assets/default-images/desserts/2.jpg`,
+                `${prefix}assets/default-images/desserts/3.jpg`
+            ]
+        };
     };
+    const defaultImagesByCategory = getDefaultImagesByCategory();
 
     // פונקציה שמחזירה תמונת ברירת מחדל אקראית לפי קטגוריה
     function getRandomDefaultImageForCategory(category) {
@@ -241,10 +256,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         }
         
         // אם אין קטגוריה או שהקטגוריה לא קיימת, השתמש בתיקיית 'other'
+        const bp = basePath || '';
+        const prefix = bp ? bp + '/' : '';
         const otherImages = [
-            '/assets/default-images/other/1.jpg',
-            '/assets/default-images/other/2.jpg',
-            '/assets/default-images/other/3.jpg'
+            `${prefix}assets/default-images/other/1.jpg`,
+            `${prefix}assets/default-images/other/2.jpg`,
+            `${prefix}assets/default-images/other/3.jpg`
         ];
         return otherImages[Math.floor(Math.random() * otherImages.length)];
     }
@@ -255,18 +272,24 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             return getRandomDefaultImageForCategory(category);
         }
         
-        // אם זה נתיב מלא (מתחיל ב-http, data:, או /assets/), החזר כפי שהוא
+        const bp = basePath || '';
+        const prefix = bp ? bp + '/' : '';
+        
+        // אם זה נתיב מלא (מתחיל ב-http, data:), החזר כפי שהוא
         if (imagePath.startsWith('http://') || 
             imagePath.startsWith('https://') || 
-            imagePath.startsWith('data:') ||
-            imagePath.startsWith('/assets/') ||
-            imagePath.startsWith('/')) {
+            imagePath.startsWith('data:')) {
             return imagePath;
         }
         
-        // אם זה נתיב יחסי שמתחיל ב-assets/, שנה אותו למוחלט
+        // אם זה נתיב מוחלט שמתחיל ב-/, הוסף basePath
+        if (imagePath.startsWith('/assets/') || imagePath.startsWith('/')) {
+            return bp + imagePath;
+        }
+        
+        // אם זה נתיב יחסי שמתחיל ב-assets/, שנה אותו למוחלט עם basePath
         if (imagePath.startsWith('assets/')) {
-            return '/' + imagePath;
+            return prefix + imagePath;
         }
         
         // אם זה רק שם קובץ (כמו "1.jpg" ללא נתיב), מצא את הנתיב המלא לפי קטגוריה
