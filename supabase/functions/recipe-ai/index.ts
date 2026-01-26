@@ -2,8 +2,69 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 
 const CATEGORIES = ["לחמים", "מרקים", "מנה עיקרית", "תוספות", "סלטים", "שונות", "עוגות", "קינוחים"];
+
+// Map Hebrew categories to English for better image generation prompts
+const CATEGORY_EN: Record<string, string> = {
+  "לחמים": "bread and baked goods",
+  "מרקים": "soup",
+  "מנה עיקרית": "main dish",
+  "תוספות": "side dish",
+  "סלטים": "salad",
+  "שונות": "food",
+  "עוגות": "cake",
+  "קינוחים": "dessert"
+};
+
+/** Generate a recipe image using DALL-E 3 */
+async function generateRecipeImage(recipeName: string, category: string): Promise<string | null> {
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!openaiKey) {
+    console.log("OPENAI_API_KEY not set, skipping image generation");
+    return null;
+  }
+
+  const categoryEn = CATEGORY_EN[category] || "food";
+  const prompt = `Professional food photography of ${recipeName}, ${categoryEn}, appetizing, well-lit, top-down view on a clean elegant background, high quality, photorealistic`;
+
+  console.log("Generating image with prompt:", prompt);
+
+  try {
+    const response = await fetch(OPENAI_IMAGE_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openaiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        response_format: "b64_json"
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("DALL-E API error:", response.status, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const base64 = data.data?.[0]?.b64_json;
+    if (base64) {
+      console.log("Image generated successfully");
+      return `data:image/png;base64,${base64}`;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error generating image:", error);
+    return null;
+  }
+}
 
 const SYSTEM = `אתה עוזר מתכונים בעברית. ענה תמיד בצורה ידידותית ושיחתית.
 
@@ -219,8 +280,13 @@ Deno.serve(async (req: Request) => {
 
   let insertedRecipeId: string | null = null;
   let insertionError: string | null = null;
+  let generatedImage: string | null = null;
 
   if (suggestedRecipe) {
+    // Generate image for the recipe
+    console.log("Generating image for recipe:", suggestedRecipe.name);
+    generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
+
     if (!supabaseAdmin) {
       console.error("Cannot insert recipe: supabaseAdmin is null (SUPABASE_SERVICE_ROLE_KEY not set)");
       insertionError = "לא ניתן להוסיף מתכון אוטומטית - חסרה הגדרת SUPABASE_SERVICE_ROLE_KEY. המתכון יוצג בטופס לשמירה ידנית.";
@@ -234,7 +300,7 @@ Deno.serve(async (req: Request) => {
         notes: null,
         recipe_link: null,
         video_url: null,
-        image: null,
+        image: generatedImage,
         rating: 0
       };
       const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
@@ -248,11 +314,14 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Add generated image to suggestedRecipe for client-side use
+  const suggestedRecipeWithImage = suggestedRecipe ? { ...suggestedRecipe, image: generatedImage } : null;
+
   // If insertion failed, append error info to reply
   const finalReply = insertionError ? `${reply}\n\n⚠️ ${insertionError}` : reply;
 
   return new Response(
-    JSON.stringify({ reply: finalReply, recipeIds, suggestedRecipe: suggestedRecipe || null, insertedRecipeId }),
+    JSON.stringify({ reply: finalReply, recipeIds, suggestedRecipe: suggestedRecipeWithImage, insertedRecipeId }),
     { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
   );
 });
