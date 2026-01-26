@@ -4,9 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 const rawUrl = import.meta.env?.VITE_SUPABASE_URL;
 const rawKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
 
-// Debug logging
-console.log('[Supabase Init] rawUrl:', rawUrl, 'type:', typeof rawUrl);
-console.log('[Supabase Init] rawKey exists:', !!rawKey, 'type:', typeof rawKey);
+// Debug logging - show actual values
+console.log('[Supabase Init] rawUrl:', JSON.stringify(rawUrl), 'type:', typeof rawUrl, 'length:', rawUrl?.length);
+console.log('[Supabase Init] rawKey exists:', !!rawKey, 'type:', typeof rawKey, 'length:', rawKey?.length);
 
 // Validation functions
 const urlOk = (v) => {
@@ -23,39 +23,54 @@ const keyOk = (v) => {
 };
 
 // Determine final values - use hardcoded strings directly, not constants
+// Build URL from parts to prevent minification issues
+const FALLBACK_URL_PART1 = 'https://';
+const FALLBACK_URL_PART2 = 'nklwzunoipplfkysaztl';
+const FALLBACK_URL_PART3 = '.supabase.co';
+const FALLBACK_URL_FULL = FALLBACK_URL_PART1 + FALLBACK_URL_PART2 + FALLBACK_URL_PART3;
+
 let supabaseUrl;
 let supabaseAnonKey;
 
 if (urlOk(rawUrl)) {
     supabaseUrl = rawUrl.trim();
-    console.log('[Supabase Init] Using env VITE_SUPABASE_URL');
+    console.log('[Supabase Init] Using env VITE_SUPABASE_URL:', supabaseUrl.substring(0, 30) + '...');
 } else {
-    // Use hardcoded string directly - prevents minification issues
-    supabaseUrl = 'https://nklwzunoipplfkysaztl.supabase.co';
-    console.warn('[Supabase Init] rawUrl invalid, using hardcoded fallback. rawUrl was:', rawUrl, 'type:', typeof rawUrl);
+    // Use hardcoded string built from parts - prevents minification issues
+    supabaseUrl = FALLBACK_URL_FULL;
+    console.warn('[Supabase Init] rawUrl invalid, using hardcoded fallback. rawUrl was:', JSON.stringify(rawUrl), 'type:', typeof rawUrl, 'length:', rawUrl?.length);
+    console.log('[Supabase Init] Fallback URL set to:', supabaseUrl);
 }
+
+// Build key from parts to prevent minification
+const FALLBACK_KEY_PART1 = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.';
+const FALLBACK_KEY_PART2 = 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.';
+const FALLBACK_KEY_PART3 = 'OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
+const FALLBACK_KEY_FULL = FALLBACK_KEY_PART1 + FALLBACK_KEY_PART2 + FALLBACK_KEY_PART3;
 
 if (keyOk(rawKey)) {
     supabaseAnonKey = rawKey;
     console.log('[Supabase Init] Using env VITE_SUPABASE_ANON_KEY');
 } else {
-    // Use hardcoded string directly - prevents minification issues
-    supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
+    // Use hardcoded string built from parts - prevents minification issues
+    supabaseAnonKey = FALLBACK_KEY_FULL;
     console.warn('[Supabase Init] rawKey invalid, using hardcoded fallback');
 }
 
 // Final validation - ensure supabaseUrl is always valid before createClient
 if (!supabaseUrl || typeof supabaseUrl !== 'string' || !supabaseUrl.startsWith('https://')) {
     console.error('[Supabase Init] CRITICAL: supabaseUrl still invalid! Forcing hardcoded URL');
-    supabaseUrl = 'https://nklwzunoipplfkysaztl.supabase.co';
+    console.error('[Supabase Init] Invalid supabaseUrl value:', JSON.stringify(supabaseUrl), 'type:', typeof supabaseUrl, 'length:', supabaseUrl?.length);
+    supabaseUrl = FALLBACK_URL_FULL;
+    console.log('[Supabase Init] After forcing fallback, supabaseUrl:', supabaseUrl);
 }
 
 if (!supabaseAnonKey || typeof supabaseAnonKey !== 'string' || supabaseAnonKey.length < 50) {
     console.error('[Supabase Init] CRITICAL: supabaseAnonKey still invalid! Forcing hardcoded key');
-    supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
+    supabaseAnonKey = FALLBACK_KEY_FULL;
 }
 
-console.log('[Supabase Init] Final supabaseUrl:', supabaseUrl);
+console.log('[Supabase Init] Final supabaseUrl:', JSON.stringify(supabaseUrl), 'type:', typeof supabaseUrl, 'length:', supabaseUrl?.length);
 console.log('[Supabase Init] Final supabaseAnonKey exists:', !!supabaseAnonKey, 'length:', supabaseAnonKey?.length);
 
 // Create Supabase client - URL and key are guaranteed to be valid at this point
@@ -79,22 +94,25 @@ try {
     console.log('[Supabase Init] Client created successfully');
 } catch (e) {
     console.error('[Supabase Init] Failed to create Supabase client:', e);
-    console.error('[Supabase Init] URL was:', supabaseUrl, 'type:', typeof supabaseUrl, 'length:', supabaseUrl?.length);
+    console.error('[Supabase Init] URL was:', JSON.stringify(supabaseUrl), 'type:', typeof supabaseUrl, 'length:', supabaseUrl?.length);
     console.error('[Supabase Init] Key exists:', !!supabaseAnonKey, 'type:', typeof supabaseAnonKey, 'length:', supabaseAnonKey?.length);
-    // Last resort: try with hardcoded values directly
+    // Last resort: try with hardcoded values built from parts
     try {
         console.error('[Supabase Init] Attempting last resort with hardcoded values');
-        supabase = createClient(
-            'https://nklwzunoipplfkysaztl.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g',
-            { auth: { detectSessionInUrl: false } }
-        );
+        const lastResortUrl = FALLBACK_URL_FULL;
+        const lastResortKey = FALLBACK_KEY_FULL;
+        console.error('[Supabase Init] Last resort URL:', lastResortUrl, 'length:', lastResortUrl.length);
+        console.error('[Supabase Init] Last resort Key length:', lastResortKey.length);
+        supabase = createClient(lastResortUrl, lastResortKey, {
+            auth: { detectSessionInUrl: false }
+        });
         console.log('[Supabase Init] Last resort client created successfully');
         // Update exported values to match
-        supabaseUrl = 'https://nklwzunoipplfkysaztl.supabase.co';
-        supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rbHd6dW5vaXBwbGZreXNhenRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1MDIxMjAsImV4cCI6MjA3NzA3ODEyMH0.OYSO3RLcZjUjmSn9hH3bW2TerTsHK2mXeOWWUUQmA3g';
+        supabaseUrl = lastResortUrl;
+        supabaseAnonKey = lastResortKey;
     } catch (e2) {
         console.error('[Supabase Init] Last resort also failed:', e2);
+        console.error('[Supabase Init] Last resort error details:', e2.message, e2.stack);
     }
 }
 
