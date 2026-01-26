@@ -240,6 +240,46 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         return otherImages[Math.floor(Math.random() * otherImages.length)];
     }
 
+    // פונקציה שמתקנת נתיב תמונה - אם זה רק שם קובץ, מוסיפה את הנתיב המלא לפי קטגוריה
+    function fixImagePath(imagePath, category) {
+        if (!imagePath || imagePath.trim() === '') {
+            return getRandomDefaultImageForCategory(category);
+        }
+        
+        // אם זה נתיב מלא (מתחיל ב-http, data:, או assets/), החזר כפי שהוא
+        if (imagePath.startsWith('http://') || 
+            imagePath.startsWith('https://') || 
+            imagePath.startsWith('data:') ||
+            imagePath.startsWith('assets/') ||
+            imagePath.startsWith('/assets/') ||
+            imagePath.includes('/')) {
+            return imagePath;
+        }
+        
+        // אם זה רק שם קובץ (כמו "1.jpg" ללא נתיב), מצא את הנתיב המלא לפי קטגוריה
+        const fileName = imagePath;
+        if (category && defaultImagesByCategory[category]) {
+            const images = defaultImagesByCategory[category];
+            // חפש תמונה עם אותו שם קובץ
+            const matchingImage = images.find(img => img.endsWith('/' + fileName) || img.endsWith(fileName));
+            if (matchingImage) {
+                return matchingImage;
+            }
+        }
+        
+        // אם לא נמצא, נסה לחפש בכל הקטגוריות
+        for (const cat in defaultImagesByCategory) {
+            const images = defaultImagesByCategory[cat];
+            const matchingImage = images.find(img => img.endsWith('/' + fileName) || img.endsWith(fileName));
+            if (matchingImage) {
+                return matchingImage;
+            }
+        }
+        
+        // אם לא נמצא בכלל, השתמש בתמונת ברירת מחדל
+        return getRandomDefaultImageForCategory(category);
+    }
+
     function getYoutubeEmbed(videoUrl) {
         if (!videoUrl) return '';
         var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -265,7 +305,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
               delete newRecipe.id;
             }
             // וודא שיש תמונה תקינה או תמונת ברירת מחדל
-            if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
+            if (!newRecipe.image || newRecipe.image.trim() === '') {
               newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
             
@@ -336,14 +376,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
         // תמונת המתכון
         const img = document.createElement('img');
-        if (recipe.image && recipe.image.startsWith('data:image')) {
-          img.src = recipe.image;
-        } else {
-          img.src = getRandomDefaultImageForCategory(recipe.category);
-          // שמור את התמונה החדשה במתכון
-          recipe.image = img.src;
-        }
+        img.src = fixImagePath(recipe.image, recipe.category);
         img.alt = recipe.name;
+        img.onerror = function() {
+          // אם התמונה נכשלה בטעינה, השתמש בתמונת ברירת מחדל
+          this.src = getRandomDefaultImageForCategory(recipe.category);
+        };
         card.appendChild(img);
 
         // Create recipe info overlay
@@ -399,7 +437,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       popup.classList.add('visible');
       
       popupBody.innerHTML = `
-        <div class="recipe-full" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('${recipe.image || getRandomDefaultImageForCategory(recipe.category)}');">
+        <div class="recipe-full" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('${fixImagePath(recipe.image, recipe.category)}');">
           <div class="recipe-content-overlay">
             <div class="recipe-header">
               <h2 class="recipe-title">${recipe.name}</h2>
@@ -715,7 +753,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
               delete newRecipe.id;
             }
             // וודא שיש תמונה תקינה או תמונת ברירת מחדל
-            if (!newRecipe.image || !newRecipe.image.startsWith('data:image')) {
+            if (!newRecipe.image || newRecipe.image.trim() === '') {
               newRecipe.image = getRandomDefaultImageForCategory(newRecipe.category);
             }
             
