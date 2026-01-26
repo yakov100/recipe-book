@@ -7,6 +7,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     let backupReminderTimeout;
     let aiChatMessages = [];
     let aiChatAbortController = null;
+    let aiGeneratedImage = null; // Stores AI-generated image for suggested recipes
 
     function recipeToRow(r) {
         return {
@@ -566,10 +567,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         document.getElementById('newCategory').style.display = 'none';
         document.getElementById('toggleNewCategory').textContent = '+ קטגוריה חדשה';
         document.getElementById('category').style.display = 'block';
-        
+
         // איפוס הטופס
         document.getElementById('recipeForm').reset();
         editingIndex = -1;
+        aiGeneratedImage = null; // איפוס תמונה שנוצרה ע"י AI
         
         // עדכון רשימת הקטגוריות
         const select = document.getElementById('category');
@@ -1165,6 +1167,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         }
         sel.value = cat;
       }
+      // Store AI-generated image for use when saving
+      aiGeneratedImage = suggestedRecipe.image || null;
     }
 
     function sendAiMessage() {
@@ -1778,7 +1782,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       } else if (editingIndex >= 0 && recipes[editingIndex].image) {
         // אם אין תמונה חדשה ואנחנו במצב עריכה, נשמור את התמונה הקיימת
         imageData = recipes[editingIndex].image;
+      } else if (aiGeneratedImage) {
+        // אם יש תמונה שנוצרה ע"י AI, נשתמש בה
+        imageData = aiGeneratedImage;
       }
+      // Reset AI generated image after use
+      aiGeneratedImage = null;
 
       const recipe = {
         name,
