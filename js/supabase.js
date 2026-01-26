@@ -5,8 +5,17 @@ const FALLBACK_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const rawUrl = import.meta.env?.VITE_SUPABASE_URL;
 const rawKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
-const urlOk = (v) => typeof v === 'string' && v && v !== 'undefined' && v.trim().startsWith('https://');
-const keyOk = (v) => typeof v === 'string' && v.length > 50;
+const urlOk = (v) => {
+  if (v === undefined || v === null) return false;
+  if (typeof v !== 'string') return false;
+  const trimmed = v.trim();
+  return trimmed && trimmed !== 'undefined' && trimmed.startsWith('https://');
+};
+const keyOk = (v) => {
+  if (v === undefined || v === null) return false;
+  if (typeof v !== 'string') return false;
+  return v.length > 50;
+};
 
 export const supabaseUrl = urlOk(rawUrl) ? rawUrl.trim() : FALLBACK_URL;
 export const supabaseAnonKey = keyOk(rawKey) ? rawKey : FALLBACK_ANON_KEY;
