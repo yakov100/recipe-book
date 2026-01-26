@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   server: {
@@ -12,5 +13,19 @@ export default defineConfig({
   // חשוב: publicDir צריך להיות 'assets' כדי ש-Vite יעתיק את התמונות ל-dist
   publicDir: 'assets',
   root: '.',
-  base: '/'
+  base: '/',
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'manifest.json',
+          dest: '.'
+        },
+        {
+          src: 'sw.js',
+          dest: '.'
+        }
+      ]
+    })
+  ]
 });
