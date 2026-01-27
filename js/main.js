@@ -323,7 +323,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     async function loadRecipesAndDisplay() {
         try {
-            // שלב 1: טעינה מיידית מ-cache
+            // שלב 1: טעינה מיידית מ-cache (להצגה מהירה)
             const cachedRecipes = loadRecipesFromCache();
             const settings = await loadSettings();
             
@@ -345,34 +345,39 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
 
-            // שלב 2: טעינה מהשרת ברקע (או מיידית אם אין cache)
+            // שלב 2: טעינה מהשרת (תמיד, כדי לקבל תמונות ועדכונים)
             const loadFromServer = async () => {
                 try {
                     const freshRecipes = await loadRecipesFromDB();
                     if (!Array.isArray(freshRecipes)) return;
                     
-                    // עדכון רק אם יש שינויים
-                    const hasChanges = freshRecipes.length !== recipes.length ||
-                        JSON.stringify(freshRecipes.map(r => r.id)) !== JSON.stringify(recipes.map(r => r.id));
-                    
-                    if (hasChanges || !cachedRecipes) {
-                        recipes = freshRecipes;
-                        displayRecipes(recipes);
-                        updateCategoryList();
-                        updateCategoryButtons();
-                        console.log('Updated with', recipes.length, 'recipes from server');
-                    }
+                    // תמיד עדכן עם הנתונים מהשרת (כולל תמונות)
+                    recipes = freshRecipes;
+                    displayRecipes(recipes);
+                    updateCategoryList();
+                    updateCategoryButtons();
+                    console.log('Updated with', recipes.length, 'recipes from server');
                     
                     if (imagesDeferred) {
                         await loadImagesForRecipes();
+                        displayRecipes(recipes);
                     }
                 } catch (err) {
                     console.error('Failed to load from server:', err);
+                    // אם נכשל וטענו מ-cache, ננסה לטעון רק תמונות
+                    if (cachedRecipes && cachedRecipes.length > 0) {
+                        try {
+                            await loadImagesForRecipes();
+                            displayRecipes(recipes);
+                        } catch (imgErr) {
+                            console.warn('Failed to load images:', imgErr);
+                        }
+                    }
                 }
             };
 
-            if (cachedRecipes && cachedRecipes.length > 0 && isCacheValid()) {
-                // אם יש cache תקף, טען מהשרת ברקע
+            if (cachedRecipes && cachedRecipes.length > 0) {
+                // אם יש cache, טען מהשרת ברקע
                 loadFromServer();
             } else {
                 // אם אין cache, חכה לטעינה מהשרת
