@@ -1,53 +1,161 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ספר המתכונים שלי</title>
+  <meta name="description" content="ספר מתכונים דיגיטלי - שמור, נהל וחפש את המתכונים שלך">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#a7f3d0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="מתכונים">
+  
+  <!-- Favicon and Icons -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <link rel="apple-touch-icon" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="96x96" href="/icons/icon-96x96.png">
+  <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128x128.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png">
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#a7f3d0", // Pale Mint
+            "primary-hover": "#6ee7b7",
+            "secondary": "#fda4af", // Soft Peach/Pink
+            "accent": "#c4b5fd", // Lavender
+            "background-light": "#fdfbf7", // Warm off-white
+            "background-dark": "#0f172a", 
+            "card-dark": "#1e293b",
+            "card-light": "#ffffff",
+          },
+          fontFamily: {
+            display: ["Outfit", "sans-serif"],
+          },
+          boxShadow: {
+            'glow': '0 0 25px -5px rgba(167, 243, 208, 0.6)', 
+            'glow-teal': '0 0 20px -5px rgba(45, 212, 191, 0.5)',
+            'glow-hover': '0 0 35px -5px rgba(167, 243, 208, 0.8)',
+            'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+            'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
+            'glow-ai': '0 0 25px -5px rgba(196, 181, 253, 0.8)',
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'blob': 'blob 10s infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            blob: {
+              "0%": { transform: "translate(0px, 0px) scale(1)" },
+              "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+              "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+              "100%": { transform: "translate(0px, 0px) scale(1)" }
+            }
+          }
+        },
+      },
+    };
+  </script>
+  
+  <!-- Custom Styles -->
+  
   <script>
     window.openMenu = function() { var e = document.getElementById('sideMenu'); if (e) e.style.width = '250px'; };
     window.closeMenu = function() { var e = document.getElementById('sideMenu'); if (e) e.style.width = '0'; };
+    
+    // Dark mode toggle
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+    }
+    
+    // Load dark mode preference
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.classList.add('dark');
+    }
   </script>
-  <script type="module" crossorigin src="/assets/index-B22VCNoF.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-HJp1mGO8.css">
-</head>
-<body>
-  <header class="header">
+  <script type="module" crossorigin src="/assets/index-BvsJggEW.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-D6JorYuI.css">
+<link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
+  <!-- Animated Blobs -->
+  <div class="blob-1"></div>
+  <div class="blob-2"></div>
+  <div class="blob-3"></div>
+  
+  <header class="header glass-panel">
     <button class="menu-icon" onclick="openMenu()">
         <div></div>
         <div></div>
         <div></div>
     </button>
-    <h1>ספר המתכונים שלי</h1>
+    <h1>
+      <div class="header-logo-icon">
+        <span class="material-symbols-outlined">restaurant_menu</span>
+      </div>
+      ספר <span class="header-logo-gradient">המתכונים</span>
+    </h1>
+    <!-- Search Bar in Header -->
+    <div class="header-search-container">
+      <div class="header-search-wrapper">
+        <span class="material-symbols-outlined header-search-icon">search</span>
+        <input type="text" id="searchName" class="header-search-input" placeholder="חפש מתכונים..." oninput="filterRecipes()">
+        <span class="material-symbols-outlined header-filter-icon" onclick="toggleFilterPanel()" title="פתח/סגור סינון">tune</span>
+      </div>
+    </div>
     <div class="header-controls">
+      <button onclick="toggleDarkMode()" class="header-btn" title="מצב כהה/בהיר">
+        <span class="material-symbols-outlined dark:hidden">dark_mode</span>
+        <span class="material-symbols-outlined hidden dark:block" style="color: var(--primary-color);">light_mode</span>
+      </button>
       <button id="show-timer-btn" class="header-btn" title="טיימר">
         <i class="fas fa-bell"></i>
       </button>
-      <div class="timer-container" style="display: none;">
+      <div class="timer-container">
         <div class="timer-controls">
+          <button id="timer-preset" class="timer-icon-btn" title="זמנים מוגדרים מראש">
+            <i class="fas fa-clock"></i>
+          </button>
+          <button id="start-timer" class="timer-icon-btn" title="התחל">
+            <i class="fas fa-play"></i>
+          </button>
+          <button id="pause-timer" class="timer-icon-btn" title="השהה" style="display: none;">
+            <i class="fas fa-pause"></i>
+          </button>
+          <button id="stop-timer" class="timer-icon-btn" title="עצור" style="display: none;">
+            <i class="fas fa-stop"></i>
+          </button>
           <div class="timer-input-group">
-            <input type="number" id="timer-seconds" min="0" max="59" value="0" class="timer-input" placeholder="ש">
+            <input type="number" id="timer-hours" min="0" max="99" step="1" value="0" class="timer-input" placeholder="0">
             <span class="timer-separator">:</span>
-            <input type="number" id="timer-minutes" min="0" max="59" value="1" class="timer-input" placeholder="ד">
+            <input type="number" id="timer-minutes" min="0" max="59" step="1" value="1" class="timer-input" placeholder="0">
             <span class="timer-separator">:</span>
-            <input type="number" id="timer-hours" min="0" max="23" value="0" class="timer-input" placeholder="ש">
-          </div>
-          <div class="timer-display" id="timer-display"></div>
-          <div class="timer-buttons">
-            <button id="start-timer" class="timer-btn" title="התחל">
-              <i class="fas fa-play fa-xs"></i>
-            </button>
-            <button id="pause-timer" class="timer-btn" title="השהה" style="display: none;">
-              <i class="fas fa-pause fa-xs"></i>
-            </button>
-            <button id="stop-timer" class="timer-btn" title="עצור" style="display: none;">
-              <i class="fas fa-stop fa-xs"></i>
-            </button>
-            <button id="timer-preset" class="timer-btn" title="זמנים מוגדרים מראש">
-              <i class="fas fa-clock fa-xs"></i>
-            </button>
+            <input type="number" id="timer-seconds" min="0" max="59" step="1" value="0" class="timer-input" placeholder="0">
           </div>
         </div>
         <div id="timer-preset-menu" class="timer-preset-menu" style="display: none;">
@@ -73,20 +181,38 @@
     <hr>
     <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
     <div class="recipes-per-row">
+      <div class="grid-icon" id="grid4" onclick="setRecipesPerRow(4); closeMenu();"></div>
+      <div class="grid-icon" id="grid5" onclick="setRecipesPerRow(5); closeMenu();"></div>
       <div class="grid-icon" id="grid6" onclick="setRecipesPerRow(6); closeMenu();"></div>
-      <div class="grid-icon" id="grid8" onclick="setRecipesPerRow(8); closeMenu();"></div>
     </div>
   </div>
 
   <main class="main">
-    <div class="search-container">
+    <!-- Filter Panel -->
+    <div class="main-filter-panel" id="searchContainer" style="display: none;">
+      <div class="search-filters-row">
+        <div class="search-filter-item">
+          <span class="material-symbols-outlined search-filter-icon">shopping_basket</span>
+          <input type="text" id="searchIngredients" class="search-filter-input" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
+        </div>
+        <div class="search-filter-item">
+          <span class="material-symbols-outlined search-filter-icon">schedule</span>
+          <input type="number" id="searchPrepTime" class="search-filter-input" placeholder="זמן הכנה (דקות)" min="0" oninput="filterRecipes()">
+        </div>
+        <div class="search-filter-item">
+          <span class="material-symbols-outlined search-filter-icon">star</span>
+          <div class="filter-rating" id="filterRating"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Category Filter Buttons Row -->
+    <div class="category-filter-row">
       <div class="category-filter" id="categoryFilter">
         <!-- כפתורי הקטגוריות יתווספו דינמית -->
       </div>
-      <input type="text" id="searchName" placeholder="חפש לפי שם" oninput="filterRecipes()">
-      <input type="text" id="searchIngredients" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
-      <div class="filter-rating" id="filterRating"></div>
     </div>
+    
+    
     <div class="recipes-container" id="recipesContainer"></div>
   </main>
 
@@ -108,6 +234,8 @@
         <input type="text" id="recipeSource" placeholder="מקור המתכון">
         <textarea id="ingredients" placeholder="מצרכים"></textarea>
         <textarea id="instructions" placeholder="אופן ההכנה"></textarea>
+        <label for="preparationTime">זמן הכנה (דקות):</label>
+        <input type="number" id="preparationTime" placeholder="זמן הכנה בדקות" min="0">
         <label for="category">קטגוריה:</label>
         <div class="category-input-container">
             <select id="category" required>
@@ -139,15 +267,41 @@
 
   <!-- פאנל צ'אט AI -->
   <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
-    <div class="ai-chat-panel">
-      <div class="ai-chat-header">
-        <h3>שיחה עם AI</h3>
-        <button class="close-btn" onclick="closeAiChat()" title="סגור">&times;</button>
+    <div class="ai-chat-container">
+      <!-- פאנל הצ'אט הראשי -->
+      <div class="ai-chat-panel">
+        <div class="ai-chat-header">
+          <button class="close-btn" onclick="closeAiChat()" title="סגור">&times;</button>
+          <h3>
+            <img src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'%20viewBox='0%200%20160%20160'%3e%3cpath%20d='M44%2046c0-10%2010-18%2022-18%203-10%2014-16%2025-16s22%206%2025%2016c12%200%2022%208%2022%2018%200%2012-10%2020-24%2020H68c-14%200-24-8-24-20z'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3crect%20x='54'%20y='40'%20width='52'%20height='14'%20rx='7'%20fill='%23F4F5F7'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3ccircle%20cx='72'%20cy='70'%20r='20'%20fill='%23F7C9A9'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3ccircle%20cx='64'%20cy='68'%20r='3'%20fill='%232D2D2D'/%3e%3ccircle%20cx='80'%20cy='68'%20r='3'%20fill='%232D2D2D'/%3e%3cpath%20d='M62%2062c2-4%208-4%2010%200'%20stroke='%232D2D2D'%20stroke-width='2'%20stroke-linecap='round'/%3e%3cpath%20d='M64%2076c6%205%2010%205%2016%200'%20stroke='%232D2D2D'%20stroke-width='3'%20stroke-linecap='round'/%3e%3ccircle%20cx='64'%20cy='74'%20r='2'%20fill='%23E07A5F'/%3e%3ccircle%20cx='80'%20cy='74'%20r='2'%20fill='%23E07A5F'/%3e%3crect%20x='44'%20y='90'%20width='56'%20height='44'%20rx='14'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3crect%20x='52'%20y='100'%20width='40'%20height='26'%20rx='10'%20fill='%2363BFAF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3crect%20x='60'%20y='108'%20width='24'%20height='10'%20rx='5'%20fill='%23F2E9E4'%20stroke='%232D2D2D'%20stroke-width='2'/%3e%3crect%20x='98'%20y='36'%20width='48'%20height='28'%20rx='10'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3cpath%20d='M108%2064l-12%2012%203-14'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'%20stroke-linejoin='round'/%3e%3ccircle%20cx='112'%20cy='50'%20r='4'%20fill='%232D2D2D'/%3e%3ccircle%20cx='124'%20cy='50'%20r='4'%20fill='%232D2D2D'/%3e%3ccircle%20cx='136'%20cy='50'%20r='4'%20fill='%232D2D2D'/%3e%3cpath%20d='M106%2034l6-8'%20stroke='%23F6C453'%20stroke-width='3'%20stroke-linecap='round'/%3e%3cpath%20d='M118%2030l4-10'%20stroke='%23F6C453'%20stroke-width='3'%20stroke-linecap='round'/%3e%3c/svg%3e" alt="שף" class="chef-speaking">
+            שיחה עם AI
+          </h3>
+          <button class="history-toggle-btn" onclick="toggleChatHistory()" title="היסטוריה">
+            <i class="fas fa-history"></i>
+          </button>
+        </div>
+        <div class="ai-chat-messages" id="aiChatMessages"></div>
+        <div class="ai-chat-attachments" id="aiChatAttachments" style="display: none;"></div>
+        <div class="ai-chat-input-row">
+          <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח"><i class="fas fa-paper-plane"></i></button>
+          <button type="button" id="aiChatVoice" onclick="toggleVoiceRecording()" title="הקלט קול"><i class="fas fa-microphone"></i></button>
+          <input type="text" id="aiChatInput" placeholder="שאל אותי, בקש מתכון, או צרף תמונה..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+          <button type="button" id="aiChatAttach" onclick="document.getElementById('aiChatFileInput').click()" title="צרף תמונה">
+            <i class="fas fa-paperclip"></i>
+          </button>
+          <input type="file" id="aiChatFileInput" accept="image/*" multiple style="display: none;" onchange="handleChatFileSelect(event)">
+        </div>
       </div>
-      <div class="ai-chat-messages" id="aiChatMessages"></div>
-      <div class="ai-chat-input-row">
-        <input type="text" id="aiChatInput" placeholder="כתוב הודעה – חפש מתכונים, ספר מתכון, או פשוט שאל אותי..." onkeydown="if(event.key==='Enter')sendAiMessage()">
-        <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח"><i class="fas fa-paper-plane"></i></button>
+
+      <!-- סיידבר היסטוריה -->
+      <div class="ai-chat-history" id="aiChatHistory">
+        <div class="ai-chat-history-header">
+          <button class="new-chat-btn" onclick="startNewConversation()" title="שיחה חדשה">
+            <i class="fas fa-plus"></i>
+          </button>
+          <h4>היסטוריה</h4>
+        </div>
+        <div class="ai-chat-history-list" id="aiChatHistoryList"></div>
       </div>
     </div>
   </div>
@@ -159,6 +313,16 @@
       <button class="confirm" onclick="deleteRecipe()">מחק</button>
       <button class="cancel" onclick="closeConfirmPopup()">בטל</button>
     </div>
+  </div>
+
+  <!-- Floating Action Buttons -->
+  <div class="floating-actions">
+    <button class="floating-action-btn ai-chat" onclick="openAiChat()" title="שיחה עם AI">
+      <img src="assets/icons/chef-speaking.svg" alt="שף" class="chat-btn-chef-icon">
+    </button>
+    <button class="floating-action-btn" onclick="openFormPopup()" title="הוסף מתכון">
+      <span class="material-symbols-outlined">add</span>
+    </button>
   </div>
 
   <!-- ספריה חיצונית ל-OCR -->
