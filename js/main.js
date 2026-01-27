@@ -47,7 +47,85 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         };
     }
 
-    // שמירת מתכונים ל-Supabase
+    // Cache keys
+    const CACHE_KEY = 'recipes_cache';
+    const CACHE_META_KEY = 'recipes_cache_meta';
+    const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 דקות
+
+    // טעינת מתכונים מ-cache
+    function loadRecipesFromCache() {
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+        } catch (e) {
+            console.warn('Failed to load from cache:', e);
+        }
+        return null;
+    }
+
+    // שמירת מתכונים ל-cache
+    function saveRecipesToCache(recipesToCache) {
+        try {
+            // שמירה ללא תמונות כדי לחסוך מקום
+            const lightRecipes = recipesToCache.map(r => ({
+                ...r,
+                image: null // התמונות ייטענו בנפרד
+            }));
+            localStorage.setItem(CACHE_KEY, JSON.stringify(lightRecipes));
+            localStorage.setItem(CACHE_META_KEY, JSON.stringify({ 
+                timestamp: Date.now(),
+                count: recipesToCache.length 
+            }));
+        } catch (e) {
+            console.warn('Failed to save to cache:', e);
+            // אם נכשל (מקום מלא), ננסה לנקות cache ישן
+            try {
+                localStorage.removeItem(CACHE_KEY);
+                localStorage.removeItem(CACHE_META_KEY);
+            } catch (e2) { /* ignore */ }
+        }
+    }
+
+    // בדיקה אם ה-cache עדיין תקף
+    function isCacheValid() {
+        try {
+            const meta = localStorage.getItem(CACHE_META_KEY);
+            if (meta) {
+                const { timestamp } = JSON.parse(meta);
+                return (Date.now() - timestamp) < CACHE_MAX_AGE;
+            }
+        } catch (e) { /* ignore */ }
+        return false;
+    }
+
+    // מחיקת מתכון בודד מ-Supabase
+    async function deleteRecipeFromDB(recipeId) {
+        if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
+        const { error } = await supabase.from('recipes').delete().eq('id', recipeId);
+        if (error) throw error;
+        // עדכון cache
+        saveRecipesToCache(recipes);
+    }
+
+    // שמירת/עדכון מתכון בודד ב-Supabase
+    async function saveRecipeToDB(recipe) {
+        if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
+        const row = recipeToRow(recipe);
+        if (recipe.id) {
+            const { error } = await supabase.from('recipes').update(row).eq('id', recipe.id);
+            if (error) throw error;
+        } else {
+            const { data, error } = await supabase.from('recipes').insert(row).select('id').single();
+            if (error) throw error;
+            recipe.id = data.id;
+        }
+        // עדכון cache
+        saveRecipesToCache(recipes);
+    }
+
+    // שמירת מתכונים מרובים ל-Supabase (לייבוא/סנכרון מלא)
     async function saveRecipesToDB(recipesToSave) {
         if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
 
@@ -56,20 +134,35 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         // מחיקת רשומות שנמחקו מהמערך
         const { data: existing } = await supabase.from('recipes').select('id');
         const toDelete = (existing || []).filter(e => !idsToKeep.includes(e.id)).map(e => e.id);
-        for (const id of toDelete) {
-            await supabase.from('recipes').delete().eq('id', id);
+        
+        // מחיקה במקבץ
+        if (toDelete.length > 0) {
+            const { error: deleteError } = await supabase.from('recipes').delete().in('id', toDelete);
+            if (deleteError) throw deleteError;
         }
 
-        for (const recipe of recipesToSave) {
+        // הפרדה למתכונים קיימים וחדשים
+        const toUpdate = recipesToSave.filter(r => r.id);
+        const toInsert = recipesToSave.filter(r => !r.id);
+
+        // עדכון במקבץ (אם יש)
+        for (const recipe of toUpdate) {
             const row = recipeToRow(recipe);
-            if (recipe.id) {
-                await supabase.from('recipes').update(row).eq('id', recipe.id);
-            } else {
-                const { data, error } = await supabase.from('recipes').insert(row).select('id').single();
-                if (error) throw error;
-                recipe.id = data.id;
-            }
+            await supabase.from('recipes').update(row).eq('id', recipe.id);
         }
+
+        // הוספה במקבץ (אם יש)
+        if (toInsert.length > 0) {
+            const rows = toInsert.map(recipeToRow);
+            const { data, error } = await supabase.from('recipes').insert(rows).select('id');
+            if (error) throw error;
+            // עדכון ה-IDs החדשים
+            data.forEach((row, i) => {
+                toInsert[i].id = row.id;
+            });
+        }
+        // עדכון cache
+        saveRecipesToCache(recipesToSave);
     }
 
     // טעינת מתכונים מ-Supabase
@@ -84,7 +177,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
-            return (data || []).map(rowToRecipe);
+            const loadedRecipes = (data || []).map(rowToRecipe);
+            saveRecipesToCache(loadedRecipes);
+            return loadedRecipes;
         } catch (err) {
             // Fallback: if payload contains invalid JSON (often from large/invalid images),
             // reload without the image column so recipes still appear.
@@ -96,7 +191,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
-            return (data || []).map(row => ({ ...rowToRecipe(row), image: null }));
+            const loadedRecipes = (data || []).map(row => ({ ...rowToRecipe(row), image: null }));
+            saveRecipesToCache(loadedRecipes);
+            return loadedRecipes;
         }
     }
 
@@ -226,13 +323,19 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     async function loadRecipesAndDisplay() {
         try {
-            recipes = await loadRecipesFromDB();
-            if (!Array.isArray(recipes)) recipes = [];
+            // שלב 1: טעינה מיידית מ-cache
+            const cachedRecipes = loadRecipesFromCache();
             const settings = await loadSettings();
+            
+            if (cachedRecipes && cachedRecipes.length > 0) {
+                recipes = cachedRecipes;
+                displayRecipes(recipes);
+                updateCategoryList();
+                updateCategoryButtons();
+                console.log('Loaded', recipes.length, 'recipes from cache');
+            }
 
-            displayRecipes(recipes);
-            updateCategoryList();
-            updateCategoryButtons();
+            // אתחול UI
             document.getElementById('filterRating').innerHTML = generateFilterStars();
             setupBackupReminder(settings.lastBackup);
             setRecipesPerRow(settings.recipesPerRow || 4);
@@ -241,9 +344,41 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             initializeTimer();
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
-            if (imagesDeferred) {
-                await loadImagesForRecipes();
+
+            // שלב 2: טעינה מהשרת ברקע (או מיידית אם אין cache)
+            const loadFromServer = async () => {
+                try {
+                    const freshRecipes = await loadRecipesFromDB();
+                    if (!Array.isArray(freshRecipes)) return;
+                    
+                    // עדכון רק אם יש שינויים
+                    const hasChanges = freshRecipes.length !== recipes.length ||
+                        JSON.stringify(freshRecipes.map(r => r.id)) !== JSON.stringify(recipes.map(r => r.id));
+                    
+                    if (hasChanges || !cachedRecipes) {
+                        recipes = freshRecipes;
+                        displayRecipes(recipes);
+                        updateCategoryList();
+                        updateCategoryButtons();
+                        console.log('Updated with', recipes.length, 'recipes from server');
+                    }
+                    
+                    if (imagesDeferred) {
+                        await loadImagesForRecipes();
+                    }
+                } catch (err) {
+                    console.error('Failed to load from server:', err);
+                }
+            };
+
+            if (cachedRecipes && cachedRecipes.length > 0 && isCacheValid()) {
+                // אם יש cache תקף, טען מהשרת ברקע
+                loadFromServer();
+            } else {
+                // אם אין cache, חכה לטעינה מהשרת
+                await loadFromServer();
             }
+
             // הוסף event listener רק פעם אחת כדי למנוע הוספה חוזרת
             if (!window.popstateHandlerAdded) {
               window.addEventListener('popstate', function() {
@@ -889,9 +1024,14 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     async function deleteRecipe() {
       const confirmPopup = document.getElementById('confirmPopup');
       const index = confirmPopup.getAttribute('data-index');
+      const recipeToDelete = recipes[index];
+      const recipeId = recipeToDelete?.id;
+      
       recipes.splice(index, 1);
       try {
-        await saveRecipesToDB(recipes);
+        if (recipeId) {
+          await deleteRecipeFromDB(recipeId);
+        }
         updateCategoryList();
         updateCategoryButtons();
         displayRecipes(recipes);
@@ -981,7 +1121,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     async function rateRecipe(index, rating) {
       recipes[index].rating = rating;
       try {
-        await saveRecipesToDB(recipes);
+        await saveRecipeToDB(recipes[index]);
         showRecipe(index);
         displayRecipes(recipes);
       } catch (e) {
@@ -2630,10 +2770,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
 
       try {
+        let recipeToSave;
         if (editingIndex === -1) {
           // מתכון חדש
           recipe.rating = 0;
           recipes.push(recipe);
+          recipeToSave = recipe;
         } else {
           // עריכת מתכון קיים - שומרים על המידע הקיים
           const existingRecipe = recipes[editingIndex];
@@ -2642,9 +2784,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             ...recipe,          // עדכון המידע החדש
             rating: editingIndex >= 0 ? recipes[editingIndex].rating || 0 : 0  // שמירת הדירוג הקיים
           };
+          recipeToSave = recipes[editingIndex];
         }
 
-        await saveRecipesToDB(recipes);
+        await saveRecipeToDB(recipeToSave);
         updateCategoryList();
         updateCategoryButtons();
         displayRecipes(recipes);
@@ -2732,14 +2875,17 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         videoUrl: recipeVideo
       };
 
+      let recipeToSave;
       if (editingIndex >= 0) {
         recipes[editingIndex] = { ...recipes[editingIndex], ...recipe };
+        recipeToSave = recipes[editingIndex];
         editingIndex = -1;
       } else {
         recipes.push(recipe);
+        recipeToSave = recipe;
       }
 
-      await saveRecipesToDB(recipes);
+      await saveRecipeToDB(recipeToSave);
       displayRecipes(recipes);
       updateCategoryList();
       updateCategoryButtons();

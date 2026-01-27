@@ -68,42 +68,67 @@ async function generateRecipeImage(recipeName: string, category: string): Promis
   }
 }
 
-const SYSTEM = `אתה עוזר מתכונים בעברית. ענה תמיד בצורה ידידותית ושיחתית.
+const SYSTEM = `אתה עוזר מתכונים מקצועי ויצירתי בעברית. ענה תמיד בצורה ידידותית ושיחתית.
 
-יש לך שלוש אפשרויות:
+יש לך ארבע אפשרויות עיקריות:
 
-1) **חיפוש מתכונים**: כשהמשתמש מחפש מתכון קיים – החזר recipeIds עם המתאימים מהרשימה.
+1) **חיפוש מתכונים קיימים**: כשהמשתמש מחפש מתכון מהספר שלו – החזר recipeIds עם המתאימים מהרשימה.
 
-2) **הוספת מתכון חדש**: כשהמשתמש אומר "הוסף מתכון", "רשום מתכון", "תכניס מתכון" או מתאר מתכון חדש – חלץ את הפרטים והחזר suggestedRecipe.
+2) **המצאת/הצעת מתכון**: כשהמשתמש מבקש ממך להמציא מתכון, לתת רעיון, לתת מתכון, או שואל "מה אפשר להכין מ..." – **הצע מתכון מקורי מהידע שלך!**
+   - תן שם יצירתי למתכון
+   - כתוב רשימת מצרכים מפורטת עם כמויות מדויקות
+   - כתוב הוראות הכנה ברורות ומפורטות
+   - בחר קטגוריה מתאימה
+   - החזר את המתכון ב-suggestedRecipe
+   - **חשוב: אל תוסיף לספר אוטומטית! רק הצג למשתמש והוא יחליט אם להוסיף**
 
-3) **החלפת תמונה**: כשהמשתמש אומר "תחליף תמונה", "תמונה חדשה", "החלף את התמונה של", "צור תמונה חדשה ל" – מצא את המתכון ברשימה והחזר regenerateImageForRecipeId עם ה-id של המתכון.
+3) **הוספת מתכון לספר**: רק כשהמשתמש אומר במפורש "תוסיף את המתכון", "הוסף לספר", "שמור את זה", "אשר", "כן תוסיף" – אז החזר confirmAddRecipe: true יחד עם ה-suggestedRecipe.
 
-**חשוב מאוד להוספת מתכון:**
+4) **החלפת תמונה**: כשהמשתמש אומר "תחליף תמונה", "תמונה חדשה", "החלף את התמונה של" – מצא את המתכון ברשימה והחזר regenerateImageForRecipeId.
+
+**כללים חשובים:**
+- כשמבקשים ממך להמציא/לתת מתכון - **תמיד תן מתכון מלא עם מצרכים מפורטים והוראות!**
+- **אל תוסיף מתכון לספר אוטומטית!** רק הצג את המתכון ושאל אם להוסיף
+- אם המשתמש שולח תמונה של מתכון כתוב - נסה לזהות את הטקסט ולחלץ את המתכון
+- אם המשתמש שולח תמונה של אוכל - הצע מתכון שנראה דומה למה שבתמונה
+- אם המשתמש שואל שאלה כללית על בישול - ענה לו מהידע שלך
+- אתה יכול ורוצה להמציא מתכונים! יש לך ידע רחב במתכונים מכל העולם
+
+**פורמט suggestedRecipe:**
 - name: שם המתכון (חובה)
-- ingredients: רשימת המצרכים שהמשתמש נתן, כל מצרך בשורה חדשה (חובה - לעולם לא להחזיר null!)
-- instructions: הוראות ההכנה שהמשתמש נתן, כל שלב בשורה חדשה (חובה - לעולם לא להחזיר null!)
+- ingredients: רשימת המצרכים עם כמויות מדויקות, כל מצרך בשורה חדשה (חובה - לעולם לא להחזיר null!)
+- instructions: הוראות ההכנה מפורטות, כל שלב בשורה חדשה (חובה - לעולם לא להחזיר null!)
 - category: קטגוריה אחת מ: ${CATEGORIES.join(", ")} (חובה)
-- source: מקור המתכון אם צוין
+- source: מקור המתכון אם המשתמש ציין, או "נוצר על ידי AI" אם המצאת
 
-**דוגמה להוספת מתכון:**
-משתמש: "מתכון לפיצה: בצק מלח 4 כוסות סוכר, ההוראות זה לערבב הכל ולשים על הראש"
+**דוגמה להצעת מתכון (בלי להוסיף):**
+משתמש: "תמציא לי מתכון לעוגת שוקולד"
 תשובה:
 {
-  "reply": "הוספתי את המתכון לפיצה!",
+  "reply": "הנה מתכון לעוגת שוקולד עשירה! רוצה שאוסיף אותו לספר המתכונים שלך?",
   "suggestedRecipe": {
-    "name": "פיצה",
-    "ingredients": "בצק\\nמלח\\n4 כוסות סוכר",
-    "instructions": "לערבב הכל\\nלשים על הראש",
-    "category": "מנה עיקרית"
-  }
+    "name": "עוגת שוקולד עשירה",
+    "ingredients": "200 גרם שוקולד מריר\\n150 גרם חמאה\\n4 ביצים\\n1 כוס סוכר\\n1/2 כוס קמח\\nקורט מלח\\n1 כפית תמצית וניל",
+    "instructions": "1. מחממים תנור ל-180 מעלות\\n2. ממיסים שוקולד וחמאה יחד במיקרוגל או באמבט מים\\n3. טורפים ביצים עם סוכר עד לקצף בהיר\\n4. מוסיפים את תערובת השוקולד ומערבבים\\n5. מקפלים את הקמח בעדינות\\n6. שופכים לתבנית משומנת ומקומחת\\n7. אופים 25-30 דקות עד שקיסם יוצא לח מעט",
+    "category": "עוגות",
+    "source": "נוצר על ידי AI"
+  },
+  "confirmAddRecipe": false
 }
 
-**דוגמה להחלפת תמונה:**
-משתמש: "תחליף את התמונה של שקשוקה"
+**דוגמה לאישור הוספה לספר:**
+משתמש: "כן, תוסיף את המתכון"
 תשובה:
 {
-  "reply": "מייצר תמונה חדשה לשקשוקה...",
-  "regenerateImageForRecipeId": "abc123"
+  "reply": "מעולה! הוספתי את המתכון לספר שלך.",
+  "suggestedRecipe": {
+    "name": "עוגת שוקולד עשירה",
+    "ingredients": "...",
+    "instructions": "...",
+    "category": "עוגות",
+    "source": "נוצר על ידי AI"
+  },
+  "confirmAddRecipe": true
 }
 
 תמיד החזר JSON בלבד.`;
@@ -124,6 +149,7 @@ const RESPONSE_SCHEMA = {
       },
       required: ["name", "ingredients", "instructions", "category"]
     },
+    confirmAddRecipe: { type: "boolean" },
     regenerateImageForRecipeId: { type: "string" }
   },
   required: [ "reply" ]
@@ -165,14 +191,38 @@ function geminiErrorToReply(status: number, bodyText: string): string {
   return "לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות (GEMINI_API_KEY ב-Supabase Secrets). אם ההגדרות נראות תקינות, בדוק את לוגי ה-Edge Function.";
 }
 
+interface MessagePart {
+  text?: string;
+  inline_data?: {
+    mime_type: string;
+    data: string;
+  };
+}
+
+interface Attachment {
+  type: 'image' | 'pdf';
+  data: string;
+  name: string;
+}
+
+interface Message {
+  role: string;
+  content: string;
+  attachments?: Attachment[];
+}
+
 function buildContents(
-  messages: { role: string; content: string }[],
+  messages: Message[],
   recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]
-): { role: string; parts: { text: string }[] }[] {
-  const contents: { role: string; parts: { text: string }[] }[] = [];
+): { role: string; parts: MessagePart[] }[] {
+  const contents: { role: string; parts: MessagePart[] }[] = [];
   let firstUserSeen = false;
+
   for (const m of messages) {
     const geminiRole = m.role === "user" ? "user" : "model";
+    const parts: MessagePart[] = [];
+
+    // Add text content
     let text = m.content || "";
     if (m.role === "user") {
       if (!firstUserSeen) {
@@ -180,7 +230,27 @@ function buildContents(
         firstUserSeen = true;
       }
     }
-    contents.push({ role: geminiRole, parts: [ { text } ] });
+    parts.push({ text });
+
+    // Add image attachments (Gemini supports inline images)
+    if (m.attachments && Array.isArray(m.attachments)) {
+      for (const att of m.attachments) {
+        if (att.type === 'image' && att.data) {
+          // Extract base64 data from data URL (format: data:image/png;base64,xxxxx)
+          const match = att.data.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            parts.push({
+              inline_data: {
+                mime_type: match[1],
+                data: match[2]
+              }
+            });
+          }
+        }
+      }
+    }
+
+    contents.push({ role: geminiRole, parts });
   }
   return contents;
 }
@@ -201,7 +271,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let body: { messages?: { role: string; content: string }[]; recipes?: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[] };
+  let body: { messages?: Message[]; recipes?: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[] };
   try {
     body = await req.json();
   } catch {
@@ -280,7 +350,7 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let parsed: { reply?: string; recipeIds?: string[]; suggestedRecipe?: { name: string; ingredients: string; instructions: string; category: string; source?: string }; regenerateImageForRecipeId?: string };
+  let parsed: { reply?: string; recipeIds?: string[]; suggestedRecipe?: { name: string; ingredients: string; instructions: string; category: string; source?: string }; confirmAddRecipe?: boolean; regenerateImageForRecipeId?: string };
   try {
     parsed = JSON.parse(text);
   } catch {
@@ -290,15 +360,17 @@ Deno.serve(async (req: Request) => {
   const reply = parsed?.reply ?? "לא התקבלה תשובה.";
   const recipeIds = Array.isArray(parsed?.recipeIds) ? parsed.recipeIds : [];
   const suggestedRecipe = parsed?.suggestedRecipe && typeof parsed.suggestedRecipe === "object" ? parsed.suggestedRecipe : undefined;
+  const confirmAddRecipe = parsed?.confirmAddRecipe === true;
   const regenerateImageForRecipeId = parsed?.regenerateImageForRecipeId || null;
 
   let insertedRecipeId: string | null = null;
   let insertionError: string | null = null;
   let generatedImage: string | null = null;
 
-  if (suggestedRecipe) {
+  // Only insert to DB if user explicitly confirmed (confirmAddRecipe: true)
+  if (suggestedRecipe && confirmAddRecipe) {
     // Generate image for the recipe
-    console.log("Generating image for recipe:", suggestedRecipe.name);
+    console.log("Generating image for confirmed recipe:", suggestedRecipe.name);
     generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
 
     if (!supabaseAdmin) {
@@ -326,6 +398,9 @@ Deno.serve(async (req: Request) => {
         console.log("Recipe inserted successfully:", insertedRecipeId);
       }
     }
+  } else if (suggestedRecipe) {
+    // Just suggesting a recipe, don't insert to DB
+    console.log("Recipe suggested (not confirmed):", suggestedRecipe.name);
   }
 
   // Handle image regeneration request

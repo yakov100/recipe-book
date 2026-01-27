@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <ellipse cx="80" cy="142" rx="46" ry="8" fill="#E5E7EB"/>
+  <path d="M42 44c0-10 10-18 22-18 3-10 14-16 25-16s22 6 25 16c12 0 22 8 22 18 0 12-10 20-24 20H66c-14 0-24-8-24-20z" fill="#FFFFFF" stroke="#2D2D2D" stroke-width="3"/>
+  <rect x="52" y="38" width="56" height="16" rx="8" fill="#F4F5F7" stroke="#2D2D2D" stroke-width="3"/>
+  <circle cx="80" cy="68" r="20" fill="#F7C9A9" stroke="#2D2D2D" stroke-width="3"/>
+  <circle cx="72" cy="66" r="3" fill="#2D2D2D"/>
+  <circle cx="88" cy="66" r="3" fill="#2D2D2D"/>
+  <path d="M70 60c2-4 8-4 10 0" stroke="#2D2D2D" stroke-width="2" stroke-linecap="round"/>
+  <path d="M80 74c6 4 10 4 16 0" stroke="#2D2D2D" stroke-width="3" stroke-linecap="round"/>
+  <path d="M68 74c-6 4-10 4-16 0" stroke="#2D2D2D" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="70" cy="72" r="2" fill="#E07A5F"/>
+  <circle cx="90" cy="72" r="2" fill="#E07A5F"/>
+  <path d="M72 78c6 6 10 6 16 0" stroke="#2D2D2D" stroke-width="3" stroke-linecap="round"/>
+  <rect x="50" y="86" width="60" height="52" rx="14" fill="#FFFFFF" stroke="#2D2D2D" stroke-width="3"/>
+  <rect x="58" y="98" width="44" height="30" rx="10" fill="#63BFAF" stroke="#2D2D2D" stroke-width="3"/>
+  <rect x="66" y="110" width="28" height="12" rx="6" fill="#F2E9E4" stroke="#2D2D2D" stroke-width="2"/>
+  <path d="M32 100h28" stroke="#2D2D2D" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="64" cy="100" r="7" fill="#F7C9A9" stroke="#2D2D2D" stroke-width="3"/>
+  <path d="M100 100h32" stroke="#2D2D2D" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="96" cy="100" r="7" fill="#F7C9A9" stroke="#2D2D2D" stroke-width="3"/>
+  <rect x="112" y="90" width="34" height="6" rx="3" fill="#2D2D2D"/>
+  <rect x="116" y="86" width="26" height="6" rx="3" fill="#2D2D2D"/>
+  <ellipse cx="128" cy="104" rx="22" ry="6" fill="#FFFFFF" stroke="#2D2D2D" stroke-width="3"/>
+  <ellipse cx="128" cy="100" rx="16" ry="4" fill="#F6C453" stroke="#2D2D2D" stroke-width="2"/>
+  <circle cx="120" cy="98" r="2" fill="#2E7D32"/>
+  <circle cx="128" cy="98" r="2" fill="#C0392B"/>
+  <circle cx="136" cy="98" r="2" fill="#F1C40F"/>
+</svg>
