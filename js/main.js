@@ -8,6 +8,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     let aiChatMessages = [];
     let aiChatAbortController = null;
     let aiGeneratedImage = null; // Stores AI-generated image for suggested recipes
+    let currentConversationId = null;
+    let conversationHistory = [];
+    let chatAttachments = [];
+    let pendingSuggestedRecipe = null; // Stores recipe waiting for user confirmation
+    let imagesDeferred = false;
 
     function recipeToRow(r) {
         return {
@@ -20,7 +25,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             rating: r.rating ?? 0,
             image: r.image || null,
             recipe_link: r.recipeLink || null,
-            video_url: r.videoUrl || null
+            video_url: r.videoUrl || null,
+            preparation_time: r.preparationTime || null
         };
     }
 
@@ -36,7 +42,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             rating: row.rating,
             image: row.image,
             recipeLink: row.recipe_link,
-            videoUrl: row.video_url
+            videoUrl: row.video_url,
+            preparationTime: row.preparation_time
         };
     }
 
@@ -69,18 +76,98 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     async function loadRecipesFromDB() {
         if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
 
+        try {
+            imagesDeferred = false;
+            const { data, error } = await supabase
+                .from('recipes')
+                .select('*')
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            return (data || []).map(rowToRecipe);
+        } catch (err) {
+            // Fallback: if payload contains invalid JSON (often from large/invalid images),
+            // reload without the image column so recipes still appear.
+            console.warn('Failed to load full recipes, retrying without images:', err);
+            imagesDeferred = true;
+            const { data, error } = await supabase
+                .from('recipes')
+                .select('id,name,source,ingredients,instructions,category,notes,rating,recipe_link,video_url,preparation_time')
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            return (data || []).map(row => ({ ...rowToRecipe(row), image: null }));
+        }
+    }
+
+    async function fetchImagesByIds(ids, imageMap) {
+        if (!supabase || !ids || ids.length === 0) return;
         const { data, error } = await supabase
             .from('recipes')
-            .select('*')
-            .order('created_at', { ascending: true });
+            .select('id,image')
+            .in('id', ids);
 
         if (error) throw error;
-        return (data || []).map(rowToRecipe);
+        (data || []).forEach(row => {
+            if (row && row.id) imageMap.set(row.id, row.image || null);
+        });
+    }
+
+    async function fetchImagesIndividually(ids, imageMap) {
+        for (const id of ids) {
+            try {
+                const { data, error } = await supabase
+                    .from('recipes')
+                    .select('id,image')
+                    .eq('id', id)
+                    .single();
+                if (!error && data && data.id) {
+                    imageMap.set(data.id, data.image || null);
+                } else if (error) {
+                    console.warn('Failed to load image for recipe id:', id, error);
+                }
+            } catch (e) {
+                console.warn('Failed to load image for recipe id:', id, e);
+            }
+        }
+    }
+
+    async function loadImagesForRecipes() {
+        if (!supabase || !Array.isArray(recipes) || recipes.length === 0) return;
+        const ids = recipes.map(r => r && r.id).filter(Boolean);
+        if (ids.length === 0) return;
+
+        const imageMap = new Map();
+        const chunkSize = 25;
+        for (let i = 0; i < ids.length; i += chunkSize) {
+            const chunk = ids.slice(i, i + chunkSize);
+            try {
+                await fetchImagesByIds(chunk, imageMap);
+            } catch (e) {
+                // If a chunk fails, try per-record to isolate any bad rows.
+                console.warn('Chunk image load failed, retrying individually:', e);
+                await fetchImagesIndividually(chunk, imageMap);
+            }
+        }
+
+        let updated = false;
+        recipes = recipes.map(r => {
+            if (!r || !r.id) return r;
+            if (imageMap.has(r.id)) {
+                updated = true;
+                return { ...r, image: imageMap.get(r.id) };
+            }
+            return r;
+        });
+
+        if (updated) {
+            displayRecipes(recipes);
+        }
     }
 
     // טעינת והגדרת ההגדרות (מחליף localStorage)
     async function loadSettings() {
-        if (!supabase) return { lastBackup: null, recipesPerRow: 6, timerVisible: false };
+        if (!supabase) return { lastBackup: null, recipesPerRow: 4, timerVisible: false };
 
         const { data } = await supabase.from('recipe_book_settings').select('key, value');
         const m = (data || []).reduce((a, r) => { a[r.key] = r.value; return a; }, {});
@@ -96,7 +183,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
         return {
             lastBackup: m.lastBackup ?? null,
-            recipesPerRow: m.recipesPerRow || 6,
+            recipesPerRow: m.recipesPerRow || 4,
             timerVisible: m.timerVisible === true
         };
     }
@@ -148,12 +235,15 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             updateCategoryButtons();
             document.getElementById('filterRating').innerHTML = generateFilterStars();
             setupBackupReminder(settings.lastBackup);
-            setRecipesPerRow(settings.recipesPerRow || 6);
+            setRecipesPerRow(settings.recipesPerRow || 4);
             drawGridIcons();
             applyTimerVisibility(settings.timerVisible);
             initializeTimer();
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
+            if (imagesDeferred) {
+                await loadImagesForRecipes();
+            }
             // הוסף event listener רק פעם אחת כדי למנוע הוספה חוזרת
             if (!window.popstateHandlerAdded) {
               window.addEventListener('popstate', function() {
@@ -171,7 +261,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             var fr = document.getElementById('filterRating');
             if (fr) fr.innerHTML = generateFilterStars();
             setupBackupReminder(null);
-            setRecipesPerRow(6);
+            setRecipesPerRow(4);
             drawGridIcons();
             applyTimerVisibility(false);
             initializeTimer();
@@ -474,64 +564,183 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       const popupBody = document.getElementById('popupBody');
       
       popup.classList.add('visible');
+      document.documentElement.classList.add('modal-open');
+      document.body.classList.add('modal-open');
       
+      // Calculate rating display
+      const currentRating = recipe.rating || 0;
+      let ratingStars = '';
+      for (let i = 1; i <= 5; i++) {
+        const starClass = i <= currentRating ? 'text-yellow-500 fill-current' : 'text-gray-300';
+        ratingStars += `<span class="material-symbols-outlined text-[16px] ${starClass}" onclick="rateRecipe(${index}, ${i})">star</span>`;
+      }
+
+      // Generate ingredients list with checkboxes
+      const ingredientsList = recipe.ingredients.split('\n').map((ingredient, i) => {
+        if (!ingredient.trim()) return '';
+        return `
+          <label class="custom-checkbox-item">
+            <input class="hidden peer" type="checkbox"/>
+            <div class="checkbox-box">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"></path></svg>
+            </div>
+            <span class="ingredient-text">${ingredient}</span>
+          </label>
+        `;
+      }).join('');
+
+      // Generate steps list
+      const stepsList = recipe.instructions.split('\n').map((step, i) => {
+        if (!step.trim()) return '';
+        return `
+          <div class="step-item">
+            <span class="step-number">${i + 1}</span>
+            <p class="step-text">${step}</p>
+          </div>
+        `;
+      }).join('');
+
       popupBody.innerHTML = `
-        <div class="recipe-full" style="background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), url('${fixImagePath(recipe.image, recipe.category)}');">
-          <div class="recipe-content-overlay">
-            <div class="recipe-header">
-              <h2 class="recipe-title">${recipe.name}</h2>
-              <span class="recipe-source">${recipe.source}</span>
+        <button class="close-popup-floating" onclick="closePopup()">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="recipe-full">
+          <!-- Image Section (Left) -->
+          <div class="recipe-image-section">
+            <img src="${fixImagePath(recipe.image, recipe.category)}" alt="${recipe.name}" onerror="this.src=getRandomDefaultImageForCategory('${recipe.category}')">
+            <div class="recipe-image-overlay"></div>
+            <div class="recipe-image-content">
+              <span class="recipe-category-badge">${recipe.category}</span>
+              <h2 class="recipe-image-title">הצצה למנה המושלמת</h2>
             </div>
-            <div class="recipe-flex-container">
-              <div class="recipe-right-side">
-                <p><strong>קטגוריה:</strong> ${recipe.category}</p>
-                <div class="recipe-main-content">
-                  <div class="ingredients-section">
-                    <p><strong>מצרכים:</strong></p>
-                    <ul class="ingredients-list">
-                      ${recipe.ingredients.split('\n').map(ingredient => `<li>${ingredient}</li>`).join('')}
-                    </ul>
-                  </div>
-                  <div class="instructions-section">
-                    <p><strong>הוראות הכנה:</strong></p>
-                    <ul class="instructions-list">
-                      ${recipe.instructions.split('\n').map(instruction => `<li>${instruction}</li>`).join('')}
-                    </ul>
-                  </div>
-                </div>
+          </div>
+
+          <!-- Content Section (Right) -->
+          <div class="recipe-content-section">
+            <!-- Sticky Header -->
+            <div class="recipe-content-header">
+              <div class="recipe-header-info">
+                <h1 class="recipe-main-title">${recipe.name}</h1>
+                <p class="recipe-source-link">מקור: <a href="${recipe.recipeLink || '#'}" target="_blank">${recipe.source || 'לא ידוע'}</a></p>
               </div>
-              <div class="recipe-left-side">
-                <div class="recipe-rating">
-                  ${generateStars(recipe.rating || 0, index)}
-                </div>
-                ${recipe.videoUrl ? `
-                  <div class="recipe-video">
-                    <iframe width="560" height="315" src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                  </div>` : ''}
-                ${recipe.recipeLink ? `<div class="recipe-link"><strong>קישור למתכון:</strong><br><a href="${recipe.recipeLink}" target="_blank">${recipe.recipeLink}</a></div>` : ''}
-                ${recipe.notes ? `<div class="recipe-notes"><strong>הערות:</strong><br>${recipe.notes}</div>` : ''}
-                <div class="action-buttons">
-                  <button class="action-btn" onclick="editRecipe(${index})" data-tooltip="ערוך">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn" onclick="confirmDeleteRecipe(${index})" data-tooltip="מחק">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                  <button class="action-btn" onclick="shareRecipe(${index})" data-tooltip="שתף">
-                    <i class="fas fa-share"></i>
-                  </button>
-                  <button class="action-btn" onclick="copyRecipeLink(${index})" data-tooltip="העתק קישור">
-                    <i class="fas fa-link"></i>
-                  </button>
-                  <button class="action-btn" onclick="downloadRecipe(${index})" data-tooltip="הורד">
-                    <i class="fas fa-download"></i>
-                  </button>
-                  <button class="action-btn" onclick="regenerateImage(${index})" data-tooltip="צור תמונה חדשה">
-                    <i class="fas fa-image"></i>
-                  </button>
+              <div class="recipe-header-actions">
+                <button class="recipe-create-image-btn" onclick="regenerateImage(${index})">
+                    צור תמונה חדשה
+                </button>
+                <div class="recipe-actions-row">
+                    <button class="recipe-action-btn" onclick="editRecipe(${index})" title="ערוך">
+                        <span class="material-symbols-outlined">edit</span>
+                    </button>
+                    <button class="recipe-action-btn" onclick="confirmDeleteRecipe(${index})" title="מחק">
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
+                    <button class="recipe-action-btn" onclick="shareRecipe(${index})" title="שתף">
+                        <span class="material-symbols-outlined">share</span>
+                    </button>
+                    <button class="recipe-action-btn" onclick="downloadRecipe(${index})" title="הורד">
+                        <span class="material-symbols-outlined">download</span>
+                    </button>
                 </div>
               </div>
             </div>
+
+            <!-- Scrollable Content -->
+            <div class="recipe-scroll-content">
+              <!-- Meta Grid -->
+              <div class="recipe-meta-grid">
+                <div class="meta-item">
+                  <span class="material-symbols-outlined meta-icon">schedule</span>
+                  <span class="meta-label">זמן הכנה</span>
+                  <span class="meta-value">${recipe.preparationTime || '--'} דקות</span>
+                </div>
+                <div class="meta-item">
+                  <span class="material-symbols-outlined meta-icon" style="color: #fb923c;">star</span>
+                  <span class="meta-label">רמת קושי</span>
+                  <div class="flex">
+                    <span class="material-symbols-outlined text-[14px] text-orange-400 fill-current">star</span>
+                    <span class="material-symbols-outlined text-[14px] text-orange-400 fill-current">star</span>
+                    <span class="material-symbols-outlined text-[14px] text-gray-300">star</span>
+                  </div>
+                </div>
+                <div class="meta-item">
+                  <span class="material-symbols-outlined meta-icon" style="color: #60a5fa;">category</span>
+                  <span class="meta-label">קטגוריה</span>
+                  <span class="meta-value">${recipe.category}</span>
+                </div>
+                <div class="meta-item">
+                  <div class="flex mb-1">
+                    ${ratingStars}
+                  </div>
+                  <span class="meta-label">דירוג</span>
+                  <span class="meta-value">${currentRating.toFixed(1)}</span>
+                </div>
+              </div>
+
+              <!-- Main Grid Layout -->
+              <div class="recipe-grid-layout">
+                <!-- Ingredients -->
+                <section>
+                  <h3 class="section-title">
+                    <span class="material-symbols-outlined">shopping_basket</span>
+                    מצרכים
+                  </h3>
+                  <div class="ingredients-list-styled">
+                    ${ingredientsList}
+                  </div>
+                </section>
+
+                <!-- Steps -->
+                <section>
+                  <h3 class="section-title">
+                    <span class="material-symbols-outlined">cooking</span>
+                    שלבי הכנה
+                  </h3>
+                  <div class="steps-list-styled">
+                    ${stepsList}
+                  </div>
+                </section>
+              </div>
+
+              <!-- Video Section -->
+              ${recipe.videoUrl ? `
+              <section class="video-section">
+                <h3 class="section-title">
+                  <span class="material-symbols-outlined" style="color: #ef4444;">play_circle</span>
+                  מדריך וידאו
+                </h3>
+                <div class="video-container-styled">
+                  <iframe src="${getYoutubeEmbed(recipe.videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+              </section>
+              ` : ''}
+
+              <!-- Notes Section -->
+              ${recipe.notes ? `
+              <section class="notes-section">
+                <h3 class="notes-title">
+                  <span class="material-symbols-outlined">description</span>
+                  הערות השף (Notes)
+                </h3>
+                <div class="notes-text">
+                  ${recipe.notes.replace(/\n/g, '<br>')}
+                </div>
+              </section>
+              ` : ''}
+
+              <!-- External Link -->
+              ${recipe.recipeLink ? `
+              <section class="original-link-section">
+                <div class="link-box">
+                  <span class="material-symbols-outlined text-gray-400">link</span>
+                  <span class="text-sm font-medium text-gray-600 dark:text-gray-300">למתכון המלא באתר המקור:</span>
+                  <a href="${recipe.recipeLink}" target="_blank" class="text-sm font-bold text-primary hover:underline" style="color: var(--primary-color);">קישור למקור</a>
+                </div>
+              </section>
+              ` : ''}
+              
+              <div class="h-12"></div>
+            </div>
+
           </div>
         </div>
       `;
@@ -549,6 +758,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
       popup.classList.remove('visible');
       popup.style.display = 'none';
+      document.documentElement.classList.remove('modal-open');
+      document.body.classList.remove('modal-open');
     }
 
     function copyRecipeLink(index) {
@@ -790,28 +1001,36 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     function setFilterRating(rating) {
       for (let i = 1; i <= 5; i++) {
         const starElement = document.getElementById(`filterStar${i}`);
-        starElement.classList.remove('selected');
-        starElement.style.color = 'gray';
-        starElement.textContent = '☆';
+        if (starElement) {
+          starElement.classList.remove('selected');
+          starElement.style.color = 'gray';
+          starElement.textContent = '☆';
+        }
       }
       if (rating > 0) {
         for (let i = 1; i <= rating; i++) {
           const starElement = document.getElementById(`filterStar${i}`);
-          starElement.classList.add('selected');
-          starElement.style.color = 'green';
-          starElement.textContent = '★';
+          if (starElement) {
+            starElement.classList.add('selected');
+            starElement.style.color = 'green';
+            starElement.textContent = '★';
+          }
         }
       }
       filterRecipes();
     }
 
     function getSelectedRating() {
-      const stars = document.querySelectorAll('.filter-rating .selected');
+      const filterRatingEl = document.getElementById('filterRating');
+      if (!filterRatingEl) return 0;
+      const stars = filterRatingEl.querySelectorAll('.selected');
       return stars.length;
     }
 
     function resetFilterStars() {
-      const stars = document.querySelectorAll('.filter-rating span');
+      const filterRatingEl = document.getElementById('filterRating');
+      if (!filterRatingEl) return;
+      const stars = filterRatingEl.querySelectorAll('span');
       stars.forEach(star => {
         star.classList.remove('selected');
         star.textContent = '☆';
@@ -821,10 +1040,15 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     function resetSearch() {
       document.getElementById('searchName').value = '';
-      document.getElementById('searchIngredients').value = '';
-      selectedCategory = '';
+      const searchIngredientsEl = document.getElementById('searchIngredients');
+      if (searchIngredientsEl) searchIngredientsEl.value = '';
+      const searchPrepTimeEl = document.getElementById('searchPrepTime');
+      if (searchPrepTimeEl) searchPrepTimeEl.value = '';
+      selectedCategory = null;
       resetFilterStars();
       displayRecipes(recipes);
+      // Update active state of category buttons
+      updateCategoryButtons();
     }
 
     function exportRecipes() {
@@ -1111,8 +1335,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     // פונקציה לשינוי מספר המתכונים בשורה
     function setRecipesPerRow(number) {
       document.documentElement.style.setProperty('--columns', number);
+      document.getElementById('grid4').classList.remove('active');
+      document.getElementById('grid5').classList.remove('active');
       document.getElementById('grid6').classList.remove('active');
-      document.getElementById('grid8').classList.remove('active');
       document.getElementById('grid' + number).classList.add('active');
       saveSetting('recipesPerRow', number);
     }
@@ -1120,11 +1345,18 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     // ציור אייקוני הגריד
     function drawGridIcons() {
       const grids = [
-        { id: 'grid6', cols: 6 },
-        { id: 'grid8', cols: 8 }
+        { id: 'grid4', cols: 4 },
+        { id: 'grid5', cols: 5 },
+        { id: 'grid6', cols: 6 }
       ];
 
       grids.forEach(grid => {
+        const element = document.getElementById(grid.id);
+        if (!element) return;
+        
+        // נקה את התוכן הקיים
+        element.innerHTML = '';
+        
         const canvas = document.createElement('canvas');
         canvas.width = 40;
         canvas.height = 40;
@@ -1140,7 +1372,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           ctx.strokeRect(i * cellWidth, 0, cellWidth, cellHeight);
         }
 
-        document.getElementById(grid.id).appendChild(canvas);
+        element.appendChild(canvas);
       });
     }
 
@@ -1182,21 +1414,389 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       aiChatMessages.forEach(function(m) {
         const d = document.createElement('div');
         d.className = 'ai-chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
-        d.textContent = m.content || '';
+
+        if (m.role !== 'user') {
+          const chefIcon = document.createElement('img');
+          chefIcon.src = '/icons/chef-speaking.svg';
+          chefIcon.onerror = function() {
+            this.onerror = null;
+            this.src = '/assets/icons/chef-speaking.svg';
+          };
+          chefIcon.alt = 'שף';
+          chefIcon.className = 'chef-msg-icon';
+          d.appendChild(chefIcon);
+        }
+
+        // Add text content
+        const textSpan = document.createElement('span');
+        textSpan.textContent = m.content || '';
+        d.appendChild(textSpan);
+
+        // Add attachment thumbnails if present
+        if (m.attachments && m.attachments.length > 0) {
+          const attachmentsDiv = document.createElement('div');
+          attachmentsDiv.className = 'message-attachments';
+          m.attachments.forEach(function(att) {
+            if (att.type === 'image') {
+              const imgContainer = document.createElement('div');
+              imgContainer.className = 'message-attachment';
+              const img = document.createElement('img');
+              img.src = att.data;
+              img.alt = att.name || 'תמונה';
+              img.onclick = function() { window.open(att.data, '_blank'); };
+              imgContainer.appendChild(img);
+              attachmentsDiv.appendChild(imgContainer);
+            }
+          });
+          d.appendChild(attachmentsDiv);
+        }
+
         el.appendChild(d);
       });
+
+      // Show pending recipe confirmation buttons if there's a suggested recipe waiting
+      if (pendingSuggestedRecipe) {
+        const confirmDiv = document.createElement('div');
+        confirmDiv.className = 'ai-chat-recipe-confirm';
+        confirmDiv.innerHTML = `
+          <div class="recipe-preview">
+            <strong>${pendingSuggestedRecipe.name}</strong>
+            <p>קטגוריה: ${pendingSuggestedRecipe.category || 'שונות'}</p>
+          </div>
+          <div class="recipe-confirm-buttons">
+            <button class="confirm-add-btn" onclick="confirmAddSuggestedRecipe()">
+              <i class="fas fa-plus"></i> הוסף לספר
+            </button>
+            <button class="confirm-edit-btn" onclick="editSuggestedRecipe()">
+              <i class="fas fa-edit"></i> ערוך לפני הוספה
+            </button>
+            <button class="confirm-cancel-btn" onclick="cancelSuggestedRecipe()">
+              <i class="fas fa-times"></i> לא תודה
+            </button>
+          </div>
+        `;
+        el.appendChild(confirmDiv);
+      }
+
       el.scrollTop = el.scrollHeight;
     }
 
-    function openAiChat() {
+    // Add suggested recipe to the book after user confirmation
+    async function confirmAddSuggestedRecipe() {
+      if (!pendingSuggestedRecipe) return;
+
+      // Send confirmation message to AI
+      var input = document.getElementById('aiChatInput');
+      if (input) input.value = 'כן, תוסיף את המתכון לספר';
+      await sendAiMessage();
+    }
+
+    // Open form to edit recipe before adding
+    function editSuggestedRecipe() {
+      if (!pendingSuggestedRecipe) return;
+      applySuggestedRecipe(pendingSuggestedRecipe);
+      pendingSuggestedRecipe = null;
+    }
+
+    // Cancel adding the suggested recipe
+    function cancelSuggestedRecipe() {
+      pendingSuggestedRecipe = null;
+      aiChatMessages.push({
+        role: 'assistant',
+        content: 'בסדר, לא הוספתי את המתכון. אם תרצה משהו אחר, אני כאן!'
+      });
+      renderAiChatMessages();
+    }
+
+    // --- Chat Conversation Management ---
+    async function createNewConversation() {
+      if (!supabase) return null;
+      try {
+        const { data, error } = await supabase
+          .from('chat_conversations')
+          .insert({ title: 'שיחה חדשה' })
+          .select('id')
+          .single();
+        if (error) {
+          console.error('Error creating conversation:', error);
+          return null;
+        }
+        return data.id;
+      } catch (e) {
+        console.error('Error creating conversation:', e);
+        return null;
+      }
+    }
+
+    async function loadConversationHistory() {
+      if (!supabase) return [];
+      try {
+        const { data, error } = await supabase
+          .from('chat_conversations')
+          .select('id, title, updated_at, last_message_preview')
+          .order('updated_at', { ascending: false })
+          .limit(30);
+        if (error) {
+          console.error('Error loading conversations:', error);
+          return [];
+        }
+        return data || [];
+      } catch (e) {
+        console.error('Error loading conversations:', e);
+        return [];
+      }
+    }
+
+    async function loadConversationMessages(conversationId) {
+      if (!supabase) return [];
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .select('role, content, attachments')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true });
+        if (error) {
+          console.error('Error loading messages:', error);
+          return [];
+        }
+        return data || [];
+      } catch (e) {
+        console.error('Error loading messages:', e);
+        return [];
+      }
+    }
+
+    async function saveMessageToDb(conversationId, role, content, attachments) {
+      if (!supabase || !conversationId) return;
+      try {
+        await supabase.from('chat_messages').insert({
+          conversation_id: conversationId,
+          role: role,
+          content: content,
+          attachments: attachments || []
+        });
+      } catch (e) {
+        console.error('Error saving message:', e);
+      }
+    }
+
+    function formatRelativeDate(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'עכשיו';
+      if (diffMins < 60) return 'לפני ' + diffMins + ' דקות';
+      if (diffHours < 24) return 'לפני ' + diffHours + ' שעות';
+      if (diffDays < 7) return 'לפני ' + diffDays + ' ימים';
+      return date.toLocaleDateString('he-IL');
+    }
+
+    function renderConversationHistory() {
+      const listEl = document.getElementById('aiChatHistoryList');
+      if (!listEl) return;
+
+      listEl.innerHTML = '';
+
+      if (conversationHistory.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = 'אין שיחות קודמות';
+        listEl.appendChild(empty);
+        return;
+      }
+
+      conversationHistory.forEach(function(conv) {
+        const item = document.createElement('div');
+        item.className = 'history-item' + (conv.id === currentConversationId ? ' active' : '');
+        item.onclick = function() { loadPastConversation(conv.id); };
+
+        const title = document.createElement('div');
+        title.className = 'history-item-title';
+        title.textContent = conv.title || 'שיחה ללא כותרת';
+
+        const preview = document.createElement('div');
+        preview.className = 'history-item-preview';
+        preview.textContent = conv.last_message_preview || '';
+
+        const date = document.createElement('div');
+        date.className = 'history-item-date';
+        date.textContent = formatRelativeDate(conv.updated_at);
+
+        item.appendChild(title);
+        item.appendChild(preview);
+        item.appendChild(date);
+        listEl.appendChild(item);
+      });
+    }
+
+    async function loadPastConversation(conversationId) {
+      currentConversationId = conversationId;
+      const messages = await loadConversationMessages(conversationId);
+      aiChatMessages = messages.map(function(m) {
+        return {
+          role: m.role,
+          content: m.content,
+          attachments: m.attachments || []
+        };
+      });
+      renderAiChatMessages();
+      renderConversationHistory();
+    }
+
+    async function startNewConversation() {
+      currentConversationId = await createNewConversation();
+      aiChatMessages = [];
+      chatAttachments = [];
+
+      aiChatMessages.push({
+        role: 'assistant',
+        content: 'שיחה חדשה! אני יכול לחפש מתכונים, להמציא מתכונים חדשים, או לעזור לך להוסיף מתכון. במה אוכל לעזור?'
+      });
+
+      conversationHistory = await loadConversationHistory();
+      renderConversationHistory();
+      renderAiChatMessages();
+      clearAttachmentPreview();
+      var input = document.getElementById('aiChatInput');
+      if (input) input.focus();
+    }
+
+    function toggleChatHistory() {
+      const history = document.getElementById('aiChatHistory');
+      if (history) {
+        history.classList.toggle('collapsed');
+      }
+    }
+
+    // --- File Upload Handling ---
+    function handleChatFileSelect(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 5 * 1024 * 1024) {
+          alert('הקובץ גדול מדי (מקסימום 5MB)');
+          continue;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          // Resize image before storing
+          resizeImageFromDataUrl(e.target.result, 800, 800, function(resizedData) {
+            chatAttachments.push({
+              type: 'image',
+              data: resizedData,
+              name: file.name
+            });
+            renderAttachmentPreviews();
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+
+      event.target.value = '';
+    }
+
+    function resizeImageFromDataUrl(dataUrl, maxW, maxH, callback) {
+      const img = new Image();
+      img.onload = function() {
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function() {
+        callback(dataUrl); // fallback to original
+      };
+      img.src = dataUrl;
+    }
+
+    function renderAttachmentPreviews() {
+      const container = document.getElementById('aiChatAttachments');
+      if (!container) return;
+
+      if (chatAttachments.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = 'flex';
+      container.innerHTML = '';
+
+      chatAttachments.forEach(function(att, idx) {
+        const preview = document.createElement('div');
+        preview.className = 'attachment-preview';
+
+        if (att.type === 'image') {
+          const img = document.createElement('img');
+          img.src = att.data;
+          img.alt = att.name || 'תמונה';
+          preview.appendChild(img);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'attachment-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.onclick = function() {
+          chatAttachments.splice(idx, 1);
+          renderAttachmentPreviews();
+        };
+        preview.appendChild(removeBtn);
+
+        container.appendChild(preview);
+      });
+
+      // Update attach button state
+      const attachBtn = document.getElementById('aiChatAttach');
+      if (attachBtn) {
+        attachBtn.classList.toggle('has-attachments', chatAttachments.length > 0);
+      }
+    }
+
+    function clearAttachmentPreview() {
+      chatAttachments = [];
+      renderAttachmentPreviews();
+    }
+
+    async function openAiChat() {
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'flex';
-      if (aiChatMessages.length === 0) {
-        aiChatMessages.push({ role: 'assistant', content: 'שלום! אני כאן כדי לעזור עם מתכונים. תכתוב לי מה תרצה – לחפש מתכון, לקבל רעיונות, או לספר מתכון ואוסיף אותו עבורך. במה אוכל לעזור?' });
-      }
+
+      // Always start a new conversation when opening
+      currentConversationId = await createNewConversation();
+      aiChatMessages = [];
+      chatAttachments = [];
+
+      aiChatMessages.push({
+        role: 'assistant',
+        content: 'שלום! אני יכול לחפש מתכונים קיימים, להמציא מתכונים חדשים מהדמיון שלי, או לעזור לך להוסיף מתכון משלך. במה אוכל לעזור?'
+      });
+
+      // Load conversation history for sidebar
+      conversationHistory = await loadConversationHistory();
+      renderConversationHistory();
+
       renderAiChatMessages();
-      document.getElementById('aiChatInput').value = '';
-      document.getElementById('aiChatInput').focus();
+      clearAttachmentPreview();
+      var input = document.getElementById('aiChatInput');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
       var sendBtn = document.getElementById('aiChatSend');
       if (sendBtn) sendBtn.disabled = false;
     }
@@ -1234,26 +1834,44 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       aiGeneratedImage = suggestedRecipe.image || null;
     }
 
-    function sendAiMessage() {
+    async function sendAiMessage() {
       var input = document.getElementById('aiChatInput');
       var sendBtn = document.getElementById('aiChatSend');
       var msg = (input && input.value) ? input.value.trim() : '';
-      if (!msg) return;
+
+      // Allow sending with only attachments (no text required)
+      if (!msg && chatAttachments.length === 0) return;
 
       if (aiChatAbortController) {
         aiChatAbortController.abort();
       }
       aiChatAbortController = new AbortController();
 
-      aiChatMessages.push({ role: 'user', content: msg });
+      // Build message with attachments
+      var userMessage = {
+        role: 'user',
+        content: msg || (chatAttachments.length > 0 ? '[תמונה]' : ''),
+        attachments: chatAttachments.slice() // copy array
+      };
+
+      aiChatMessages.push(userMessage);
+
+      // Save user message to database
+      if (currentConversationId) {
+        await saveMessageToDb(currentConversationId, 'user', userMessage.content, userMessage.attachments);
+      }
+
+      // Clear inputs
       if (input) input.value = '';
+      clearAttachmentPreview();
       renderAiChatMessages();
       if (sendBtn) sendBtn.disabled = true;
 
       var loading = document.createElement('div');
-      loading.className = 'ai-chat-msg loading';
+      loading.className = 'ai-chat-msg loading chef-typing-container';
       loading.id = 'aiChatLoading';
-      loading.textContent = 'מחפש...';
+      loading.setAttribute('aria-label', 'השף כותב...');
+      loading.innerHTML = '<img src="/icons/chef-typing.svg" alt="השף כותב..." class="chef-typing" onerror="this.onerror=null; this.src=\'/assets/icons/chef-typing.svg\';">';
       var msgsEl = document.getElementById('aiChatMessages');
       if (msgsEl) msgsEl.appendChild(loading);
 
@@ -1274,11 +1892,21 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
           var reply = (data && data.reply) ? data.reply : (data && data.error) ? data.error : 'לא התקבלה תשובה.';
           if (!reply && res && !res.ok) reply = 'שגיאה מהשרת (' + (res.status || '') + '). נא לבדוק GEMINI_API_KEY ב-Supabase Secrets.';
-          aiChatMessages.push({ role: 'assistant', content: reply });
+
+          var assistantMessage = { role: 'assistant', content: reply };
+          aiChatMessages.push(assistantMessage);
+
+          // Save assistant message to database
+          if (currentConversationId) {
+            await saveMessageToDb(currentConversationId, 'assistant', reply, []);
+          }
+
           renderAiChatMessages();
 
           var recipeIds = (data && Array.isArray(data.recipeIds)) ? data.recipeIds : [];
           if (data && data.insertedRecipeId) {
+            // Recipe was confirmed and inserted to DB
+            pendingSuggestedRecipe = null;
             closeAiChat();
             recipes = await loadRecipesFromDB();
             if (!Array.isArray(recipes)) recipes = [];
@@ -1300,7 +1928,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             var filtered = recipes.filter(function(r) { return r.id && recipeIds.indexOf(r.id) !== -1; });
             displayRecipes(filtered);
           } else if (data && data.suggestedRecipe) {
-            applySuggestedRecipe(data.suggestedRecipe);
+            // Store suggested recipe for user confirmation (don't auto-add)
+            pendingSuggestedRecipe = data.suggestedRecipe;
+            renderAiChatMessages(); // Re-render to show confirmation buttons
           }
         })
         .catch(function(err) {
@@ -1392,6 +2022,33 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('sideMenu').style.width = '0';
     }
 
+    // פונקציה לפתיחה/סגירה של פאנל הסינון
+    function toggleFilterPanel() {
+      const searchContainer = document.getElementById('searchContainer');
+      const filterIcon = document.querySelector('.header-filter-icon');
+      
+      if (!searchContainer) return;
+      
+      const computedStyle = window.getComputedStyle(searchContainer);
+      const isVisible = searchContainer.style.display !== 'none' && 
+                       computedStyle.display !== 'none';
+      
+      if (isVisible) {
+        searchContainer.style.display = 'none';
+        if (filterIcon) {
+          filterIcon.style.color = '#64748b';
+          filterIcon.classList.remove('active');
+        }
+      } else {
+        // Use 'block' display for the main filter panel container
+        searchContainer.style.display = 'block';
+        if (filterIcon) {
+          filterIcon.style.color = 'var(--secondary)';
+          filterIcon.classList.add('active');
+        }
+      }
+    }
+
     // חשיפת הפונקציות לחלון הגלובלי כדי שהן יהיו נגישות מ-onclick
     window.openFormPopup = openFormPopup;
     window.closeFormPopup = closeFormPopup;
@@ -1415,37 +2072,82 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     window.downloadAllRecipes = downloadAllRecipes;
     window.openMenu = openMenu;
     window.closeMenu = closeMenu;
+    window.toggleFilterPanel = toggleFilterPanel;
     window.setRecipesPerRow = setRecipesPerRow;
     window.openAiChat = openAiChat;
     window.closeAiChat = closeAiChat;
     window.sendAiMessage = sendAiMessage;
     window.toggleVoiceRecording = toggleVoiceRecording;
     window.regenerateImage = regenerateImage;
+    window.startNewConversation = startNewConversation;
+    window.toggleChatHistory = toggleChatHistory;
+    window.handleChatFileSelect = handleChatFileSelect;
+    window.confirmAddSuggestedRecipe = confirmAddSuggestedRecipe;
+    window.editSuggestedRecipe = editSuggestedRecipe;
+    window.cancelSuggestedRecipe = cancelSuggestedRecipe;
 
     // Timer functionality
     let timerInterval;
     let currentBeepInterval;
+    let currentMelodyContext;
     let timerPaused = false;
     let pausedTimeRemaining = 0;
     let timerEndTime = 0;
+    const TIMER_MAX_HOURS = 99;
+    const TIMER_MAX_MINUTES = 59;
+    const TIMER_MAX_SECONDS = 59;
 
-    function beep(duration, frequency, volume, type) {
+    function playMelodyOnce() {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        currentMelodyContext = audioContext;
+        const masterGain = audioContext.createGain();
+        masterGain.gain.value = 0.12;
+        masterGain.connect(audioContext.destination);
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        const notes = [
+            { freq: 523.25, dur: 0.25 }, // C5
+            { freq: 659.25, dur: 0.25 }, // E5
+            { freq: 783.99, dur: 0.25 }, // G5
+            { freq: 659.25, dur: 0.25 }, // E5
+            { freq: 587.33, dur: 0.3 },  // D5
+            { freq: 523.25, dur: 0.4 },  // C5
+            { freq: 659.25, dur: 0.25 }, // E5
+            { freq: 523.25, dur: 0.35 }  // C5
+        ];
 
-        oscillator.type = type;
-        oscillator.frequency.value = frequency;
-        gainNode.gain.value = volume;
+        let t = audioContext.currentTime;
+        notes.forEach(note => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-        oscillator.start();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = note.freq;
+            gainNode.gain.setValueAtTime(0, t);
+            gainNode.gain.linearRampToValueAtTime(0.18, t + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, t + note.dur);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+
+            oscillator.start(t);
+            oscillator.stop(t + note.dur);
+            t += note.dur + 0.05;
+        });
+
+        const totalDurationMs = (t - audioContext.currentTime + 0.1) * 1000;
         setTimeout(() => {
-            oscillator.stop();
+            if (currentMelodyContext === audioContext) {
+                currentMelodyContext = null;
+            }
             audioContext.close();
-        }, duration);
+        }, totalDurationMs);
+    }
+
+    function stopMelody() {
+        if (currentMelodyContext) {
+            currentMelodyContext.close();
+            currentMelodyContext = null;
+        }
     }
 
     function formatTime(totalSeconds) {
@@ -1455,21 +2157,74 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
+    function normalizeTimerInputs() {
+        const secondsEl = document.getElementById('timer-seconds');
+        const minutesEl = document.getElementById('timer-minutes');
+        const hoursEl = document.getElementById('timer-hours');
+        if (!secondsEl || !minutesEl || !hoursEl) return;
+
+        let seconds = parseInt(secondsEl.value, 10);
+        let minutes = parseInt(minutesEl.value, 10);
+        let hours = parseInt(hoursEl.value, 10);
+
+        seconds = Number.isFinite(seconds) ? seconds : 0;
+        minutes = Number.isFinite(minutes) ? minutes : 0;
+        hours = Number.isFinite(hours) ? hours : 0;
+
+        seconds = Math.max(0, seconds);
+        minutes = Math.max(0, minutes);
+        hours = Math.max(0, hours);
+
+        if (seconds > TIMER_MAX_SECONDS) {
+            minutes += Math.floor(seconds / 60);
+            seconds = seconds % 60;
+        }
+
+        if (minutes > TIMER_MAX_MINUTES) {
+            hours += Math.floor(minutes / 60);
+            minutes = minutes % 60;
+        }
+
+        if (hours > TIMER_MAX_HOURS) {
+            hours = TIMER_MAX_HOURS;
+            minutes = TIMER_MAX_MINUTES;
+            seconds = TIMER_MAX_SECONDS;
+        }
+
+        secondsEl.value = seconds;
+        minutesEl.value = minutes;
+        hoursEl.value = hours;
+    }
+
     function getTimeInSeconds() {
-        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
-        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
-        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
+        normalizeTimerInputs();
+        const secondsEl = document.getElementById('timer-seconds');
+        const minutesEl = document.getElementById('timer-minutes');
+        const hoursEl = document.getElementById('timer-hours');
+        if (!secondsEl || !minutesEl || !hoursEl) return 0;
+        
+        const seconds = parseInt(secondsEl.value) || 0;
+        const minutes = parseInt(minutesEl.value) || 0;
+        const hours = parseInt(hoursEl.value) || 0;
         return (hours * 3600) + (minutes * 60) + seconds;
     }
 
     function setTimeInputs(totalSeconds) {
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
+        const secondsEl = document.getElementById('timer-seconds');
+        const minutesEl = document.getElementById('timer-minutes');
+        const hoursEl = document.getElementById('timer-hours');
+        if (!secondsEl || !minutesEl || !hoursEl) return;
 
-        document.getElementById('timer-seconds').value = seconds;
-        document.getElementById('timer-minutes').value = minutes;
-        document.getElementById('timer-hours').value = hours;
+        const maxTotalSeconds = (TIMER_MAX_HOURS * 3600) + (TIMER_MAX_MINUTES * 60) + TIMER_MAX_SECONDS;
+        const safeSeconds = Math.min(Math.max(0, totalSeconds), maxTotalSeconds);
+
+        const hours = Math.floor(safeSeconds / 3600);
+        const minutes = Math.floor((safeSeconds % 3600) / 60);
+        const seconds = safeSeconds % 60;
+
+        secondsEl.value = seconds;
+        minutesEl.value = minutes;
+        hoursEl.value = hours;
     }
 
     function startTimer() {
@@ -1480,11 +2235,15 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const pauseBtn = document.getElementById('pause-timer');
         const stopBtn = document.getElementById('stop-timer');
         const display = document.getElementById('timer-display');
+        const timerContainer = document.querySelector('.timer-container');
+
+        if (!startBtn || !pauseBtn || !stopBtn || !display || !timerContainer) return;
 
         startBtn.style.display = 'none';
         pauseBtn.style.display = 'flex';
         stopBtn.style.display = 'flex';
         display.classList.add('active');
+        timerContainer.classList.add('is-running');
 
         timerEndTime = Date.now() + (timerPaused ? pausedTimeRemaining : totalSeconds * 1000);
         timerPaused = false;
@@ -1497,24 +2256,26 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
             if (remaining === 0) {
                 clearInterval(timerInterval);
-                // צפצוף למשך דקה - צליל נעים יותר
-                let beepCount = 0;
-                const totalBeeps = 30; // פחות צפצופים עם הפסקות ארוכות יותר
+                // מנגינה נעימה למשך כחצי דקה
+                let melodyCount = 0;
+                const totalMelodies = 8;
                 currentBeepInterval = setInterval(() => {
-                    if (beepCount < totalBeeps) {
-                        beep(800, 330, 0.2, 'sine'); // צליל ארוך יותר, תדר נמוך יותר, גל סינוס
-                        beepCount++;
+                    if (melodyCount < totalMelodies) {
+                        playMelodyOnce();
+                        melodyCount++;
                     } else {
                         clearInterval(currentBeepInterval);
                         currentBeepInterval = null;
+                        stopMelody();
                         // רק כשהצפצוף מסתיים, נסתיר את כפתור העצירה
                         startBtn.style.display = 'flex';
                         pauseBtn.style.display = 'none';
                         stopBtn.style.display = 'none';
                         display.classList.remove('active');
                         display.textContent = '';
+                        timerContainer.classList.remove('is-running');
                     }
-                }, 2000); // הפסקה של 2 שניות בין הצפצופים
+                }, 4000);
 
                 // כשהטיימר מסתיים, נציג את כפתור ההתחלה ונסתיר את כפתור ההשהיה
                 startBtn.style.display = 'flex';
@@ -1523,6 +2284,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 stopBtn.style.display = 'flex';
                 display.classList.remove('active');
                 display.textContent = '';
+                timerContainer.classList.remove('is-running');
                 return;
             }
 
@@ -1534,6 +2296,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const startBtn = document.getElementById('start-timer');
         const pauseBtn = document.getElementById('pause-timer');
         const display = document.getElementById('timer-display');
+        const timerContainer = document.querySelector('.timer-container');
+
+        if (!startBtn || !pauseBtn || !display || !timerContainer) return;
 
         clearInterval(timerInterval);
         timerPaused = true;
@@ -1542,6 +2307,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         startBtn.style.display = 'flex';
         pauseBtn.style.display = 'none';
         display.classList.remove('active');
+        timerContainer.classList.remove('is-running');
     }
 
     function stopTimer() {
@@ -1549,12 +2315,16 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const pauseBtn = document.getElementById('pause-timer');
         const stopBtn = document.getElementById('stop-timer');
         const display = document.getElementById('timer-display');
+        const timerContainer = document.querySelector('.timer-container');
+
+        if (!startBtn || !pauseBtn || !stopBtn || !display || !timerContainer) return;
 
         clearInterval(timerInterval);
         if (currentBeepInterval) {
             clearInterval(currentBeepInterval);
             currentBeepInterval = null;
         }
+        stopMelody();
 
         timerPaused = false;
         pausedTimeRemaining = 0;
@@ -1564,10 +2334,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         stopBtn.style.display = 'none';
         display.classList.remove('active');
         display.textContent = '';
+        timerContainer.classList.remove('is-running');
     }
 
     function togglePresetMenu() {
         const menu = document.getElementById('timer-preset-menu');
+        if (!menu) return;
         menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
     }
 
@@ -1578,6 +2350,15 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const presetButton = document.getElementById('timer-preset');
         const showTimerButton = document.getElementById('show-timer-btn');
         const timerContainer = document.querySelector('.timer-container');
+        const hoursInput = document.getElementById('timer-hours');
+        const minutesInput = document.getElementById('timer-minutes');
+        const secondsInput = document.getElementById('timer-seconds');
+
+        // בדיקה שכל האלמנטים קיימים לפני הוספת event listeners
+        if (!startButton || !pauseButton || !stopButton || !presetButton || !showTimerButton || !timerContainer || !hoursInput || !minutesInput || !secondsInput) {
+            console.warn('Timer elements not found, skipping timer initialization');
+            return;
+        }
 
         // טיימר טוגל
         showTimerButton.addEventListener('click', () => {
@@ -1598,8 +2379,16 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             btn.addEventListener('click', () => {
                 const seconds = parseInt(btn.dataset.time);
                 setTimeInputs(seconds);
-                document.getElementById('timer-preset-menu').style.display = 'none';
+                const presetMenu = document.getElementById('timer-preset-menu');
+                if (presetMenu) {
+                    presetMenu.style.display = 'none';
+                }
             });
+        });
+
+        [hoursInput, minutesInput, secondsInput].forEach(input => {
+            input.addEventListener('input', normalizeTimerInputs);
+            input.addEventListener('change', normalizeTimerInputs);
         });
     }
 
@@ -1637,7 +2426,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     function filterRecipes() {
       const searchName = document.getElementById('searchName').value.toLowerCase().trim();
-      const searchIngredients = document.getElementById('searchIngredients').value.toLowerCase().trim();
+      const searchIngredientsEl = document.getElementById('searchIngredients');
+      const searchIngredients = searchIngredientsEl ? searchIngredientsEl.value.toLowerCase().trim() : '';
+      const searchPrepTimeEl = document.getElementById('searchPrepTime');
+      const searchPrepTime = searchPrepTimeEl ? parseInt(searchPrepTimeEl.value) || 0 : 0;
       const selectedRating = getSelectedRating();
 
       // וודא שיש מתכונים לסנן
@@ -1648,7 +2440,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
 
       // אם אין פילטרים פעילים, הצג את כל המתכונים
-      if (!searchName && !searchIngredients && !selectedCategory && !selectedRating) {
+      if (!searchName && !searchIngredients && !selectedCategory && !selectedRating && !searchPrepTime) {
         console.log('No filters active, showing all recipes:', recipes.length);
         displayRecipes(recipes);
         return;
@@ -1666,8 +2458,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         // אם אין קטגוריה נבחרת או שהקטגוריה תואמת
         const categoryMatch = !selectedCategory || (recipe.category && recipe.category.trim() === selectedCategory.trim());
         const ratingMatch = !selectedRating || (recipe.rating && recipe.rating === selectedRating);
+        // סינון לפי זמן הכנה - אם יש זמן הכנה במתכון והוא קטן או שווה לזמן המבוקש
+        const prepTimeMatch = !searchPrepTime || !recipe.preparationTime || recipe.preparationTime <= searchPrepTime;
 
-        return nameMatch && ingredientsMatch && categoryMatch && ratingMatch;
+        return nameMatch && ingredientsMatch && categoryMatch && ratingMatch && prepTimeMatch;
       });
       
       console.log('Filtered recipes:', filteredRecipes.length, 'out of', recipes.length);
@@ -1677,6 +2471,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     function filterByCategory(category) {
       selectedCategory = category;
       filterRecipes();
+      // Update active state of category buttons
+      updateCategoryButtons();
     }
 
     function updateCategoryList() {
@@ -1714,21 +2510,79 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         }
     }
 
+    // Category icon mapping
+    const categoryIcons = {
+      'כל הקטגוריות': 'restaurant',
+      'לחמים': 'bakery_dining',
+      'מרקים': 'soup_kitchen',
+      'מנה עיקרית': 'dinner_dining',
+      'תוספות': 'lunch_dining',
+      'סלטים': 'eco',
+      'שונות': 'restaurant_menu',
+      'עוגות': 'cake',
+      'קינוחים': 'icecream'
+    };
+
+    // Category color mapping for icons and backgrounds (matching the design example)
+    const categoryColors = {
+      'כל הקטגוריות': 'teal',    // Teal/green for "All"
+      'לחמים': 'amber',           // Amber/yellow for bakery
+      'מרקים': 'blue',            // Blue for soups
+      'מנה עיקרית': 'red',        // Red for main dishes
+      'תוספות': 'purple',         // Purple for sides
+      'סלטים': 'emerald',         // Bright green for salads/healthy
+      'שונות': 'blue',            // Blue for other
+      'עוגות': 'amber',           // Amber/yellow for cakes
+      'קינוחים': 'rose'           // Bright pink for desserts
+    };
+
+    function getCategoryIcon(category) {
+      return categoryIcons[category] || 'restaurant_menu';
+    }
+
+    function getCategoryColorClass(category) {
+      const color = categoryColors[category] || '';
+      return color ? `category-icon-${color}` : '';
+    }
+
+    function getCategoryBgColor(category) {
+      const color = categoryColors[category] || 'blue';
+      return color;
+    }
+
     function updateCategoryButtons() {
       const categories = getUniqueCategories();
       const categoryFilter = document.getElementById('categoryFilter');
       categoryFilter.innerHTML = '';
 
       const allButton = document.createElement('button');
-      allButton.className = 'category-button';
-      allButton.innerHTML = 'כל הקטגוריות';
+      const allIsActive = selectedCategory === null;
+      const allColorClass = getCategoryColorClass('כל הקטגוריות');
+      const allBgColor = getCategoryBgColor('כל הקטגוריות');
+      allButton.className = `category-button ${allIsActive ? 'active' : ''}`;
+      allButton.setAttribute('data-category', 'all');
+      allButton.innerHTML = `
+        <div class="glass-btn-3d category-bg-${allBgColor} ${allIsActive ? 'active' : ''}">
+          <span class="material-symbols-outlined ${allColorClass}">${getCategoryIcon('כל הקטגוריות')}</span>
+        </div>
+        <span>כל הקטגוריות</span>
+      `;
       allButton.onclick = resetSearch;
       categoryFilter.appendChild(allButton);
 
       categories.forEach(category => {
         const button = document.createElement('button');
-        button.className = 'category-button';
-        button.innerHTML = `<span>${category}</span>`;
+        const isActive = selectedCategory === category;
+        button.className = `category-button ${isActive ? 'active' : ''}`;
+        button.setAttribute('data-category', category);
+        const colorClass = getCategoryColorClass(category);
+        const bgColor = getCategoryBgColor(category);
+        button.innerHTML = `
+          <div class="glass-btn-3d category-bg-${bgColor} ${isActive ? 'active' : ''}">
+            <span class="material-symbols-outlined ${colorClass}">${getCategoryIcon(category)}</span>
+          </div>
+          <span>${category}</span>
+        `;
         button.onclick = () => filterByCategory(category);
         categoryFilter.appendChild(button);
       });
@@ -1758,6 +2612,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('recipeSource').value = recipe.source || '';
       document.getElementById('ingredients').value = recipe.ingredients || '';
       document.getElementById('instructions').value = recipe.instructions || '';
+      document.getElementById('preparationTime').value = recipe.preparationTime || '';
       document.getElementById('category').value = recipe.category || 'שונות';
       document.getElementById('notes').value = recipe.notes || '';
       document.getElementById('recipeVideo').value = recipe.videoUrl || '';
@@ -1817,6 +2672,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       const source = document.getElementById('recipeSource').value;
       const ingredients = document.getElementById('ingredients').value;
       const instructions = document.getElementById('instructions').value;
+      const preparationTime = document.getElementById('preparationTime').value ? parseInt(document.getElementById('preparationTime').value) : null;
       const notes = document.getElementById('notes').value;
       const recipeLink = document.getElementById('recipeLink').value;
       const recipeVideo = document.getElementById('recipeVideo').value;
@@ -1869,6 +2725,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         instructions,
         category,
         notes,
+        preparationTime,
         rating: editingIndex >= 0 ? recipes[editingIndex].rating || 0 : 0,
         image: imageData,
         recipeLink,
