@@ -698,6 +698,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         
         // Use imagePath (Storage) if available, fallback to legacy image (base64)
         const imageSource = recipe.imagePath || recipe.image;
+        const usingDefaultImage = !imageSource;
         
         // Set image source with transformations
         if (imageSource) {
@@ -718,6 +719,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         } else {
             // No image - use default
             img.src = fixImagePath(null, recipe.category);
+        }
+        
+        // Add visual indicator for default images
+        if (usingDefaultImage) {
+            card.classList.add('using-default-image');
         }
         
         img.alt = recipe.name;
@@ -876,6 +882,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
               <div class="recipe-header-actions">
                 <button class="recipe-create-image-btn" onclick="regenerateImage(${index})">
                     צור תמונה חדשה
+                </button>
+                <button class="recipe-create-image-btn" onclick="reuploadRecipeImage(${recipe.id})" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
+                    <span class="material-symbols-outlined" style="font-size: 18px; margin-left: 6px;">upload</span>
+                    החלף תמונה
                 </button>
                 <div class="recipe-actions-row">
                     <button class="recipe-action-btn" onclick="editRecipe(${index})" title="ערוך">
@@ -3141,13 +3151,14 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             
         } catch (error) {
             console.error('Error uploading image:', error);
-            // Fallback to base64 if storage fails
-            console.warn('Falling back to base64 encoding');
-            return new Promise((resolve) => {
-                resizeImage(file, 800, 800, (dataUrl) => {
-                    resolve(dataUrl);
-                });
-            });
+            console.warn('Upload failed - will use default image');
+            
+            // Return null to trigger default image usage
+            // This is better than base64 because:
+            // 1. Saves storage space in database
+            // 2. Faster page loads
+            // 3. User can easily reupload later using reuploadRecipeImage()
+            return null;
         }
     }
 
@@ -3185,6 +3196,126 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     // ============================================
     // END: Supabase Storage Image Functions
     // ============================================
+
+    // ============================================
+    // DEBUG: Recipe Image Diagnostics
+    // ============================================
+    
+    async function debugRecipeImage(recipeId) {
+        console.log('🔍 Debugging Recipe Image...');
+        const recipe = recipes.find(r => r.id === recipeId);
+        
+        if (!recipe) {
+            console.error('❌ Recipe not found with ID:', recipeId);
+            return;
+        }
+        
+        console.log('📋 Recipe Info:', {
+            id: recipe.id,
+            name: recipe.name,
+            category: recipe.category
+        });
+        
+        console.log('🖼️ Image Data:');
+        console.log('  - imagePath (Storage):', recipe.imagePath || 'None');
+        console.log('  - image (legacy):', recipe.image ? `${recipe.image.substring(0, 50)}...` : 'None');
+        
+        // Check if image exists in Storage
+        if (recipe.imagePath) {
+            const url = getImageUrl(recipe.imagePath);
+            console.log('  - Full URL:', url);
+            
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                console.log('  - Storage Status:', response.status, response.ok ? '✅ OK' : '❌ Failed');
+                
+                if (!response.ok) {
+                    console.error('  - Image file not found in Storage!');
+                    console.log('  - 💡 Solution: Use reuploadRecipeImage() to upload a new image');
+                }
+            } catch (error) {
+                console.error('  - Fetch Error:', error);
+            }
+        } else if (recipe.image && recipe.image.startsWith('data:')) {
+            console.log('  - Using base64 image (legacy format)');
+        } else {
+            console.log('  - Using default category image');
+            console.log('  - Default image:', getRandomDefaultImageForCategory(recipe.category));
+        }
+        
+        console.log('✅ Debug complete');
+    }
+    
+    // Function to reupload image for a specific recipe
+    async function reuploadRecipeImage(recipeId) {
+        const recipe = recipes.find(r => r.id === recipeId);
+        if (!recipe) {
+            alert('מתכון לא נמצא');
+            return;
+        }
+        
+        // Create file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                // Show loading message
+                const loadingMsg = document.createElement('div');
+                loadingMsg.id = 'upload-loading';
+                loadingMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px 40px; border-radius: 10px; z-index: 10000; font-size: 18px;';
+                loadingMsg.textContent = 'מעלה תמונה...';
+                document.body.appendChild(loadingMsg);
+                
+                // Upload to Storage
+                const imagePath = await uploadImageToStorage(file, recipe.id || 'temp');
+                
+                if (!imagePath || imagePath.startsWith('data:')) {
+                    throw new Error('Upload failed');
+                }
+                
+                // Update recipe
+                recipe.imagePath = imagePath;
+                recipe.image = null; // Clear legacy base64
+                
+                // Save to DB
+                await saveRecipeToDB(recipe);
+                
+                // Remove loading and show success
+                document.body.removeChild(loadingMsg);
+                
+                // Refresh display
+                displayRecipes(recipes);
+                
+                // If popup is open, refresh it
+                const popup = document.getElementById('popup');
+                if (popup && popup.style.display === 'flex') {
+                    const index = recipes.findIndex(r => r.id === recipeId);
+                    if (index >= 0) {
+                        showRecipe(index);
+                    }
+                }
+                
+                alert('✅ התמונה הועלתה בהצלחה!');
+                
+            } catch (error) {
+                console.error('Error reuploading image:', error);
+                const loadingMsg = document.getElementById('upload-loading');
+                if (loadingMsg) document.body.removeChild(loadingMsg);
+                alert('❌ שגיאה בהעלאת התמונה. נא לנסות שוב.');
+            }
+        };
+        
+        input.click();
+    }
+    
+    // Make debug functions globally available
+    window.debugRecipeImage = debugRecipeImage;
+    window.reuploadRecipeImage = reuploadRecipeImage;
 
     function filterRecipes() {
       const searchName = document.getElementById('searchName').value.toLowerCase().trim();
@@ -3476,17 +3607,31 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         try {
           imagePath = await uploadImageToStorage(imageFile, 'temp');
           console.log('Image uploaded to Storage:', imagePath);
-        } catch (error) {
-          console.error('Failed to upload to Storage, using base64:', error);
-          // Fallback already handled in uploadImageToStorage
-          imageData = await uploadImageToStorage(imageFile, 'temp');
-          if (imageData && imageData.startsWith('data:')) {
-            // It returned base64, not a path
-            imagePath = null;
-          } else {
-            imagePath = imageData;
-            imageData = null;
+          
+          // Verify upload was successful
+          if (!imagePath || imagePath.startsWith('data:')) {
+            throw new Error('Upload returned base64 instead of storage path');
           }
+          
+          console.log('✅ Image uploaded successfully to Storage');
+        } catch (error) {
+          console.error('Failed to upload to Storage:', error);
+          
+          // Show user-friendly error message
+          const shouldContinue = confirm(
+            '⚠️ שגיאה בהעלאת התמונה\n\n' +
+            'התמונה לא הועלתה בהצלחה לשרת.\n' +
+            'המתכון יישמר עם תמונת ברירת מחדל.\n\n' +
+            'האם להמשיך בשמירת המתכון?\n' +
+            '(תוכל להעלות תמונה מאוחר יותר בעריכת המתכון)'
+          );
+          
+          if (!shouldContinue) {
+            return; // Cancel recipe save
+          }
+          
+          imagePath = null; // Will use default image
+          console.log('ℹ️ Continuing with default image');
         }
       } else if (editingIndex >= 0) {
         // Editing existing recipe - keep existing image
