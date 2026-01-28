@@ -50,10 +50,23 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         };
     }
 
-    // Cache keys
+    // Cache keys and version
     const CACHE_KEY = 'recipes_cache';
     const CACHE_META_KEY = 'recipes_cache_meta';
+    const CACHE_VERSION_KEY = 'recipes_cache_version';
+    const CURRENT_CACHE_VERSION = '1.0.1'; // Update this when cache structure changes
     const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 דקות
+    
+    // Clear old cache if version changed
+    (function clearOldCacheIfNeeded() {
+        const cachedVersion = localStorage.getItem(CACHE_VERSION_KEY);
+        if (cachedVersion !== CURRENT_CACHE_VERSION) {
+            console.log('Cache version changed, clearing old cache...');
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_META_KEY);
+            localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+        }
+    })();
 
     // טעינת מתכונים מ-cache
     function loadRecipesFromCache() {
@@ -71,10 +84,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     // שמירת מתכונים ל-cache
     function saveRecipesToCache(recipesToCache) {
         try {
-            // שמירה ללא תמונות כדי לחסוך מקום
+            // שמירה ללא תמונות base64 כדי לחסוך מקום, אבל שומרים imagePath
             const lightRecipes = recipesToCache.map(r => ({
                 ...r,
-                image: null // התמונות ייטענו בנפרד
+                image: null, // מחיקת base64 כדי לחסוך מקום
+                imagePath: r.imagePath || r.image_path // שומרים את הנתיב לתמונה ב-Storage
             }));
             localStorage.setItem(CACHE_KEY, JSON.stringify(lightRecipes));
             localStorage.setItem(CACHE_META_KEY, JSON.stringify({ 
