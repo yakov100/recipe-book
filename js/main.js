@@ -191,32 +191,17 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     async function loadRecipesFromDB() {
         if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
 
-        try {
-            imagesDeferred = false;
-            const { data, error } = await supabase
-                .from('recipes')
-                .select('*')
-                .order('created_at', { ascending: true });
+        // Always load without base64 image column - we use image_path for Supabase Storage
+        imagesDeferred = false;
+        const { data, error } = await supabase
+            .from('recipes')
+            .select('id,name,source,ingredients,instructions,category,notes,rating,recipe_link,video_url,preparation_time,image_path,created_at')
+            .order('created_at', { ascending: true });
 
-            if (error) throw error;
-            const loadedRecipes = (data || []).map(rowToRecipe);
-            saveRecipesToCache(loadedRecipes);
-            return loadedRecipes;
-        } catch (err) {
-            // Fallback: if payload contains invalid JSON (often from large/invalid images),
-            // reload without the image column so recipes still appear.
-            console.warn('Failed to load full recipes, retrying without images:', err);
-            imagesDeferred = true;
-            const { data, error } = await supabase
-                .from('recipes')
-                .select('id,name,source,ingredients,instructions,category,notes,rating,recipe_link,video_url,preparation_time,image_path')
-                .order('created_at', { ascending: true });
-
-            if (error) throw error;
-            const loadedRecipes = (data || []).map(row => ({ ...rowToRecipe(row), image: null }));
-            saveRecipesToCache(loadedRecipes);
-            return loadedRecipes;
-        }
+        if (error) throw error;
+        const loadedRecipes = (data || []).map(rowToRecipe);
+        saveRecipesToCache(loadedRecipes);
+        return loadedRecipes;
     }
 
     async function fetchImagesByIds(ids, imageMap) {
@@ -702,13 +687,19 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         
         // Set image source with transformations
         if (imageSource) {
-            img.src = getImageUrl(imageSource, { width: 400, height: 400, quality: 75 });
-            
-            // Add srcset for responsive images
-            const srcset = getImageSrcSet(imageSource);
-            if (srcset) {
-                img.srcset = srcset;
-                img.sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px';
+            const imageUrl = getImageUrl(imageSource, { width: 400, height: 400, quality: 75 });
+            if (imageUrl) {
+                img.src = imageUrl;
+                
+                // Add srcset for responsive images
+                const srcset = getImageSrcSet(imageSource);
+                if (srcset) {
+                    img.srcset = srcset;
+                    img.sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px';
+                }
+            } else {
+                // getImageUrl returned null - use default
+                img.src = fixImagePath(null, recipe.category);
             }
         } else {
             // No image - use default
