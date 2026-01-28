@@ -85,9 +85,6 @@
   <!-- Custom Styles -->
   
   <script>
-    window.openMenu = function() { var e = document.getElementById('sideMenu'); if (e) e.style.width = '250px'; };
-    window.closeMenu = function() { var e = document.getElementById('sideMenu'); if (e) e.style.width = '0'; };
-    
     // Dark mode toggle
     function toggleDarkMode() {
       document.documentElement.classList.toggle('dark');
@@ -99,8 +96,8 @@
       document.documentElement.classList.add('dark');
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-BvsJggEW.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-D6JorYuI.css">
+  <script type="module" crossorigin src="/assets/index-BQ1cFjJo.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BKKqk7eo.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
   <!-- Animated Blobs -->
@@ -109,11 +106,6 @@
   <div class="blob-3"></div>
   
   <header class="header glass-panel">
-    <button class="menu-icon" onclick="openMenu()">
-        <div></div>
-        <div></div>
-        <div></div>
-    </button>
     <h1>
       <div class="header-logo-icon">
         <span class="material-symbols-outlined">restaurant_menu</span>
@@ -133,59 +125,70 @@
         <span class="material-symbols-outlined dark:hidden">dark_mode</span>
         <span class="material-symbols-outlined hidden dark:block" style="color: var(--primary-color);">light_mode</span>
       </button>
-      <button id="show-timer-btn" class="header-btn" title="טיימר">
-        <i class="fas fa-bell"></i>
-      </button>
-      <div class="timer-container">
-        <div class="timer-controls">
-          <button id="timer-preset" class="timer-icon-btn" title="זמנים מוגדרים מראש">
-            <i class="fas fa-clock"></i>
-          </button>
-          <button id="start-timer" class="timer-icon-btn" title="התחל">
-            <i class="fas fa-play"></i>
-          </button>
-          <button id="pause-timer" class="timer-icon-btn" title="השהה" style="display: none;">
-            <i class="fas fa-pause"></i>
-          </button>
-          <button id="stop-timer" class="timer-icon-btn" title="עצור" style="display: none;">
-            <i class="fas fa-stop"></i>
-          </button>
-          <div class="timer-input-group">
-            <input type="number" id="timer-hours" min="0" max="99" step="1" value="0" class="timer-input" placeholder="0">
-            <span class="timer-separator">:</span>
-            <input type="number" id="timer-minutes" min="0" max="59" step="1" value="1" class="timer-input" placeholder="0">
-            <span class="timer-separator">:</span>
-            <input type="number" id="timer-seconds" min="0" max="59" step="1" value="0" class="timer-input" placeholder="0">
+      <!-- Timer Widget - Collapsible -->
+      <div class="timer-widget" id="timer-widget">
+        <button id="timer-toggle-btn" class="timer-toggle-btn" title="טיימר">
+          <span class="material-symbols-outlined timer-icon">timer</span>
+          <span class="timer-mini-display" id="timer-mini-display"></span>
+        </button>
+        <div class="timer-expanded" id="timer-expanded">
+          <div class="timer-expanded-header">
+            <span class="timer-title">טיימר בישול</span>
+            <button id="timer-close-btn" class="timer-close-btn" title="סגור">
+              <span class="material-symbols-outlined">close</span>
+            </button>
           </div>
-        </div>
-        <div id="timer-preset-menu" class="timer-preset-menu" style="display: none;">
-          <button class="preset-btn" data-time="300">5 דקות</button>
-          <button class="preset-btn" data-time="600">10 דקות</button>
-          <button class="preset-btn" data-time="900">15 דקות</button>
-          <button class="preset-btn" data-time="1800">30 דקות</button>
-          <button class="preset-btn" data-time="3600">שעה</button>
+          <div class="timer-content">
+            <div class="timer-display-large" id="timer-display"></div>
+            <div class="timer-input-group">
+              <div class="timer-input-wrapper">
+                <input type="number" id="timer-hours" min="0" max="99" step="1" value="0" class="timer-input" placeholder="0">
+                <span class="timer-input-label">שעות</span>
+              </div>
+              <span class="timer-separator">:</span>
+              <div class="timer-input-wrapper">
+                <input type="number" id="timer-minutes" min="0" max="59" step="1" value="1" class="timer-input" placeholder="0">
+                <span class="timer-input-label">דקות</span>
+              </div>
+              <span class="timer-separator">:</span>
+              <div class="timer-input-wrapper">
+                <input type="number" id="timer-seconds" min="0" max="59" step="1" value="0" class="timer-input" placeholder="0">
+                <span class="timer-input-label">שניות</span>
+              </div>
+            </div>
+            <div class="timer-controls">
+              <button id="start-timer" class="timer-action-btn timer-start" title="התחל">
+                <span class="material-symbols-outlined">play_arrow</span>
+                <span>התחל</span>
+              </button>
+              <button id="pause-timer" class="timer-action-btn timer-pause" title="השהה" style="display: none;">
+                <span class="material-symbols-outlined">pause</span>
+                <span>השהה</span>
+              </button>
+              <button id="stop-timer" class="timer-action-btn timer-stop" title="עצור" style="display: none;">
+                <span class="material-symbols-outlined">stop</span>
+                <span>עצור</span>
+              </button>
+            </div>
+            <div class="timer-presets">
+              <span class="timer-presets-label">זמנים מהירים:</span>
+              <div class="timer-presets-grid">
+                <button class="preset-btn" data-time="300">5 דק׳</button>
+                <button class="preset-btn" data-time="600">10 דק׳</button>
+                <button class="preset-btn" data-time="900">15 דק׳</button>
+                <button class="preset-btn" data-time="1800">30 דק׳</button>
+                <button class="preset-btn" data-time="2700">45 דק׳</button>
+                <button class="preset-btn" data-time="3600">שעה</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- תפריט הצד -->
-  <div id="sideMenu" class="side-menu">
-    <a href="javascript:void(0)" class="closebtn" onclick="closeMenu()">&times;</a>
-    <a href="#" onclick="openFormPopup(); closeMenu();">הוספת מתכון</a>
-    <a href="#" onclick="openAiChat(); closeMenu();">שיחה עם AI</a>
-    <a href="#" onclick="downloadAllRecipes(); closeMenu();">הורדת כל המתכונים</a>
-    <a href="#" onclick="exportRecipes(); closeMenu();">גיבוי ל-JSON</a>
-    <a href="#" onclick="document.getElementById('importJson').click(); closeMenu();">יבוא מ-JSON</a>
-    <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
-    <hr>
-    <p style="padding: 10px 20px; font-weight: bold;">הצג מתכונים בשורה:</p>
-    <div class="recipes-per-row">
-      <div class="grid-icon" id="grid4" onclick="setRecipesPerRow(4); closeMenu();"></div>
-      <div class="grid-icon" id="grid5" onclick="setRecipesPerRow(5); closeMenu();"></div>
-      <div class="grid-icon" id="grid6" onclick="setRecipesPerRow(6); closeMenu();"></div>
-    </div>
-  </div>
+  <!-- Hidden file input for JSON import -->
+  <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
 
   <main class="main">
     <!-- Filter Panel -->
@@ -212,6 +215,19 @@
       </div>
     </div>
     
+    <!-- Grid Selector (Fixed Position) -->
+    <div class="grid-selector-wrapper">
+      <button id="grid-selector-btn" class="grid-selector-btn" title="מתכונים בשורה" onclick="toggleGridSelector()">
+        <span class="material-symbols-outlined">grid_view</span>
+      </button>
+      <div id="grid-selector-menu" class="grid-selector-menu" style="display: none;">
+        <button class="grid-option" data-cols="4">4 בשורה</button>
+        <button class="grid-option" data-cols="5">5 בשורה</button>
+        <button class="grid-option" data-cols="6">6 בשורה</button>
+        <button class="grid-option" data-cols="7">7 בשורה</button>
+      </div>
+    </div>
+    
     
     <div class="recipes-container" id="recipesContainer"></div>
   </main>
@@ -226,36 +242,173 @@
 
   <!-- חלון הוספת מתכון -->
   <div class="popup-overlay" id="formPopup" style="display: none;">
-    <div class="form-popup-content">
+    <div class="form-popup-content form-popup-redesign pastel-mesh">
+      <!-- Decorative blobs -->
+      <div class="form-blob form-blob-1"></div>
+      <div class="form-blob form-blob-2"></div>
+      
       <button class="close-btn" onclick="closeFormPopup()">&times;</button>
-      <form id="recipeForm">
-        <h2>הוספת מתכון חדש</h2>
-        <input type="text" id="recipeName" placeholder="שם המתכון">
-        <input type="text" id="recipeSource" placeholder="מקור המתכון">
-        <textarea id="ingredients" placeholder="מצרכים"></textarea>
-        <textarea id="instructions" placeholder="אופן ההכנה"></textarea>
-        <label for="preparationTime">זמן הכנה (דקות):</label>
-        <input type="number" id="preparationTime" placeholder="זמן הכנה בדקות" min="0">
-        <label for="category">קטגוריה:</label>
-        <div class="category-input-container">
-            <select id="category" required>
-                <option value="" disabled selected>בחר קטגוריה</option>
-            </select>
-            <input type="text" id="newCategory" placeholder="או הוסף קטגוריה חדשה" style="display: none;">
-            <button type="button" id="toggleNewCategory" onclick="toggleCategoryInput()">+ קטגוריה חדשה</button>
+      
+      <form id="recipeForm" class="form-two-columns">
+        <!-- עמודה שמאלית - תוכן מפורט -->
+        <div class="form-column form-column-left">
+          <div class="form-card glass-card">
+            <!-- פס צבעוני עליון -->
+            <div class="form-card-accent"></div>
+            
+            <div class="form-card-content">
+              <!-- מצרכים -->
+              <div class="form-section">
+                <h3 class="form-section-header">
+                  <span class="material-symbols-outlined form-section-icon text-green-600">grocery</span>
+                  מצרכים - הזנה חופשית
+                  <span class="form-section-badge">רשימה</span>
+                </h3>
+                <div class="form-input-wrapper">
+                  <textarea id="ingredients" class="glass-input" placeholder="רשמו כאן את כל המצרכים, כל מצרך בשורה חדשה...
+למשל:
+2 כוסות קמח
+1 כפית אבקת אפייה
+3 ביצים L" rows="6"></textarea>
+                  <div class="form-input-action">
+                    <button type="button" class="ai-format-btn" title="הדביקו כאן את הרשימה ואני אעצב אותה">
+                      <span class="material-symbols-outlined">auto_awesome</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- הוראות הכנה -->
+              <div class="form-section">
+                <h3 class="form-section-header">
+                  <span class="material-symbols-outlined form-section-icon text-orange-400">menu_book</span>
+                  הוראות הכנה
+                </h3>
+                <textarea id="instructions" class="glass-input" placeholder="תארו כאן את שלבי ההכנה בפירוט..." rows="8"></textarea>
+              </div>
+
+              <!-- הערות -->
+              <div class="form-section">
+                <h3 class="form-section-header">
+                  <span class="material-symbols-outlined form-section-icon text-yellow-500">lightbulb</span>
+                  הערות
+                </h3>
+                <textarea id="notes" class="glass-input" placeholder="טיפים קטנים לשדרוג המנה..." rows="3"></textarea>
+              </div>
+
+              <!-- קישורים -->
+              <div class="form-section form-section-links">
+                <div class="form-field">
+                  <label class="form-label" for="recipeLink">קישור למתכון</label>
+                  <input type="url" id="recipeLink" name="recipeLink" class="glass-input" placeholder="https://">
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="recipeVideo">קישור ליוטיוב</label>
+                  <div class="form-input-with-icon">
+                    <span class="material-symbols-outlined input-icon text-red-500">play_circle</span>
+                    <input type="url" id="recipeVideo" name="recipeVideo" class="glass-input has-icon" placeholder="הדביקו כאן קישור (אופציונלי)">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- כפתור שמירה צף -->
+            <div class="form-save-area">
+              <button type="submit" class="form-save-btn">
+                <span class="material-symbols-outlined">save</span>
+                שמור מתכון
+              </button>
+            </div>
+          </div>
         </div>
-        <textarea id="notes" placeholder="הערות"></textarea>
-        <label for="recipeLink">קישור למתכון:</label>
-        <input type="url" id="recipeLink" name="recipeLink" placeholder="https://">
-        <label for="recipeVideo">קישור לסרטון YouTube:</label>
-        <input type="url" id="recipeVideo" name="recipeVideo" placeholder="https://www.youtube.com/watch?v=">
-        <div class="file-upload-container">
-          <input type="file" id="image" accept="image/*">
-          <button type="button" onclick="document.getElementById('ocrImage').click()">OCR</button>
+
+        <!-- עמודה ימנית - מידע בסיסי -->
+        <div class="form-column form-column-right">
+          <!-- כותרת -->
+          <header class="form-header">
+            <h2 class="form-title">מתכון חדש</h2>
+            <p class="form-subtitle">שתפו את העולם ביצירה הקולינרית שלכם</p>
+          </header>
+
+          <!-- העלאת תמונה -->
+          <div class="image-upload-area" onclick="document.getElementById('image').click()">
+            <div class="image-upload-content">
+              <div class="image-upload-icon">
+                <span class="material-symbols-outlined">add_a_photo</span>
+              </div>
+              <h3 class="image-upload-title">העלאת תמונה</h3>
+              <p class="image-upload-hint">PNG, JPG עד 10MB</p>
+            </div>
+            <div class="image-upload-sparkle">
+              <span class="material-symbols-outlined">auto_awesome</span>
+            </div>
+            <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
+              <img id="imagePreview" src="" alt="תצוגה מקדימה">
+            </div>
+          </div>
+          <input type="file" id="image" accept="image/*" style="display: none;" onchange="previewFormImage(event)">
+          
+          <!-- OCR Button -->
+          <div class="ocr-upload-area">
+            <button type="button" class="ocr-btn" onclick="document.getElementById('ocrImage').click()">
+              <span class="material-symbols-outlined">document_scanner</span>
+              זיהוי טקסט מתמונה (OCR)
+            </button>
+            <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
+          </div>
+
+          <!-- שדות מידע בסיסי -->
+          <div class="form-basic-fields">
+            <!-- שם המתכון -->
+            <div class="form-field">
+              <label class="form-label" for="recipeName">שם המתכון</label>
+              <input type="text" id="recipeName" class="glass-input form-input-underline" placeholder="למשל: פסטה ברוטב שמנת">
+            </div>
+
+            <!-- מקור המתכון -->
+            <div class="form-field">
+              <label class="form-label" for="recipeSource">מקור המתכון</label>
+              <div class="form-input-with-icon">
+                <span class="material-symbols-outlined input-icon">person</span>
+                <input type="text" id="recipeSource" class="glass-input has-icon" placeholder="מאיפה המתכון?">
+              </div>
+            </div>
+
+            <!-- זמן הכנה -->
+            <div class="form-field">
+              <label class="form-label" for="preparationTime">זמן הכנה (דקות)</label>
+              <div class="form-input-with-icon">
+                <span class="material-symbols-outlined input-icon">schedule</span>
+                <input type="number" id="preparationTime" class="glass-input has-icon" placeholder="30" min="0">
+              </div>
+            </div>
+
+            <!-- קטגוריה -->
+            <div class="form-field">
+              <label class="form-label" for="category">קטגוריה</label>
+              <div class="category-input-container">
+                <div class="form-select-wrapper">
+                  <select id="category" class="glass-input form-select" required>
+                    <option value="" disabled selected>בחירת קטגוריה</option>
+                  </select>
+                  <span class="material-symbols-outlined select-arrow">expand_more</span>
+                </div>
+                <input type="text" id="newCategory" class="glass-input" placeholder="או הוסף קטגוריה חדשה" style="display: none;">
+                <button type="button" id="toggleNewCategory" class="toggle-category-btn" onclick="toggleCategoryInput()">+ חדשה</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
-        <button type="submit">שמירת מתכון</button>
       </form>
+
+      <!-- כפתור עוזר AI -->
+      <div class="form-ai-assistant">
+        <button type="button" class="ai-assistant-btn" onclick="openAiChat()">
+          <span class="material-symbols-outlined">smart_toy</span>
+          <span class="ai-pulse"></span>
+        </button>
+        <div class="ai-assistant-tooltip">היי! צריך עזרה בניסוח המתכון?</div>
+      </div>
     </div>
   </div>
 
@@ -265,43 +418,64 @@
     <button onclick="closeBackupReminder()">×</button>
   </div>
 
-  <!-- פאנל צ'אט AI -->
+  <!-- פאנל צ'אט AI - עיצוב חדש כמו בדוגמה -->
   <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
     <div class="ai-chat-container">
-      <!-- פאנל הצ'אט הראשי -->
       <div class="ai-chat-panel">
+        <!-- Header -->
         <div class="ai-chat-header">
-          <button class="close-btn" onclick="closeAiChat()" title="סגור">&times;</button>
-          <h3>
-            <img src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'%20viewBox='0%200%20160%20160'%3e%3cpath%20d='M44%2046c0-10%2010-18%2022-18%203-10%2014-16%2025-16s22%206%2025%2016c12%200%2022%208%2022%2018%200%2012-10%2020-24%2020H68c-14%200-24-8-24-20z'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3crect%20x='54'%20y='40'%20width='52'%20height='14'%20rx='7'%20fill='%23F4F5F7'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3ccircle%20cx='72'%20cy='70'%20r='20'%20fill='%23F7C9A9'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3ccircle%20cx='64'%20cy='68'%20r='3'%20fill='%232D2D2D'/%3e%3ccircle%20cx='80'%20cy='68'%20r='3'%20fill='%232D2D2D'/%3e%3cpath%20d='M62%2062c2-4%208-4%2010%200'%20stroke='%232D2D2D'%20stroke-width='2'%20stroke-linecap='round'/%3e%3cpath%20d='M64%2076c6%205%2010%205%2016%200'%20stroke='%232D2D2D'%20stroke-width='3'%20stroke-linecap='round'/%3e%3ccircle%20cx='64'%20cy='74'%20r='2'%20fill='%23E07A5F'/%3e%3ccircle%20cx='80'%20cy='74'%20r='2'%20fill='%23E07A5F'/%3e%3crect%20x='44'%20y='90'%20width='56'%20height='44'%20rx='14'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3crect%20x='52'%20y='100'%20width='40'%20height='26'%20rx='10'%20fill='%2363BFAF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3crect%20x='60'%20y='108'%20width='24'%20height='10'%20rx='5'%20fill='%23F2E9E4'%20stroke='%232D2D2D'%20stroke-width='2'/%3e%3crect%20x='98'%20y='36'%20width='48'%20height='28'%20rx='10'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'/%3e%3cpath%20d='M108%2064l-12%2012%203-14'%20fill='%23FFFFFF'%20stroke='%232D2D2D'%20stroke-width='3'%20stroke-linejoin='round'/%3e%3ccircle%20cx='112'%20cy='50'%20r='4'%20fill='%232D2D2D'/%3e%3ccircle%20cx='124'%20cy='50'%20r='4'%20fill='%232D2D2D'/%3e%3ccircle%20cx='136'%20cy='50'%20r='4'%20fill='%232D2D2D'/%3e%3cpath%20d='M106%2034l6-8'%20stroke='%23F6C453'%20stroke-width='3'%20stroke-linecap='round'/%3e%3cpath%20d='M118%2030l4-10'%20stroke='%23F6C453'%20stroke-width='3'%20stroke-linecap='round'/%3e%3c/svg%3e" alt="שף" class="chef-speaking">
-            שיחה עם AI
-          </h3>
-          <button class="history-toggle-btn" onclick="toggleChatHistory()" title="היסטוריה">
-            <i class="fas fa-history"></i>
-          </button>
+          <div class="ai-chat-header-top">
+            <div class="ai-chat-header-info">
+              <div class="ai-chat-header-avatar">
+                <span class="material-symbols-outlined">robot_2</span>
+              </div>
+              <div class="ai-chat-header-text">
+                <h3>AI עוזר בישול</h3>
+                <div class="ai-chat-header-status">
+                  <span class="status-dot"></span>
+                  <span>מחובר ומוכן לעזור</span>
+                </div>
+              </div>
+            </div>
+            <button class="close-btn" onclick="closeAiChat()" title="סגור">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <!-- History Dropdown -->
+          <div class="ai-chat-history-select-wrapper">
+            <label>היסטוריית שיחות</label>
+            <div class="ai-chat-history-select">
+              <select id="aiChatHistorySelect" onchange="loadSelectedConversation(this.value)">
+                <option value="new">שיחה חדשה - מה מבשלים היום?</option>
+              </select>
+              <span class="material-symbols-outlined select-arrow">expand_more</span>
+            </div>
+          </div>
         </div>
-        <div class="ai-chat-messages" id="aiChatMessages"></div>
-        <div class="ai-chat-attachments" id="aiChatAttachments" style="display: none;"></div>
-        <div class="ai-chat-input-row">
-          <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח"><i class="fas fa-paper-plane"></i></button>
-          <button type="button" id="aiChatVoice" onclick="toggleVoiceRecording()" title="הקלט קול"><i class="fas fa-microphone"></i></button>
-          <input type="text" id="aiChatInput" placeholder="שאל אותי, בקש מתכון, או צרף תמונה..." onkeydown="if(event.key==='Enter')sendAiMessage()">
-          <button type="button" id="aiChatAttach" onclick="document.getElementById('aiChatFileInput').click()" title="צרף תמונה">
-            <i class="fas fa-paperclip"></i>
-          </button>
-          <input type="file" id="aiChatFileInput" accept="image/*" multiple style="display: none;" onchange="handleChatFileSelect(event)">
-        </div>
-      </div>
 
-      <!-- סיידבר היסטוריה -->
-      <div class="ai-chat-history" id="aiChatHistory">
-        <div class="ai-chat-history-header">
-          <button class="new-chat-btn" onclick="startNewConversation()" title="שיחה חדשה">
-            <i class="fas fa-plus"></i>
-          </button>
-          <h4>היסטוריה</h4>
+        <!-- Messages -->
+        <div class="ai-chat-messages" id="aiChatMessages"></div>
+
+        <!-- Attachments Preview -->
+        <div class="ai-chat-attachments" id="aiChatAttachments" style="display: none;"></div>
+
+        <!-- Input Area -->
+        <div class="ai-chat-input-area">
+          <div class="ai-chat-input-row">
+            <button type="button" id="aiChatAttach" onclick="document.getElementById('aiChatFileInput').click()" title="צרף תמונה">
+              <span class="material-symbols-outlined">attach_file</span>
+            </button>
+            <input type="text" id="aiChatInput" placeholder="הקלד כאן..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+            <button type="button" id="aiChatVoice" onclick="toggleVoiceRecording()" title="הקלט קול">
+              <span class="material-symbols-outlined">mic</span>
+            </button>
+            <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח">
+              <span class="material-symbols-outlined">send</span>
+            </button>
+            <input type="file" id="aiChatFileInput" accept="image/*" multiple style="display: none;" onchange="handleChatFileSelect(event)">
+          </div>
+          <p class="ai-chat-input-helper">ה-AI עשוי להציע שילובים יצירתיים, בדקו תמיד את זמני הבישול.</p>
         </div>
-        <div class="ai-chat-history-list" id="aiChatHistoryList"></div>
       </div>
     </div>
   </div>
@@ -318,7 +492,7 @@
   <!-- Floating Action Buttons -->
   <div class="floating-actions">
     <button class="floating-action-btn ai-chat" onclick="openAiChat()" title="שיחה עם AI">
-      <img src="assets/icons/chef-speaking.svg" alt="שף" class="chat-btn-chef-icon">
+      <img src="/chef-main.png" alt="שף" class="chat-btn-chef-icon">
     </button>
     <button class="floating-action-btn" onclick="openFormPopup()" title="הוסף מתכון">
       <span class="material-symbols-outlined">add</span>
