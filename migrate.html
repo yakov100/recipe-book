@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Migration - Recipe Book</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .warning h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .info h3 {
+            margin-top: 0;
+            color: #0c5460;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .success h3 {
+            margin-top: 0;
+            color: #155724;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #console {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .step {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        .step::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Image Migration Tool</h1>
+        <p class="subtitle">העברת תמונות מתכונים מ-base64 ל-Supabase Storage</p>
+        
+        <div class="warning">
+            <h3>⚠️ לפני שמתחילים</h3>
+            <ul>
+                <li>וודא שאתה מחובר לאינטרנט</li>
+                <li>אל תסגור את הדף בזמן ה-migration</li>
+                <li>התהליך עשוי לקחת מספר דקות (תלוי במספר התמונות)</li>
+                <li>ה-migration בטוח - התמונות המקוריות יישארו עד שתאשר שהכל עובד</li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <h3>ℹ️ מה התהליך עושה?</h3>
+            <ol>
+                <li>טוען את כל המתכונים עם תמונות base64</li>
+                <li>מעביר כל תמונה ל-Supabase Storage (אחסון קבצים)</li>
+                <li>מעדכן את המתכון עם הנתיב החדש</li>
+                <li>שומר את התמונה המקורית כגיבוי</li>
+            </ol>
+        </div>
+        
+        <div class="success" style="display: none;" id="sqlInstructions">
+            <h3>📋 שלב 1: הרץ SQL</h3>
+            <p>לפני הרצת ה-migration, עליך להריץ את ה-SQL הבא ב-Supabase Dashboard:</p>
+            <ol class="step-list">
+                <li>פתח את <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a></li>
+                <li>בחר את הפרויקט שלך</li>
+                <li>לחץ על <strong>SQL Editor</strong> בתפריט הצד</li>
+                <li>הדבק את ה-SQL מהקובץ: <code>supabase/migrations/20250128000000_add_image_storage.sql</code></li>
+                <li>לחץ <strong>Run</strong></li>
+                <li>חזור לכאן ולחץ "SQL הורץ - המשך למיגרציה"</li>
+            </ol>
+            <button onclick="startMigration()">✓ SQL הורץ - המשך למיגרציה</button>
+        </div>
+        
+        <button id="startBtn" onclick="checkSqlFirst()">התחל Migration</button>
+        <button id="openDashboard" onclick="window.open('https://supabase.com/dashboard', '_blank')" style="background: #17a2b8;">
+            פתח Supabase Dashboard
+        </button>
+        
+        <div id="console"></div>
+    </div>
+    
+    <script type="module">
+        import { migrateAllImages } from './js/migrate-images.js';
+        
+        const consoleEl = document.getElementById('console');
+        const startBtn = document.getElementById('startBtn');
+        const sqlInstructions = document.getElementById('sqlInstructions');
+        
+        // Override console.log to display in our console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToConsole(message, type = 'log') {
+            originalLog(message);
+            const color = type === 'error' ? '#ff6b6b' : 
+                         type === 'warn' ? '#ffd93d' : 
+                         '#00ff00';
+            consoleEl.innerHTML += `<span style="color: ${color}">${message}</span>\n`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+        
+        console.log = (...args) => addToConsole(args.join(' '), 'log');
+        console.error = (...args) => addToConsole(args.join(' '), 'error');
+        console.warn = (...args) => addToConsole(args.join(' '), 'warn');
+        
+        window.checkSqlFirst = function() {
+            startBtn.style.display = 'none';
+            sqlInstructions.style.display = 'block';
+        };
+        
+        window.startMigration = async function() {
+            startBtn.disabled = true;
+            sqlInstructions.style.display = 'none';
+            consoleEl.innerHTML = '';
+            
+            addToConsole('🚀 Starting migration...', 'log');
+            addToConsole('', 'log');
+            
+            try {
+                await migrateAllImages();
+                addToConsole('', 'log');
+                addToConsole('✅ Migration completed successfully!', 'log');
+                addToConsole('', 'log');
+                addToConsole('You can now close this page and verify the images in your recipe book.', 'log');
+            } catch (error) {
+                addToConsole('', 'log');
+                addToConsole('❌ Migration failed:', 'error');
+                addToConsole(error.message, 'error');
+                startBtn.disabled = false;
+            }
+        };
+        
+        // AUTO-RUN: Check if URL has ?auto=true
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auto') === 'true') {
+            addToConsole('🚀 Auto-running migration (URL parameter detected)...', 'log');
+            addToConsole('', 'log');
+            // Hide the button and instructions
+            startBtn.style.display = 'none';
+            sqlInstructions.style.display = 'none';
+            // Run after a short delay to ensure everything loaded
+            setTimeout(() => {
+                startMigration();
+            }, 1000);
+        } else {
+            // Show initial message
+            addToConsole('✓ Migration tool loaded successfully', 'log');
+            addToConsole('Click "התחל Migration" to start', 'log');
+            addToConsole('', 'log');
+        }
+    </script>
+</body>
+</html>

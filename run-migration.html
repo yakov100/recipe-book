@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Running Migration...</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            white-space: pre-wrap;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .info { color: #00d7ff; }
+    </style>
+</head>
+<body>
+<div id="output">Starting migration...\n\n</div>
+
+<script type="module">
+import { migrateAllImages } from './js/migrate-images.js';
+
+const output = document.getElementById('output');
+
+// Override console to display
+const log = (msg, type = 'info') => {
+    const span = document.createElement('span');
+    span.className = type;
+    span.textContent = msg + '\n';
+    output.appendChild(span);
+    console.log(msg);
+};
+
+console.log = (...args) => log(args.join(' '), 'info');
+console.error = (...args) => log(args.join(' '), 'error');
+console.warn = (...args) => log(args.join(' '), 'info');
+
+// Auto-run migration
+(async () => {
+    try {
+        log('🚀 Auto-running migration...', 'info');
+        await migrateAllImages();
+        log('\n✅ Migration completed!', 'success');
+    } catch (error) {
+        log('\n❌ Migration failed:', 'error');
+        log(error.message, 'error');
+    }
+})();
+</script>
+</body>
+</html>
