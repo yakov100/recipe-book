@@ -1,82 +1,228 @@
-/* Timer styles - matching the design exactly */
-/* Override styles from style.css */
-.timer-container {
-    padding: 4px 10px !important;
-    background: #f0f9f4 !important; /* Light green/off-white background */
-    border-radius: 50px !important; /* Very rounded, pill-like shape */
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12) !important; /* Subtle drop shadow */
-    margin-right: 20px;
+/* Timer Widget - Compact & Elegant Design */
+
+.timer-widget {
     position: relative;
-    display: flex !important;
-    align-items: center;
-    gap: 6px;
-    border: none !important;
-    backdrop-filter: none !important;
+    z-index: 100;
 }
 
-.timer-controls {
+/* Toggle Button - Sleek timer button */
+.timer-toggle-btn {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    border-radius: 20px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
-/* Circular green buttons on the left */
-.timer-icon-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: #28a745; /* Green background */
-    border: none;
-    color: #ffffff;
+.timer-toggle-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.timer-toggle-btn:active {
+    transform: translateY(0);
+}
+
+.timer-toggle-btn .timer-icon {
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.timer-widget.is-open .timer-toggle-btn .timer-icon {
+    transform: rotate(180deg);
+}
+
+/* Mini display when timer is running */
+.timer-mini-display {
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+    transition: all 0.3s ease;
+}
+
+.timer-mini-display:empty {
+    display: none;
+}
+
+.timer-mini-display:not(:empty) {
+    min-width: 45px;
+}
+
+/* Pulsing animation when timer is running */
+.timer-widget.is-running .timer-toggle-btn {
+    animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+    50% {
+        box-shadow: 0 2px 16px rgba(16, 185, 129, 0.5), 0 0 0 4px rgba(16, 185, 129, 0.1);
+    }
+}
+
+/* Expanded Panel - Compact & positioned correctly for RTL */
+.timer-expanded {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px) scale(0.96);
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(16px);
+    border-radius: 16px;
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.timer-widget.is-open .timer-expanded {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.dark .timer-expanded {
+    background: rgba(30, 41, 59, 0.98);
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Expanded Header - Slim */
+.timer-expanded-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.timer-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.timer-close-btn {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: white;
     cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 0;
-    font-size: 11px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease;
 }
 
-.timer-icon-btn:hover {
-    background: #218838; /* Darker green on hover */
-    transform: scale(1.03);
+.timer-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
-.timer-icon-btn:active {
-    transform: scale(0.98);
+.timer-close-btn .material-symbols-outlined {
+    font-size: 0.9rem;
 }
 
-.timer-icon-btn i {
-    color: #ffffff;
+/* Timer Content - Compact */
+.timer-content {
+    padding: 14px;
 }
 
-/* Input group on the right */
+/* Large Timer Display (when running) */
+.timer-display-large {
+    font-size: 2.2rem;
+    font-weight: 700;
+    text-align: center;
+    color: #10b981;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+}
+
+.timer-display-large:empty {
+    display: none;
+}
+
+.timer-display-large:not(:empty) + .timer-input-group {
+    display: none;
+}
+
+.dark .timer-display-large {
+    color: #34d399;
+}
+
+/* Blinking animation when timer ends */
+.timer-display-large.timer-ended {
+    animation: timerBlink 0.5s ease-in-out infinite;
+    color: #ef4444;
+}
+
+@keyframes timerBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Timer Input Group - Compact */
 .timer-input-group {
     display: flex;
+    flex-direction: row-reverse;
     align-items: center;
-    gap: 0;
-    padding: 0;
-    background: transparent;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 14px;
 }
 
-/* White input fields with green borders */
+.timer-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
 .timer-input {
-    width: 32px !important;
-    height: 32px !important;
-    padding: 0 !important;
-    border: 1.5px solid #28a745 !important; /* Green border */
-    border-radius: 6px !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
+    width: 52px;
+    height: 46px;
+    padding: 0;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1.3rem;
+    font-weight: 700;
     text-align: center;
-    background-color: #ffffff !important;
+    background: #f9fafb;
+    color: #1f2937;
     transition: all 0.2s ease;
-    color: #000000 !important;
-    box-sizing: border-box;
-    box-shadow: none !important;
-    display: block !important;
-    line-height: normal !important;
+    font-family: inherit;
+}
+
+.timer-input:focus {
+    outline: none;
+    border-color: #10b981;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .timer-input::-webkit-inner-spin-button,
@@ -89,106 +235,187 @@
     -moz-appearance: textfield;
 }
 
-.timer-input:focus {
-    outline: none !important;
-    border-color: #218838 !important;
-    box-shadow: 0 0 0 1.5px rgba(40, 167, 69, 0.2) !important;
-}
-
-/* Green colon separators */
-.timer-separator {
-    color: #28a745 !important; /* Green color */
-    font-weight: bold;
-    font-size: 0.95rem;
-    margin: 0 2px;
-    display: flex;
-    align-items: center;
-    height: 32px;
-    line-height: 1;
-}
-
-/* Dark mode adjustments */
-.dark .timer-container {
-    background: #1a3a2a; /* Darker green background for dark mode */
-}
-
 .dark .timer-input {
-    background-color: #2d4a3a;
-    color: #ffffff;
-    border-color: #28a745;
+    background: #374151;
+    border-color: #4b5563;
+    color: white;
 }
 
 .dark .timer-input:focus {
-    border-color: #34ce57;
-    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.3);
+    border-color: #10b981;
+    background: #4b5563;
 }
 
-.dark .timer-separator {
-    color: #34ce57; /* Lighter green for dark mode */
+.timer-input-label {
+    font-size: 0.65rem;
+    color: #9ca3af;
+    font-weight: 500;
 }
 
-/* Preset menu */
-.timer-preset-menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 8px;
-    z-index: 1000;
+.dark .timer-input-label {
+    color: #6b7280;
+}
+
+.timer-separator {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #10b981;
+    margin-bottom: 18px;
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+/* Timer Controls - Compact */
+.timer-controls {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 150px;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
 }
 
-.dark .timer-preset-menu {
-    background: #1e293b;
+.timer-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.timer-action-btn .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+.timer-start {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.timer-start:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.timer-pause {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+.timer-pause:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+
+.timer-stop {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.timer-stop:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+/* Timer Presets - Compact */
+.timer-presets {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 12px;
+}
+
+.dark .timer-presets {
+    border-top-color: #374151;
+}
+
+.timer-presets-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #9ca3af;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.timer-presets-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
 }
 
 .preset-btn {
-    padding: 8px 12px;
-    border: none;
-    background: transparent;
-    color: inherit;
-    text-align: right;
+    padding: 6px 4px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 500;
     cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.2s ease;
+    transition: all 0.15s ease;
+    font-family: inherit;
 }
 
 .preset-btn:hover {
-    background: rgba(40, 167, 69, 0.1);
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+
+.dark .preset-btn {
+    background: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
 }
 
 .dark .preset-btn:hover {
-    background: rgba(40, 167, 69, 0.2);
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
 }
 
-/* Timer display */
-.timer-display {
-    min-width: 72px;
-    text-align: center;
-    font-weight: 700;
-    color: #1f2937;
-}
-
-.dark .timer-display {
-    color: #ffffff;
-}
-
-/* Hide elements based on timer state */
-.timer-container:not(.is-running) .timer-display {
+/* State: Timer Running - Hide inputs, show display */
+.timer-widget.is-running .timer-input-group {
     display: none;
 }
 
-.timer-container.is-running .timer-input-group {
-    display: none;
+.timer-widget.is-running .timer-display-large {
+    display: block;
 }
 
-/* Ensure buttons use flex display when shown */
-.timer-icon-btn[style*="display: flex"],
-.timer-icon-btn[style*="display:flex"] {
-    display: flex !important;
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .timer-expanded {
+        width: 260px;
+        top: 60px;
+    }
+    
+    .timer-input {
+        width: 46px;
+        height: 42px;
+        font-size: 1.1rem;
+    }
+    
+    .timer-display-large {
+        font-size: 1.8rem;
+    }
+    
+    .timer-action-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    
+    .timer-toggle-btn {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .timer-toggle-btn .timer-icon {
+        font-size: 1rem;
+    }
 }
