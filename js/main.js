@@ -3151,65 +3151,29 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         }
     }
 
-    // Get image URL with optional transformations
+    // Get image URL from Supabase Storage
     function getImageUrl(imagePathOrUrl, options = {}) {
         // If no image, return null
         if (!imagePathOrUrl) return null;
-        
+
         // If it's already a full URL (base64, external, or default), return as-is
         // This handles legacy images during migration
-        if (imagePathOrUrl.startsWith('http') || 
-            imagePathOrUrl.startsWith('data:') || 
+        if (imagePathOrUrl.startsWith('http') ||
+            imagePathOrUrl.startsWith('data:') ||
             imagePathOrUrl.startsWith('/default-images/')) {
             return imagePathOrUrl;
         }
-        
-        const {
-            width = 400,
-            height = 400,
-            quality = 75
-        } = options;
-        
-        // Supabase Image Transformation API
-        // Format: /storage/v1/render/image/public/{bucket}/{path}?width=X&height=Y
-        try {
-            const renderPath = `/storage/v1/render/image/public/recipe-images/${imagePathOrUrl}`;
-            const params = new URLSearchParams({
-                width: width.toString(),
-                height: height.toString(),
-                quality: quality.toString()
-            });
-            
-            return `${supabaseUrl}${renderPath}?${params}`;
-        } catch (e) {
-            console.error('Error generating image URL:', e);
-            // Fallback to direct storage URL
-            return `${supabaseUrl}/storage/v1/object/public/recipe-images/${imagePathOrUrl}`;
-        }
+
+        // Use direct public Storage URL (works on all Supabase plans)
+        return `${supabaseUrl}/storage/v1/object/public/recipe-images/${imagePathOrUrl}`;
     }
 
     // Helper: Get responsive image srcset
+    // Without Supabase Image Transformations, srcset uses the same URL
+    // (no server-side resizing available on free plan)
     function getImageSrcSet(imagePath) {
-        if (!imagePath) return '';
-        
-        // Skip srcset for base64 or external URLs
-        if (!imagePath || 
-            imagePath.startsWith('data:') || 
-            imagePath.startsWith('http') ||
-            imagePath.startsWith('/default-images/')) {
-            return '';
-        }
-        
-        try {
-            return [
-                `${getImageUrl(imagePath, { width: 400, height: 400, quality: 75 })} 400w`,
-                `${getImageUrl(imagePath, { width: 800, height: 800, quality: 80 })} 800w`,
-                `${getImageUrl(imagePath, { width: 1200, height: 1200, quality: 85 })} 1200w`
-            ].join(', ');
-        } catch (e) {
-            console.error('Error generating srcset:', e);
-            return '';
-        }
+        // No srcset needed - single URL for all sizes
+        return '';
     }
 
     // Make functions available globally
