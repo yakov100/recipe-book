@@ -5222,3 +5222,68 @@ img[loading="lazy"]:not([src=""]) {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   opacity: 0.3;
 }
+
+/* ============================================
+   Visual Indicator for Default Images
+   ============================================ */
+
+/* Add subtle indicator for cards using default images */
+.recipe-card.using-default-image::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 8px;
+  height: 8px;
+  background-color: #fbbf24;
+  border-radius: 50%;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+  animation: pulse-indicator 2s ease-in-out infinite;
+}
+
+.dark .recipe-card.using-default-image::before {
+  background-color: #fcd34d;
+  box-shadow: 0 0 8px rgba(252, 211, 77, 0.6);
+}
+
+/* Optional: Add text indicator on hover */
+.recipe-card.using-default-image::after {
+  content: 'תמונת ברירת מחדל';
+  position: absolute;
+  top: 24px;
+  left: 8px;
+  background-color: rgba(251, 191, 36, 0.95);
+  color: #78350f;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.dark .recipe-card.using-default-image::after {
+  background-color: rgba(252, 211, 77, 0.95);
+  color: #451a03;
+}
+
+.recipe-card.using-default-image:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes pulse-indicator {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
