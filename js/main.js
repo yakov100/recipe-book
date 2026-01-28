@@ -263,7 +263,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         imagesDeferred = false;
         const { data, error } = await supabase
             .from('recipes')
-            .select('id,name,source,ingredients,instructions,category,notes,rating,recipe_link,video_url,preparation_time,image_path,created_at')
+            .select('id,name,source,ingredients,instructions,category,notes,rating,recipe_link,video_url,preparation_time,image_path,image,created_at')
             .order('created_at', { ascending: true });
 
         if (error) {
@@ -1332,8 +1332,28 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const data = await response.json();
 
         if (data.success && data.image) {
-          // Update local recipe data
-          recipes[index].image = data.image;
+          // Upload the generated image to Supabase Storage and persist to DB
+          let imagePath = null;
+          try {
+            const imgResponse = await fetch(data.image);
+            const blob = await imgResponse.blob();
+            const ext = blob.type === 'image/png' ? 'png' : 'jpg';
+            const file = new File([blob], `regenerated.${ext}`, { type: blob.type });
+            imagePath = await uploadImageToStorage(file);
+          } catch (uploadErr) {
+            console.warn('Failed to upload regenerated image to Storage:', uploadErr);
+          }
+
+          if (imagePath) {
+            recipes[index].imagePath = imagePath;
+            recipes[index].image = null;
+          } else {
+            // Fallback: save base64 directly
+            recipes[index].image = data.image;
+          }
+
+          // Persist to database
+          await saveRecipeToDB(recipes[index]);
 
           // Refresh the display
           displayRecipes(recipes);
@@ -2639,7 +2659,26 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             closeAiChat();
             var idx = recipes.findIndex(function(r) { return r && r.id === data.regenerateImageForRecipeId; });
             if (idx >= 0) {
-              recipes[idx].image = data.regeneratedImage;
+              // Upload to Storage and persist to DB
+              var aiImagePath = null;
+              try {
+                var imgResp = await fetch(data.regeneratedImage);
+                var imgBlob = await imgResp.blob();
+                var imgExt = imgBlob.type === 'image/png' ? 'png' : 'jpg';
+                var imgFile = new File([imgBlob], 'ai-regenerated.' + imgExt, { type: imgBlob.type });
+                aiImagePath = await uploadImageToStorage(imgFile);
+              } catch (aiUploadErr) {
+                console.warn('Failed to upload AI regenerated image to Storage:', aiUploadErr);
+              }
+
+              if (aiImagePath) {
+                recipes[idx].imagePath = aiImagePath;
+                recipes[idx].image = null;
+              } else {
+                recipes[idx].image = data.regeneratedImage;
+              }
+
+              await saveRecipeToDB(recipes[idx]);
               displayRecipes(recipes);
               showRecipe(idx);
             }
@@ -3209,25 +3248,26 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     // Upload image to Supabase Storage
-    async function uploadImageToStorage(file, recipeId) {
+    async function uploadImageToStorage(file) {
         try {
             console.log('📤 [uploadImageToStorage] Starting upload...');
             console.log('  - File name:', file.name);
             console.log('  - File size:', (file.size / 1024).toFixed(2), 'KB');
             console.log('  - File type:', file.type);
-            console.log('  - Recipe ID:', recipeId || 'temp');
             
             // 1. Resize the image first (client-side optimization)
             console.log('  📏 Resizing image...');
             const resized = await resizeImageToBlob(file, 1200, 1200, 0.85);
             console.log('  ✅ Image resized, new size:', (resized.size / 1024).toFixed(2), 'KB');
             
-            // 2. Create unique filename
+            // 2. Create unique filename using UUID
+            const uuid = crypto.randomUUID();
             const fileExt = file.name.split('.').pop().toLowerCase();
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `${recipeId || 'temp'}/${fileName}`;
+            const fileName = `${uuid}.${fileExt}`;
+            const filePath = `recipe-images/${fileName}`;
             
             console.log('  📁 Storage path:', filePath);
+            console.log('  🆔 UUID:', uuid);
             
             // 3. Upload to Supabase Storage
             console.log('  ⬆️ Uploading to Supabase Storage...');
@@ -3381,7 +3421,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 document.body.appendChild(loadingMsg);
                 
                 // Upload to Storage
-                const imagePath = await uploadImageToStorage(file, recipe.id || 'temp');
+                const imagePath = await uploadImageToStorage(file);
                 
                 if (!imagePath || imagePath.startsWith('data:')) {
                     throw new Error('Upload failed');
@@ -3755,24 +3795,23 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         return;
       }
 
-      // Handle image upload - use Storage for new images
+      // Step 1: Handle image upload FIRST (before saving recipe)
       let imagePath = null;
-      let imageData = null; // Keep for backward compatibility during migration
+      let imageData = null;
       
       if (imageFile) {
         // New image uploaded - save to Storage
         try {
-          imagePath = await uploadImageToStorage(imageFile, 'temp');
-          console.log('Image uploaded to Storage:', imagePath);
+          console.log('📤 Uploading image to Storage...');
+          imagePath = await uploadImageToStorage(imageFile);
+          console.log('✅ Image uploaded to Storage:', imagePath);
           
           // Verify upload was successful
           if (!imagePath || imagePath.startsWith('data:')) {
             throw new Error('Upload returned base64 instead of storage path');
           }
-          
-          console.log('✅ Image uploaded successfully to Storage');
         } catch (error) {
-          console.error('Failed to upload to Storage:', error);
+          console.error('❌ Failed to upload to Storage:', error);
           
           // Show user-friendly error message
           const shouldContinue = confirm(
@@ -3798,8 +3837,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           imageData = recipes[editingIndex].image;
         }
       } else if (aiGeneratedImage) {
-        // AI generated image - for now keep as base64
-        // TODO: Could upload to Storage in the future
+        // AI generated image
         if (aiGeneratedImage.startsWith('http')) {
           imagePath = aiGeneratedImage;
         } else {
@@ -3810,6 +3848,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       // Reset AI generated image after use
       aiGeneratedImage = null;
 
+      // Step 2: Create recipe object with ALL data (including image)
       const recipe = {
         name,
         source,
@@ -3819,23 +3858,26 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         notes,
         preparationTime,
         rating: editingIndex >= 0 ? recipes[editingIndex].rating || 0 : 0,
-        image: imageData, // Keep for backward compatibility
-        imagePath: imagePath, // New: Storage path
+        image: imageData,
+        imagePath: imagePath,
         recipeLink,
         videoUrl: recipeVideo
       };
 
-      let recipeToSave;
+      // Step 3: Save recipe to DB ONCE
       if (editingIndex >= 0) {
+        // Editing existing recipe - merge with existing data
         recipes[editingIndex] = { ...recipes[editingIndex], ...recipe };
-        recipeToSave = recipes[editingIndex];
+        await saveRecipeToDB(recipes[editingIndex]);
+        console.log('✅ Recipe updated in DB');
         editingIndex = -1;
       } else {
+        // New recipe - add to array
         recipes.push(recipe);
-        recipeToSave = recipe;
+        await saveRecipeToDB(recipe);
+        console.log('✅ Recipe saved to DB with ID:', recipe.id);
       }
 
-      await saveRecipeToDB(recipeToSave);
       displayRecipes(recipes);
       updateCategoryList();
       updateCategoryButtons();
