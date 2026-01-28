@@ -223,12 +223,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         if (!supabase || !ids || ids.length === 0) return;
         const { data, error } = await supabase
             .from('recipes')
-            .select('id,image,image_path')
+            .select('id,image_path')
             .in('id', ids);
 
         if (error) throw error;
         (data || []).forEach(row => {
-            if (row && row.id) imageMap.set(row.id, row.image || null);
+            if (row && row.id) imageMap.set(row.id, row.image_path || null);
         });
     }
 
@@ -237,11 +237,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             try {
                 const { data, error } = await supabase
                     .from('recipes')
-                    .select('id,image,image_path')
+                    .select('id,image_path')
                     .eq('id', id)
                     .single();
                 if (!error && data && data.id) {
-                    imageMap.set(data.id, data.image || null);
+                    imageMap.set(data.id, data.image_path || null);
                 } else if (error) {
                     console.warn('Failed to load image for recipe id:', id, error);
                 }
@@ -257,7 +257,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         if (ids.length === 0) return;
 
         const imageMap = new Map();
-        const chunkSize = 25;
+        const chunkSize = 50;
         for (let i = 0; i < ids.length; i += chunkSize) {
             const chunk = ids.slice(i, i + chunkSize);
             try {
@@ -274,7 +274,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             if (!r || !r.id) return r;
             if (imageMap.has(r.id)) {
                 updated = true;
-                return { ...r, image: imageMap.get(r.id) };
+                return { ...r, imagePath: imageMap.get(r.id) };
             }
             return r;
         });
