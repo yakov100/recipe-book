@@ -291,11 +291,13 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     function applyTimerVisibility(visible) {
-        const tc = document.querySelector('.timer-container');
-        const btn = document.getElementById('show-timer-btn');
-        if (!tc || !btn) return;
-        if (visible) { tc.style.display = 'block'; btn.style.display = 'none'; }
-        else { tc.style.display = 'none'; btn.style.display = 'flex'; }
+        const widget = document.getElementById('timer-widget');
+        if (!widget) return;
+        if (visible) {
+            widget.classList.add('is-open');
+        } else {
+            widget.classList.remove('is-open');
+        }
     }
 
     function getRecipeIdFromPath() {
@@ -339,7 +341,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             document.getElementById('filterRating').innerHTML = generateFilterStars();
             setupBackupReminder(settings.lastBackup);
             setRecipesPerRow(settings.recipesPerRow || 4);
-            drawGridIcons();
+            setupGridSelector();
             applyTimerVisibility(settings.timerVisible);
             initializeTimer();
             setupPopupCloseOnOverlayClick();
@@ -402,7 +404,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             if (fr) fr.innerHTML = generateFilterStars();
             setupBackupReminder(null);
             setRecipesPerRow(4);
-            drawGridIcons();
+            setupGridSelector();
             applyTimerVisibility(false);
             initializeTimer();
             setupPopupCloseOnOverlayClick();
@@ -1018,6 +1020,38 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('formPopup').style.display = 'none';
       document.getElementById('recipeForm').reset();
       editingIndex = -1;
+      // Reset image preview
+      const previewContainer = document.getElementById('imagePreviewContainer');
+      const uploadArea = document.querySelector('.image-upload-area');
+      if (previewContainer) {
+        previewContainer.style.display = 'none';
+        document.getElementById('imagePreview').src = '';
+      }
+      if (uploadArea) {
+        uploadArea.classList.remove('has-image');
+      }
+    }
+
+    // Preview image in the form upload area
+    function previewFormImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const previewContainer = document.getElementById('imagePreviewContainer');
+          const imagePreview = document.getElementById('imagePreview');
+          const uploadArea = document.querySelector('.image-upload-area');
+          
+          if (previewContainer && imagePreview) {
+            imagePreview.src = e.target.result;
+            previewContainer.style.display = 'block';
+            if (uploadArea) {
+              uploadArea.classList.add('has-image');
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     }
 
     function confirmDeleteRecipe(index) {
@@ -1480,44 +1514,49 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     // פונקציה לשינוי מספר המתכונים בשורה
     function setRecipesPerRow(number) {
       document.documentElement.style.setProperty('--columns', number);
-      document.getElementById('grid4').classList.remove('active');
-      document.getElementById('grid5').classList.remove('active');
-      document.getElementById('grid6').classList.remove('active');
-      document.getElementById('grid' + number).classList.add('active');
+      // Update grid selector menu active state
+      const gridOptions = document.querySelectorAll('.grid-option');
+      gridOptions.forEach(option => {
+        option.classList.remove('active');
+        if (parseInt(option.dataset.cols) === number) {
+          option.classList.add('active');
+        }
+      });
       saveSetting('recipesPerRow', number);
     }
 
-    // ציור אייקוני הגריד
-    function drawGridIcons() {
-      const grids = [
-        { id: 'grid4', cols: 4 },
-        { id: 'grid5', cols: 5 },
-        { id: 'grid6', cols: 6 }
-      ];
+    // פתיחה/סגירה של תפריט בחירת גריד
+    function toggleGridSelector() {
+      const menu = document.getElementById('grid-selector-menu');
+      if (!menu) return;
+      
+      const isVisible = menu.style.display !== 'none';
+      menu.style.display = isVisible ? 'none' : 'flex';
+      
+      // סגירה בלחיצה מחוץ לתפריט
+      if (!isVisible) {
+        const closeOnClickOutside = (e) => {
+          if (!e.target.closest('.grid-selector-wrapper')) {
+            menu.style.display = 'none';
+            document.removeEventListener('click', closeOnClickOutside);
+          }
+        };
+        // Delay to prevent immediate close
+        setTimeout(() => {
+          document.addEventListener('click', closeOnClickOutside);
+        }, 0);
+      }
+    }
 
-      grids.forEach(grid => {
-        const element = document.getElementById(grid.id);
-        if (!element) return;
-        
-        // נקה את התוכן הקיים
-        element.innerHTML = '';
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = 40;
-        canvas.height = 40;
-        const ctx = canvas.getContext('2d');
-
-        const cols = grid.cols;
-        const rows = 1;
-        const cellWidth = canvas.width / cols;
-        const cellHeight = canvas.height / rows;
-
-        for (let i = 0; i < cols; i++) {
-          ctx.strokeStyle = '#333';
-          ctx.strokeRect(i * cellWidth, 0, cellWidth, cellHeight);
-        }
-
-        element.appendChild(canvas);
+    // הגדרת event listeners לכפתורי הגריד
+    function setupGridSelector() {
+      const gridOptions = document.querySelectorAll('.grid-option');
+      gridOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          const cols = parseInt(option.dataset.cols);
+          setRecipesPerRow(cols);
+          document.getElementById('grid-selector-menu').style.display = 'none';
+        });
       });
     }
 
@@ -1552,30 +1591,47 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       });
     }
 
+    function formatMessageTime(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    }
+
     function renderAiChatMessages() {
       const el = document.getElementById('aiChatMessages');
       if (!el) return;
       el.innerHTML = '';
+      
+      // Add date separator at the beginning
+      const dateSeparator = document.createElement('div');
+      dateSeparator.className = 'ai-chat-date-separator';
+      dateSeparator.innerHTML = '<span>היום</span>';
+      el.appendChild(dateSeparator);
+      
       aiChatMessages.forEach(function(m) {
+        // Create wrapper for avatar layout
+        const wrapper = document.createElement('div');
+        wrapper.className = 'ai-chat-msg-wrapper ' + (m.role === 'user' ? 'user' : 'assistant');
+
+        // Create avatar (only for assistant messages)
+        if (m.role !== 'user') {
+          const avatar = document.createElement('div');
+          avatar.className = 'ai-chat-avatar chef';
+          avatar.innerHTML = '<span class="material-symbols-outlined">smart_toy</span>';
+          wrapper.appendChild(avatar);
+        }
+
+        // Create content container (message + timestamp)
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'ai-chat-msg-content';
+
+        // Create message bubble
         const d = document.createElement('div');
         d.className = 'ai-chat-msg ' + (m.role === 'user' ? 'user' : 'assistant');
 
-        if (m.role !== 'user') {
-          const chefIcon = document.createElement('img');
-          chefIcon.src = '/icons/chef-speaking.svg';
-          chefIcon.onerror = function() {
-            this.onerror = null;
-            this.src = '/assets/icons/chef-speaking.svg';
-          };
-          chefIcon.alt = 'שף';
-          chefIcon.className = 'chef-msg-icon';
-          d.appendChild(chefIcon);
-        }
-
-        // Add text content
-        const textSpan = document.createElement('span');
-        textSpan.textContent = m.content || '';
-        d.appendChild(textSpan);
+        // Add text content (with support for highlighted text)
+        const textContent = m.content || '';
+        d.innerHTML = '<p class="text-sm leading-relaxed">' + textContent.replace(/\n/g, '<br>') + '</p>';
 
         // Add attachment thumbnails if present
         if (m.attachments && m.attachments.length > 0) {
@@ -1596,7 +1652,31 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           d.appendChild(attachmentsDiv);
         }
 
-        el.appendChild(d);
+        // Add recipe card if present (inside the message bubble)
+        if (m.recipeCard) {
+          const recipeCard = document.createElement('div');
+          recipeCard.className = 'ai-chat-recipe-card';
+          recipeCard.innerHTML = `
+            <img src="${m.recipeCard.image || '/assets/default-images/other/1.jpg'}" alt="${m.recipeCard.name}" onerror="this.src='/assets/default-images/other/1.jpg'">
+            <div class="ai-chat-recipe-card-footer" onclick="viewRecipeFromChat('${m.recipeCard.id || ''}')">
+              <span>צפה במתכון המלא</span>
+              <span class="material-symbols-outlined">arrow_back</span>
+            </div>
+          `;
+          d.appendChild(recipeCard);
+        }
+
+        contentContainer.appendChild(d);
+
+        // Add timestamp
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'ai-chat-msg-time';
+        timeDiv.textContent = formatMessageTime(m.timestamp || new Date());
+        contentContainer.appendChild(timeDiv);
+
+        // Assemble wrapper
+        wrapper.appendChild(contentContainer);
+        el.appendChild(wrapper);
       });
 
       // Show pending recipe confirmation buttons if there's a suggested recipe waiting
@@ -1648,10 +1728,21 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       pendingSuggestedRecipe = null;
       aiChatMessages.push({
         role: 'assistant',
-        content: 'בסדר, לא הוספתי את המתכון. אם תרצה משהו אחר, אני כאן!'
+        content: 'בסדר, לא הוספתי את המתכון. אם תרצה משהו אחר, אני כאן!',
+        timestamp: new Date()
       });
       renderAiChatMessages();
     }
+
+    // View recipe from chat card
+    window.viewRecipeFromChat = function(recipeId) {
+      if (!recipeId) return;
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (recipe) {
+        closeAiChat();
+        openPopup(recipe);
+      }
+    };
 
     // --- Chat Conversation Management ---
     async function createNewConversation() {
@@ -1676,19 +1767,56 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     async function loadConversationHistory() {
       if (!supabase) return [];
       try {
+        // Calculate the date 24 hours ago
+        const oneDayAgo = new Date();
+        oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+        const oneDayAgoISO = oneDayAgo.toISOString();
+
+        // Load only conversations from the last 24 hours
         const { data, error } = await supabase
           .from('chat_conversations')
           .select('id, title, updated_at, last_message_preview')
+          .gte('updated_at', oneDayAgoISO)
           .order('updated_at', { ascending: false })
           .limit(30);
         if (error) {
           console.error('Error loading conversations:', error);
           return [];
         }
+        
+        // Also clean up old conversations (older than 24 hours)
+        deleteOldConversations();
+        
         return data || [];
       } catch (e) {
         console.error('Error loading conversations:', e);
         return [];
+      }
+    }
+
+    // Delete conversations older than 24 hours
+    async function deleteOldConversations() {
+      if (!supabase) return;
+      try {
+        const oneDayAgo = new Date();
+        oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+        const oneDayAgoISO = oneDayAgo.toISOString();
+
+        // Delete old messages first (due to foreign key constraint)
+        await supabase
+          .from('chat_messages')
+          .delete()
+          .lt('created_at', oneDayAgoISO);
+
+        // Then delete old conversations
+        await supabase
+          .from('chat_conversations')
+          .delete()
+          .lt('updated_at', oneDayAgoISO);
+
+        console.log('Old conversations cleaned up');
+      } catch (e) {
+        console.error('Error deleting old conversations:', e);
       }
     }
 
@@ -1741,6 +1869,35 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     function renderConversationHistory() {
+      // Update the select dropdown
+      const selectEl = document.getElementById('aiChatHistorySelect');
+      if (!selectEl) return;
+
+      // Clear existing options except the first one (new chat)
+      selectEl.innerHTML = '<option value="new">שיחה חדשה - מה מבשלים היום?</option>';
+
+      conversationHistory.forEach(function(conv) {
+        const option = document.createElement('option');
+        option.value = conv.id;
+        option.textContent = (conv.title || 'שיחה ללא כותרת') + ' (' + formatRelativeDate(conv.updated_at) + ')';
+        if (conv.id === currentConversationId) {
+          option.selected = true;
+        }
+        selectEl.appendChild(option);
+      });
+    }
+
+    // Load conversation from select dropdown
+    async function loadSelectedConversation(value) {
+      if (value === 'new') {
+        await startNewConversation();
+      } else {
+        await loadPastConversation(value);
+      }
+    }
+    window.loadSelectedConversation = loadSelectedConversation;
+
+    function renderConversationHistoryOld() {
       const listEl = document.getElementById('aiChatHistoryList');
       if (!listEl) return;
 
@@ -1790,6 +1947,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       });
       renderAiChatMessages();
       renderConversationHistory();
+
+      // Hide history dropdown after selecting conversation
+      const history = document.getElementById('aiChatHistory');
+      if (history) history.style.display = 'none';
     }
 
     async function startNewConversation() {
@@ -1799,13 +1960,19 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
       aiChatMessages.push({
         role: 'assistant',
-        content: 'שיחה חדשה! אני יכול לחפש מתכונים, להמציא מתכונים חדשים, או לעזור לך להוסיף מתכון. במה אוכל לעזור?'
+        content: 'היי! איך אוכל לעזור לך לבשל היום? אני יכול להציע מתכונים, לחפש לפי מצרכים שיש לך בבית, או להמציא מתכון חדש.',
+        timestamp: new Date()
       });
 
       conversationHistory = await loadConversationHistory();
       renderConversationHistory();
       renderAiChatMessages();
       clearAttachmentPreview();
+
+      // Hide history dropdown after starting new conversation
+      const history = document.getElementById('aiChatHistory');
+      if (history) history.style.display = 'none';
+
       var input = document.getElementById('aiChatInput');
       if (input) input.focus();
     }
@@ -1813,9 +1980,21 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     function toggleChatHistory() {
       const history = document.getElementById('aiChatHistory');
       if (history) {
-        history.classList.toggle('collapsed');
+        // Toggle display for dropdown style
+        if (history.style.display === 'none' || !history.style.display) {
+          history.style.display = 'block';
+          loadChatHistory();
+        } else {
+          history.style.display = 'none';
+        }
       }
     }
+
+    function toggleChatMenu() {
+      // Placeholder for menu functionality
+      console.log('Chat menu clicked');
+    }
+    window.toggleChatMenu = toggleChatMenu;
 
     // --- File Upload Handling ---
     function handleChatFileSelect(event) {
@@ -1928,7 +2107,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
       aiChatMessages.push({
         role: 'assistant',
-        content: 'שלום! אני יכול לחפש מתכונים קיימים, להמציא מתכונים חדשים מהדמיון שלי, או לעזור לך להוסיף מתכון משלך. במה אוכל לעזור?'
+        content: 'שלום! אני יכול לחפש מתכונים קיימים, להמציא מתכונים חדשים מהדמיון שלי, או לעזור לך להוסיף מתכון משלך. במה אוכל לעזור?',
+        timestamp: new Date()
       });
 
       // Load conversation history for sidebar
@@ -1996,7 +2176,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       var userMessage = {
         role: 'user',
         content: msg || (chatAttachments.length > 0 ? '[תמונה]' : ''),
-        attachments: chatAttachments.slice() // copy array
+        attachments: chatAttachments.slice(), // copy array
+        timestamp: new Date()
       };
 
       aiChatMessages.push(userMessage);
@@ -2012,13 +2193,27 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       renderAiChatMessages();
       if (sendBtn) sendBtn.disabled = true;
 
+      var loadingWrapper = document.createElement('div');
+      loadingWrapper.className = 'ai-chat-msg-wrapper assistant';
+      loadingWrapper.id = 'aiChatLoading';
+
+      var loadingAvatar = document.createElement('div');
+      loadingAvatar.className = 'ai-chat-avatar chef';
+      loadingAvatar.innerHTML = '<span class="material-symbols-outlined">smart_toy</span>';
+
+      var loadingContent = document.createElement('div');
+      loadingContent.className = 'ai-chat-msg-content';
+
       var loading = document.createElement('div');
-      loading.className = 'ai-chat-msg loading chef-typing-container';
-      loading.id = 'aiChatLoading';
-      loading.setAttribute('aria-label', 'השף כותב...');
-      loading.innerHTML = '<img src="/icons/chef-typing.svg" alt="השף כותב..." class="chef-typing" onerror="this.onerror=null; this.src=\'/assets/icons/chef-typing.svg\';">';
+      loading.className = 'ai-chat-msg assistant loading';
+      loading.setAttribute('aria-label', 'חושב...');
+      loading.innerHTML = '<span class="typing-dots">מעבד...</span>';
+
+      loadingContent.appendChild(loading);
+      loadingWrapper.appendChild(loadingAvatar);
+      loadingWrapper.appendChild(loadingContent);
       var msgsEl = document.getElementById('aiChatMessages');
-      if (msgsEl) msgsEl.appendChild(loading);
+      if (msgsEl) msgsEl.appendChild(loadingWrapper);
 
       var url = supabaseUrl + '/functions/v1/recipe-ai';
       fetch(url, {
@@ -2038,7 +2233,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           var reply = (data && data.reply) ? data.reply : (data && data.error) ? data.error : 'לא התקבלה תשובה.';
           if (!reply && res && !res.ok) reply = 'שגיאה מהשרת (' + (res.status || '') + '). נא לבדוק GEMINI_API_KEY ב-Supabase Secrets.';
 
-          var assistantMessage = { role: 'assistant', content: reply };
+          var assistantMessage = { role: 'assistant', content: reply, timestamp: new Date() };
           aiChatMessages.push(assistantMessage);
 
           // Save assistant message to database
@@ -2083,7 +2278,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           var loadEl = document.getElementById('aiChatLoading');
           if (loadEl) loadEl.remove();
           if (sendBtn) sendBtn.disabled = false;
-          aiChatMessages.push({ role: 'assistant', content: 'לא ניתן להתחבר ל-AI. נא לבדוק חיבור וכו\'.' });
+          aiChatMessages.push({ role: 'assistant', content: 'לא ניתן להתחבר ל-AI. נא לבדוק חיבור וכו\'.', timestamp: new Date() });
           renderAiChatMessages();
         });
     }
@@ -2158,15 +2353,6 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
     }
 
-    // פונקציות לפתיחת וסגירת תפריט הצד
-    function openMenu() {
-      document.getElementById('sideMenu').style.width = '250px';
-    }
-
-    function closeMenu() {
-      document.getElementById('sideMenu').style.width = '0';
-    }
-
     // פונקציה לפתיחה/סגירה של פאנל הסינון
     function toggleFilterPanel() {
       const searchContainer = document.getElementById('searchContainer');
@@ -2197,6 +2383,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     // חשיפת הפונקציות לחלון הגלובלי כדי שהן יהיו נגישות מ-onclick
     window.openFormPopup = openFormPopup;
     window.closeFormPopup = closeFormPopup;
+    window.previewFormImage = previewFormImage;
     window.closePopup = closePopup;
     window.editRecipe = editRecipe;
     window.confirmDeleteRecipe = confirmDeleteRecipe;
@@ -2215,9 +2402,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     window.exportRecipes = exportRecipes;
     window.importRecipes = importRecipes;
     window.downloadAllRecipes = downloadAllRecipes;
-    window.openMenu = openMenu;
-    window.closeMenu = closeMenu;
     window.toggleFilterPanel = toggleFilterPanel;
+    window.toggleGridSelector = toggleGridSelector;
     window.setRecipesPerRow = setRecipesPerRow;
     window.openAiChat = openAiChat;
     window.closeAiChat = closeAiChat;
@@ -2380,15 +2566,16 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const pauseBtn = document.getElementById('pause-timer');
         const stopBtn = document.getElementById('stop-timer');
         const display = document.getElementById('timer-display');
-        const timerContainer = document.querySelector('.timer-container');
+        const miniDisplay = document.getElementById('timer-mini-display');
+        const timerWidget = document.getElementById('timer-widget');
 
-        if (!startBtn || !pauseBtn || !stopBtn || !display || !timerContainer) return;
+        if (!startBtn || !pauseBtn || !stopBtn || !display || !timerWidget) return;
 
         startBtn.style.display = 'none';
         pauseBtn.style.display = 'flex';
         stopBtn.style.display = 'flex';
         display.classList.add('active');
-        timerContainer.classList.add('is-running');
+        timerWidget.classList.add('is-running');
 
         timerEndTime = Date.now() + (timerPaused ? pausedTimeRemaining : totalSeconds * 1000);
         timerPaused = false;
@@ -2401,6 +2588,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
             if (remaining === 0) {
                 clearInterval(timerInterval);
+                display.classList.add('timer-ended');
                 // מנגינה נעימה למשך כחצי דקה
                 let melodyCount = 0;
                 const totalMelodies = 8;
@@ -2417,8 +2605,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                         pauseBtn.style.display = 'none';
                         stopBtn.style.display = 'none';
                         display.classList.remove('active');
+                        display.classList.remove('timer-ended');
                         display.textContent = '';
-                        timerContainer.classList.remove('is-running');
+                        if (miniDisplay) miniDisplay.textContent = '';
+                        timerWidget.classList.remove('is-running');
                     }
                 }, 4000);
 
@@ -2428,12 +2618,25 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 // נשאיר את כפתור העצירה מוצג כדי שאפשר יהיה לעצור את הצפצוף
                 stopBtn.style.display = 'flex';
                 display.classList.remove('active');
-                display.textContent = '';
-                timerContainer.classList.remove('is-running');
+                display.textContent = '00:00:00';
+                if (miniDisplay) miniDisplay.textContent = '00:00';
+                timerWidget.classList.remove('is-running');
                 return;
             }
 
-            display.textContent = formatTime(Math.ceil(remaining / 1000));
+            const timeStr = formatTime(Math.ceil(remaining / 1000));
+            display.textContent = timeStr;
+            // עדכון התצוגה המיני (רק דקות ושניות אם פחות משעה)
+            if (miniDisplay) {
+                const secs = Math.ceil(remaining / 1000);
+                if (secs >= 3600) {
+                    miniDisplay.textContent = timeStr;
+                } else {
+                    const m = Math.floor(secs / 60);
+                    const s = secs % 60;
+                    miniDisplay.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                }
+            }
         }, 1000);
     }
 
@@ -2441,9 +2644,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const startBtn = document.getElementById('start-timer');
         const pauseBtn = document.getElementById('pause-timer');
         const display = document.getElementById('timer-display');
-        const timerContainer = document.querySelector('.timer-container');
+        const timerWidget = document.getElementById('timer-widget');
 
-        if (!startBtn || !pauseBtn || !display || !timerContainer) return;
+        if (!startBtn || !pauseBtn || !display || !timerWidget) return;
 
         clearInterval(timerInterval);
         timerPaused = true;
@@ -2452,7 +2655,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         startBtn.style.display = 'flex';
         pauseBtn.style.display = 'none';
         display.classList.remove('active');
-        timerContainer.classList.remove('is-running');
+        // Keep is-running class so mini display still shows
     }
 
     function stopTimer() {
@@ -2460,9 +2663,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const pauseBtn = document.getElementById('pause-timer');
         const stopBtn = document.getElementById('stop-timer');
         const display = document.getElementById('timer-display');
-        const timerContainer = document.querySelector('.timer-container');
+        const miniDisplay = document.getElementById('timer-mini-display');
+        const timerWidget = document.getElementById('timer-widget');
 
-        if (!startBtn || !pauseBtn || !stopBtn || !display || !timerContainer) return;
+        if (!startBtn || !pauseBtn || !stopBtn || !display || !timerWidget) return;
 
         clearInterval(timerInterval);
         if (currentBeepInterval) {
@@ -2478,56 +2682,69 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         pauseBtn.style.display = 'none';
         stopBtn.style.display = 'none';
         display.classList.remove('active');
+        display.classList.remove('timer-ended');
         display.textContent = '';
-        timerContainer.classList.remove('is-running');
+        if (miniDisplay) miniDisplay.textContent = '';
+        timerWidget.classList.remove('is-running');
     }
 
-    function togglePresetMenu() {
-        const menu = document.getElementById('timer-preset-menu');
-        if (!menu) return;
-        menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+    function toggleTimerWidget() {
+        const timerWidget = document.getElementById('timer-widget');
+        if (!timerWidget) return;
+        const isOpen = timerWidget.classList.contains('is-open');
+        if (isOpen) {
+            timerWidget.classList.remove('is-open');
+        } else {
+            timerWidget.classList.add('is-open');
+        }
+        saveSetting('timerVisible', !isOpen);
     }
 
     function initializeTimer() {
         const startButton = document.getElementById('start-timer');
         const pauseButton = document.getElementById('pause-timer');
         const stopButton = document.getElementById('stop-timer');
-        const presetButton = document.getElementById('timer-preset');
-        const showTimerButton = document.getElementById('show-timer-btn');
-        const timerContainer = document.querySelector('.timer-container');
+        const toggleButton = document.getElementById('timer-toggle-btn');
+        const closeButton = document.getElementById('timer-close-btn');
+        const timerWidget = document.getElementById('timer-widget');
         const hoursInput = document.getElementById('timer-hours');
         const minutesInput = document.getElementById('timer-minutes');
         const secondsInput = document.getElementById('timer-seconds');
 
         // בדיקה שכל האלמנטים קיימים לפני הוספת event listeners
-        if (!startButton || !pauseButton || !stopButton || !presetButton || !showTimerButton || !timerContainer || !hoursInput || !minutesInput || !secondsInput) {
+        if (!startButton || !pauseButton || !stopButton || !toggleButton || !timerWidget || !hoursInput || !minutesInput || !secondsInput) {
             console.warn('Timer elements not found, skipping timer initialization');
             return;
         }
 
-        // טיימר טוגל
-        showTimerButton.addEventListener('click', () => {
-            const isVisible = timerContainer.style.display !== 'none';
-            timerContainer.style.display = isVisible ? 'none' : 'block';
-            showTimerButton.style.display = isVisible ? 'flex' : 'none';
-            saveSetting('timerVisible', !isVisible);
+        // טיימר טוגל - פתיחה וסגירה
+        toggleButton.addEventListener('click', toggleTimerWidget);
+        
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                timerWidget.classList.remove('is-open');
+                saveSetting('timerVisible', false);
+            });
+        }
+
+        // סגירה בלחיצה מחוץ לטיימר
+        document.addEventListener('click', (e) => {
+            if (!timerWidget.contains(e.target) && timerWidget.classList.contains('is-open')) {
+                timerWidget.classList.remove('is-open');
+                saveSetting('timerVisible', false);
+            }
         });
 
         // אתחול הטיימר
         startButton.addEventListener('click', startTimer);
         pauseButton.addEventListener('click', pauseTimer);
         stopButton.addEventListener('click', stopTimer);
-        presetButton.addEventListener('click', togglePresetMenu);
 
         // הגדרת זמנים מראש
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const seconds = parseInt(btn.dataset.time);
                 setTimeInputs(seconds);
-                const presetMenu = document.getElementById('timer-preset-menu');
-                if (presetMenu) {
-                    presetMenu.style.display = 'none';
-                }
             });
         });
 
@@ -2665,7 +2882,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       'סלטים': 'eco',
       'שונות': 'restaurant_menu',
       'עוגות': 'cake',
-      'קינוחים': 'icecream'
+      'קינוחים': 'icecream',
+      'פינוקים': 'cookie'
     };
 
     // Category color mapping for icons and backgrounds (matching the design example)
@@ -2678,7 +2896,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       'סלטים': 'emerald',         // Bright green for salads/healthy
       'שונות': 'blue',            // Blue for other
       'עוגות': 'amber',           // Amber/yellow for cakes
-      'קינוחים': 'rose'           // Bright pink for desserts
+      'קינוחים': 'rose',          // Bright pink for desserts
+      'פינוקים': 'orange'         // Orange for treats/snacks
     };
 
     function getCategoryIcon(category) {
