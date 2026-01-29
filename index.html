@@ -257,34 +257,33 @@
             <div class="form-card-accent"></div>
             
             <div class="form-card-content">
-              <!-- מצרכים -->
-              <div class="form-section">
-                <h3 class="form-section-header">
-                  <span class="material-symbols-outlined form-section-icon text-green-600">grocery</span>
-                  מצרכים - הזנה חופשית
-                  <span class="form-section-badge">רשימה</span>
-                </h3>
-                <div class="form-input-wrapper">
-                  <textarea id="ingredients" class="glass-input" placeholder="רשמו כאן את כל המצרכים, כל מצרך בשורה חדשה...
-למשל:
-2 כוסות קמח
-1 כפית אבקת אפייה
-3 ביצים L" rows="6"></textarea>
-                  <div class="form-input-action">
-                    <button type="button" class="ai-format-btn" title="הדביקו כאן את הרשימה ואני אעצב אותה">
-                      <span class="material-symbols-outlined">auto_awesome</span>
-                    </button>
+              <!-- מצרכים והוראות - מאוזן -->
+              <div class="form-sections-horizontal">
+                <!-- מצרכים -->
+                <div class="form-section">
+                  <h3 class="form-section-header">
+                    <span class="material-symbols-outlined form-section-icon text-green-600">grocery</span>
+                    מצרכים - הזנה חופשית
+                    <span class="form-section-badge">רשימה</span>
+                  </h3>
+                  <div class="form-input-wrapper">
+                    <textarea id="ingredients" class="glass-input" placeholder="הדביקו כאן מתכון מלא (מצרכים + הוראות + הערות) ולחצו על ✨ – אפצל אוטומטית לשדות המתאימים&#10;או רשמו רק מצרכים, כל מצרך בשורה חדשה" rows="8"></textarea>
+                    <div class="form-input-action">
+                      <button type="button" class="ai-format-btn" title="הדביקו מתכון מלא – אפצל למצרכים, הוראות והערות">
+                        <span class="material-symbols-outlined">auto_awesome</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- הוראות הכנה -->
-              <div class="form-section">
-                <h3 class="form-section-header">
-                  <span class="material-symbols-outlined form-section-icon text-orange-400">menu_book</span>
-                  הוראות הכנה
-                </h3>
-                <textarea id="instructions" class="glass-input" placeholder="תארו כאן את שלבי ההכנה בפירוט..." rows="8"></textarea>
+                <!-- הוראות הכנה -->
+                <div class="form-section">
+                  <h3 class="form-section-header">
+                    <span class="material-symbols-outlined form-section-icon text-orange-400">menu_book</span>
+                    הוראות הכנה
+                  </h3>
+                  <textarea id="instructions" class="glass-input" placeholder="תאר כאן את שלבי המתכון&#10;הדביקו כאן את הרשימה ואני אעצב אותה" rows="8"></textarea>
+                </div>
               </div>
 
               <!-- הערות -->
