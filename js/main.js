@@ -3,6 +3,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 (() => {
     let recipes = [];
     let editingIndex = -1;
+    let formSelectedRating = 0;
     let selectedCategory = null;
     let backupReminderTimeout;
     let aiChatMessages = [];
@@ -1376,16 +1377,41 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
     }
 
+    const DIFFICULTY_LABELS = { 1: 'קל', 2: 'בינוני', 3: 'קשה' };
+
+    function setFormDifficulty(level) {
+        const bars = document.querySelectorAll('#formDifficultyBars .form-diff-bar');
+        const textEl = document.getElementById('formDifficultyText');
+        if (!bars.length || !textEl) return;
+        bars.forEach((bar, i) => {
+            const barLevel = i + 1;
+            bar.classList.toggle('form-diff-empty', barLevel > level);
+        });
+        textEl.textContent = DIFFICULTY_LABELS[level] || 'בינוני';
+    }
+
+    function updateFormRatingStars(rating) {
+        const stars = document.querySelectorAll('#formRatingStars .form-star');
+        stars.forEach((star) => {
+            const r = parseInt(star.dataset.rating, 10);
+            star.classList.toggle('filled', r <= rating);
+        });
+    }
+
     // עדכון הקטגוריות בעת פתיחת הטופס
     function openFormPopup() {
         document.getElementById('formPopup').style.display = 'flex';
         document.getElementById('newCategory').style.display = 'none';
-        document.getElementById('toggleNewCategory').textContent = '+ קטגוריה חדשה';
+        const toggleBtn = document.getElementById('toggleNewCategory');
+        if (toggleBtn) toggleBtn.innerHTML = '<span class="material-symbols-outlined">add</span>';
         document.getElementById('category').style.display = 'block';
 
         // איפוס הטופס
         document.getElementById('recipeForm').reset();
         editingIndex = -1;
+        formSelectedRating = 0;
+        setFormDifficulty(2);
+        updateFormRatingStars(0);
         aiGeneratedImage = null; // איפוס תמונה שנוצרה ע"י AI
         
         // עדכון רשימת הקטגוריות
@@ -1413,6 +1439,19 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 select.appendChild(option);
             }
         });
+
+        // Reset ingredient rows
+        const ingContainer = document.getElementById('ingredientsTableRows');
+        if (ingContainer) {
+          ingContainer.querySelectorAll('.form-ingredient-row').forEach(r => r.remove());
+          addIngredientRow();
+        }
+
+        // Reset inline image preview
+        const inlinePreview = document.getElementById('inlineImagePreview');
+        const inlineContent = document.getElementById('inlineImageUploadContent');
+        if (inlinePreview) inlinePreview.style.display = 'none';
+        if (inlineContent) inlineContent.style.display = '';
     }
 
     function closeFormPopup() {
@@ -1431,6 +1470,120 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
     }
 
+    // === Ingredient Row Helpers ===
+    const INGREDIENT_UNIT_OPTIONS = ['כפות', 'כוסות', 'גרם', 'יחידה'];
+    function addIngredientRow() {
+      const container = document.getElementById('ingredientsTableRows');
+      if (!container) return;
+      const row = document.createElement('div');
+      row.className = 'form-ingredient-row';
+      row.draggable = true;
+      const unitOptions = INGREDIENT_UNIT_OPTIONS.map(u => `<option>${u}</option>`).join('');
+      row.innerHTML = `
+        <span class="material-symbols-outlined ing-drag-handle">drag_indicator</span>
+        <input type="number" class="ing-input ing-input-qty" placeholder="כמות">
+        <select class="ing-input ing-input-unit">${unitOptions}</select>
+        <input type="text" class="ing-input ing-input-name" placeholder="שמן זית כתית מעולה">
+        <button type="button" class="ing-remove-btn" onclick="removeIngredientRow(this)" title="הסר">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      `;
+      container.appendChild(row);
+      row.querySelector('.ing-input-name').focus();
+      syncIngredientsToTextarea();
+    }
+    window.addIngredientRow = addIngredientRow;
+
+    function removeIngredientRow(btn) {
+      const row = btn.closest('.form-ingredient-row');
+      const container = document.getElementById('ingredientsTableRows');
+      // Keep at least one row
+      if (container && container.querySelectorAll('.form-ingredient-row').length > 1) {
+        row.remove();
+      }
+      syncIngredientsToTextarea();
+    }
+    window.removeIngredientRow = removeIngredientRow;
+
+    function syncIngredientsToTextarea() {
+      const rows = document.querySelectorAll('#ingredientsTableRows .form-ingredient-row');
+      const lines = [];
+      rows.forEach(row => {
+        const name = row.querySelector('.ing-input-name')?.value?.trim() || '';
+        const unit = row.querySelector('.ing-input-unit')?.value?.trim() || '';
+        const qty = row.querySelector('.ing-input-qty')?.value?.trim() || '';
+        if (name || unit || qty) {
+          let line = '';
+          if (qty) line += qty + ' ';
+          if (unit) line += unit + ' ';
+          line += name;
+          lines.push(line.trim());
+        }
+      });
+      const ta = document.getElementById('ingredients');
+      if (ta) ta.value = lines.join('\n');
+    }
+
+    // Sync on any input/change in ingredient rows
+    document.addEventListener('input', function(e) {
+      if (e.target.closest && e.target.closest('.form-ingredient-row')) {
+        syncIngredientsToTextarea();
+      }
+    });
+    document.addEventListener('change', function(e) {
+      if (e.target.closest && e.target.closest('.form-ingredient-row')) {
+        syncIngredientsToTextarea();
+      }
+    });
+
+    // Populate ingredient rows from textarea (for editing existing recipes)
+    function populateIngredientRows(text) {
+      const container = document.getElementById('ingredientsTableRows');
+      if (!container) return;
+      // Remove all existing rows
+      container.querySelectorAll('.form-ingredient-row').forEach(r => r.remove());
+      const lines = (text || '').split('\n').filter(l => l.trim());
+      if (lines.length === 0) {
+        addIngredientRow();
+        return;
+      }
+      lines.forEach(line => {
+        const row = document.createElement('div');
+        row.className = 'form-ingredient-row';
+        row.draggable = true;
+        const unitOptions = INGREDIENT_UNIT_OPTIONS.map(u => `<option>${u}</option>`).join('');
+        row.innerHTML = `
+          <span class="material-symbols-outlined ing-drag-handle">drag_indicator</span>
+          <input type="number" class="ing-input ing-input-qty" placeholder="כמות">
+          <select class="ing-input ing-input-unit">${unitOptions}</select>
+          <input type="text" class="ing-input ing-input-name" placeholder="שמן זית כתית מעולה">
+          <button type="button" class="ing-remove-btn" onclick="removeIngredientRow(this)" title="הסר">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        `;
+        // Try to parse "qty unit name" pattern
+        const match = line.trim().match(/^(\d+[\d\/\.]*\s*)?(\S+\s+)?(.+)$/);
+        if (match) {
+          row.querySelector('.ing-input-qty').value = (match[1] || '').trim();
+          const unitEl = row.querySelector('.ing-input-unit');
+          const unitVal = (match[2] || '').trim();
+          if (unitVal && INGREDIENT_UNIT_OPTIONS.includes(unitVal)) {
+            unitEl.value = unitVal;
+          } else if (unitVal) {
+            const opt = document.createElement('option');
+            opt.value = unitVal;
+            opt.textContent = unitVal;
+            unitEl.appendChild(opt);
+            unitEl.value = unitVal;
+          }
+          row.querySelector('.ing-input-name').value = (match[3] || '').trim();
+        } else {
+          row.querySelector('.ing-input-name').value = line.trim();
+        }
+        container.appendChild(row);
+      });
+    }
+
     // Preview image in the form upload area
     function previewFormImage(event) {
       const file = event.target.files[0];
@@ -1440,13 +1593,23 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           const previewContainer = document.getElementById('imagePreviewContainer');
           const imagePreview = document.getElementById('imagePreview');
           const uploadArea = document.querySelector('.image-upload-area');
-          
+
           if (previewContainer && imagePreview) {
             imagePreview.src = e.target.result;
             previewContainer.style.display = 'block';
             if (uploadArea) {
               uploadArea.classList.add('has-image');
             }
+          }
+
+          // Also update inline image preview
+          const inlinePreview = document.getElementById('inlineImagePreview');
+          const inlineImg = document.getElementById('inlinePreviewImg');
+          const inlineContent = document.getElementById('inlineImageUploadContent');
+          if (inlinePreview && inlineImg) {
+            inlineImg.src = e.target.result;
+            inlinePreview.style.display = 'block';
+            if (inlineContent) inlineContent.style.display = 'none';
           }
         };
         reader.readAsDataURL(file);
@@ -1726,6 +1889,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       });
 
       document.getElementById('ingredients').value = ingredients.trim();
+      populateIngredientRows(ingredients.trim());
     }
 
     function shareRecipe(index) {
@@ -2542,6 +2706,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('recipeName').value = suggestedRecipe.name || '';
       document.getElementById('recipeSource').value = suggestedRecipe.source || '';
       document.getElementById('ingredients').value = suggestedRecipe.ingredients || '';
+      populateIngredientRows(suggestedRecipe.ingredients || '');
       document.getElementById('instructions').value = suggestedRecipe.instructions || '';
       var cat = suggestedRecipe.category || 'שונות';
       var sel = document.getElementById('category');
@@ -3655,6 +3820,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('recipeName').value = recipe.name || '';
       document.getElementById('recipeSource').value = recipe.source || '';
       document.getElementById('ingredients').value = recipe.ingredients || '';
+      populateIngredientRows(recipe.ingredients || '');
       document.getElementById('instructions').value = recipe.instructions || '';
       document.getElementById('preparationTime').value = recipe.preparationTime || '';
       document.getElementById('category').value = recipe.category || 'שונות';
@@ -3662,19 +3828,26 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('recipeVideo').value = recipe.videoUrl || '';
       document.getElementById('recipeLink').value = recipe.recipeLink || '';
 
+      formSelectedRating = recipe.rating || 0;
+      updateFormRatingStars(formSelectedRating);
+      setFormDifficulty(2);
+
       // הצגת התמונה הקיימת בתצוגה מקדימה
       const previewContainer = document.getElementById('imagePreviewContainer');
       const imagePreview = document.getElementById('imagePreview');
       const uploadArea = document.querySelector('.image-upload-area');
-      
+      const inlinePreview = document.getElementById('inlineImagePreview');
+      const inlineImg = document.getElementById('inlinePreviewImg');
+      const inlineContent = document.getElementById('inlineImageUploadContent');
+
       console.log('🖼️ [editRecipe] Displaying existing image for recipe:', recipe.name);
       console.log('  - imagePath:', recipe.imagePath);
       console.log('  - image (base64):', recipe.image ? 'exists' : 'none');
-      
-      if (previewContainer && imagePreview) {
+
+      {
         // Use imagePath (Storage) if available, fallback to legacy image (base64)
         const imageSource = recipe.imagePath || recipe.image;
-        
+
         if (imageSource) {
           // Get full URL for the image
           let imageUrl;
@@ -3687,26 +3860,40 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           }
           
           if (imageUrl) {
-            imagePreview.src = imageUrl;
-            previewContainer.style.display = 'block';
+            if (imagePreview) {
+              imagePreview.src = imageUrl;
+            }
+            if (previewContainer) {
+              previewContainer.style.display = 'block';
+            }
             if (uploadArea) {
               uploadArea.classList.add('has-image');
+            }
+            // Update inline preview
+            if (inlineImg) {
+              inlineImg.src = imageUrl;
+            }
+            if (inlinePreview) {
+              inlinePreview.style.display = 'block';
+            }
+            if (inlineContent) {
+              inlineContent.style.display = 'none';
             }
             console.log('  ✅ Image preview displayed successfully');
           } else {
             console.log('  ⚠️ No valid image URL generated');
-            previewContainer.style.display = 'none';
-            if (uploadArea) {
-              uploadArea.classList.remove('has-image');
-            }
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (uploadArea) uploadArea.classList.remove('has-image');
+            if (inlinePreview) inlinePreview.style.display = 'none';
+            if (inlineContent) inlineContent.style.display = '';
           }
         } else {
           // No image - hide preview
           console.log('  ℹ️ No image for this recipe, using default');
-          previewContainer.style.display = 'none';
-          if (uploadArea) {
-            uploadArea.classList.remove('has-image');
-          }
+          if (previewContainer) previewContainer.style.display = 'none';
+          if (uploadArea) uploadArea.classList.remove('has-image');
+          if (inlinePreview) inlinePreview.style.display = 'none';
+          if (inlineContent) inlineContent.style.display = '';
         }
       }
 
@@ -3762,7 +3949,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     document.getElementById('recipeForm').addEventListener('submit', async function(e) {
       e.preventDefault();
-      
+
+      // Sync ingredient rows to textarea before reading
+      syncIngredientsToTextarea();
+
       const name = document.getElementById('recipeName').value;
       const source = document.getElementById('recipeSource').value;
       const ingredients = document.getElementById('ingredients').value;
@@ -3857,7 +4047,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         category,
         notes,
         preparationTime,
-        rating: editingIndex >= 0 ? recipes[editingIndex].rating || 0 : 0,
+        rating: formSelectedRating,
         image: imageData,
         imagePath: imagePath,
         recipeLink,
@@ -3884,6 +4074,31 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       closeFormPopup();
     });
 
+    // Event listeners for difficulty bars and rating stars in the add/edit form
+    (function initFormDifficultyAndRating() {
+      const bars = document.getElementById('formDifficultyBars');
+      if (bars) {
+        bars.addEventListener('click', function(e) {
+          const bar = e.target.closest('.form-diff-bar');
+          if (!bar) return;
+          const level = parseInt(bar.dataset.level, 10);
+          if (level >= 1 && level <= 3) setFormDifficulty(level);
+        });
+      }
+      const starsContainer = document.getElementById('formRatingStars');
+      if (starsContainer) {
+        starsContainer.addEventListener('click', function(e) {
+          const star = e.target.closest('.form-star');
+          if (!star) return;
+          const r = parseInt(star.dataset.rating, 10);
+          if (r >= 1 && r <= 5) {
+            formSelectedRating = r;
+            updateFormRatingStars(r);
+          }
+        });
+      }
+    })();
+
     function toggleCategoryInput() {
         const select = document.getElementById('category');
         const newCategoryInput = document.getElementById('newCategory');
@@ -3892,13 +4107,13 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         if (newCategoryInput.style.display === 'none') {
             select.style.display = 'none';
             newCategoryInput.style.display = 'block';
-            toggleButton.textContent = 'חזור לרשימת הקטגוריות';
+            if (toggleButton) toggleButton.innerHTML = 'חזור לרשימת הקטגוריות';
             select.required = false;
             newCategoryInput.required = true;
         } else {
             select.style.display = 'block';
             newCategoryInput.style.display = 'none';
-            toggleButton.textContent = '+ קטגוריה חדשה';
+            if (toggleButton) toggleButton.innerHTML = '<span class="material-symbols-outlined">add</span>';
             select.required = true;
             newCategoryInput.required = false;
             newCategoryInput.value = '';
@@ -3906,81 +4121,4 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     window.toggleCategoryInput = toggleCategoryInput;
-
-    // --- AI: פיצול מתכון מלא למצרכים / הוראות / הערות ---
-    async function formatIngredientsWithAI() {
-        const ingredientsTextarea = document.getElementById('ingredients');
-        const instructionsTextarea = document.getElementById('instructions');
-        const notesTextarea = document.getElementById('notes');
-        const formatBtn = document.querySelector('.ai-format-btn');
-        
-        if (!ingredientsTextarea) return;
-        
-        const currentText = ingredientsTextarea.value.trim();
-        
-        if (!currentText) {
-            alert('הדבק כאן מתכון מלא (מצרכים, הוראות, הערות) ולחץ על הכפתור ✨');
-            return;
-        }
-        
-        if (formatBtn) {
-            formatBtn.disabled = true;
-            formatBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span>';
-        }
-        
-        try {
-            const messages = [
-                {
-                    role: 'user',
-                    content: `הנה מתכון גולמי שהדבקתי. פצל אותו לשדות: מצרכים (רשימה מעוצבת), הוראות הכנה, והערות (אם יש).\n\n${currentText}`
-                }
-            ];
-            
-            const url = supabaseUrl + '/functions/v1/recipe-ai';
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': 'Bearer ' + supabaseAnonKey 
-                },
-                body: JSON.stringify({ messages: messages, recipes: [], parseFullRecipe: true })
-            });
-            
-            const data = await response.json();
-            
-            if (data && data.parsedRecipe) {
-                const p = data.parsedRecipe;
-                ingredientsTextarea.value = p.ingredients || '';
-                if (instructionsTextarea) instructionsTextarea.value = p.instructions || '';
-                if (notesTextarea) notesTextarea.value = p.notes || '';
-                
-                [ingredientsTextarea, instructionsTextarea, notesTextarea].forEach(function(el) {
-                    if (!el) return;
-                    el.style.transition = 'background-color 0.3s';
-                    el.style.backgroundColor = '#d1fae5';
-                    setTimeout(function() { el.style.backgroundColor = ''; }, 1000);
-                });
-            } else {
-                throw new Error('לא התקבלה תשובה מובנית מה-AI');
-            }
-        } catch (error) {
-            console.error('Error parsing recipe:', error);
-            alert('שגיאה בפיצול המתכון. נא לנסות שוב.');
-        } finally {
-            if (formatBtn) {
-                formatBtn.disabled = false;
-                formatBtn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>';
-            }
-        }
-    }
-    
-    // Attach event listener to AI format button
-    document.addEventListener('DOMContentLoaded', function() {
-        const formatBtn = document.querySelector('.ai-format-btn');
-        if (formatBtn) {
-            formatBtn.addEventListener('click', formatIngredientsWithAI);
-        }
-    });
-    
-    window.formatIngredientsWithAI = formatIngredientsWithAI;
 })();
