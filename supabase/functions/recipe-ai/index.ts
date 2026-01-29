@@ -94,7 +94,9 @@ const SYSTEM = `אתה עוזר מתכונים מקצועי ויצירתי בע�
 - אם יש ספק - החזר false!
 
 **כללים נוספים:**
-- כשמבקשים ממך להמציא/לתת מתכון - **תמיד תן מתכון מלא עם מצרכים מפורטים והוראות!**
+- כשמבקשים ממך להמציא/לתת/להציע מתכון - **תמיד החזר את המתכון המלא בתוך suggestedRecipe** עם מצרכים מפורטים והוראות! לעולם אל תכתוב את המתכון בתוך reply בלבד - תמיד השתמש באובייקט suggestedRecipe.
+- גם אם המשתמש אומר "תציע לי קודם", "תראה לי את המתכון", "תן לי את הפרטים" - החזר suggestedRecipe מלא!
+- ב-reply כתוב רק משפט קצר כמו "הנה המתכון!" – הפרטים המלאים יהיו ב-suggestedRecipe.
 - בסוף כל הצעת מתכון, שאל את המשתמש "רוצה שאוסיף את המתכון לספר?"
 - אם המשתמש שולח תמונה של מתכון כתוב - נסה לזהות את הטקסט ולחלץ את המתכון
 - אם המשתמש שולח תמונה של אוכל - הצע מתכון שנראה דומה למה שבתמונה
@@ -432,12 +434,14 @@ Deno.serve(async (req: Request) => {
   let insertionError: string | null = null;
   let generatedImage: string | null = null;
 
+  // Generate image for any suggested recipe (both suggestion and confirmation)
+  if (suggestedRecipe) {
+    console.log("Generating image for recipe:", suggestedRecipe.name);
+    generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
+  }
+
   // Only insert to DB if user explicitly confirmed (confirmAddRecipe: true)
   if (suggestedRecipe && confirmAddRecipe) {
-    // Generate image for the recipe
-    console.log("Generating image for confirmed recipe:", suggestedRecipe.name);
-    generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
-
     if (!supabaseAdmin) {
       console.error("Cannot insert recipe: supabaseAdmin is null (SUPABASE_SERVICE_ROLE_KEY not set)");
       insertionError = "לא ניתן להוסיף מתכון אוטומטית - חסרה הגדרת SUPABASE_SERVICE_ROLE_KEY. המתכון יוצג בטופס לשמירה ידנית.";

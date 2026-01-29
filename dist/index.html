@@ -28,6 +28,7 @@
   <link href="https://fonts.googleapis.com" rel="preconnect">
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
   
   <!-- Icons -->
@@ -82,7 +83,7 @@
     };
   </script>
   
-  <!-- Custom Styles -->
+  <!-- Custom Styles (?v= forces browser to load latest in dev) -->
   
   <script>
     // Dark mode toggle
@@ -96,8 +97,8 @@
       document.documentElement.classList.add('dark');
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-DJ1_zh-P.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-D1VSMXSH.css">
+  <script type="module" crossorigin src="/assets/index-BI_7Wf_k.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BjA_33p5.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
   <!-- Animated Blobs -->
@@ -170,6 +171,14 @@
                 <span>עצור</span>
               </button>
             </div>
+            <div class="timer-volume-row">
+              <label for="timer-volume" class="timer-volume-label">
+                <span class="material-symbols-outlined timer-volume-icon">volume_up</span>
+                עוצמת צליל
+              </label>
+              <input type="range" id="timer-volume" class="timer-volume-slider" min="0" max="100" value="80" step="1" title="עוצמת צליל ההתראה">
+              <span class="timer-volume-value" id="timer-volume-value">80%</span>
+            </div>
             <div class="timer-presets">
               <span class="timer-presets-label">זמנים מהירים:</span>
               <div class="timer-presets-grid">
@@ -235,180 +244,166 @@
   <!-- חלון המתכון -->
   <div class="popup-overlay" id="popup">
     <div class="popup-content">
-      <button class="close-btn" onclick="closePopup()">&times;</button>
       <div id="popupBody"></div>
     </div>
   </div>
 
   <!-- חלון הוספת מתכון -->
   <div class="popup-overlay" id="formPopup" style="display: none;">
-    <div class="form-popup-content form-popup-redesign pastel-mesh">
-      <!-- Decorative blobs -->
-      <div class="form-blob form-blob-1"></div>
-      <div class="form-blob form-blob-2"></div>
-      
+    <div class="form-popup-content form-add-recipe">
       <button class="close-btn" onclick="closeFormPopup()">&times;</button>
-      
-      <form id="recipeForm" class="form-two-columns">
-        <!-- עמודה שמאלית - תוכן מפורט -->
-        <div class="form-column form-column-left">
-          <div class="form-card glass-card">
-            <!-- פס צבעוני עליון -->
-            <div class="form-card-accent"></div>
-            
-            <div class="form-card-content">
-              <!-- מצרכים -->
-              <div class="form-section">
-                <h3 class="form-section-header">
-                  <span class="material-symbols-outlined form-section-icon text-green-600">grocery</span>
-                  מצרכים - הזנה חופשית
-                  <span class="form-section-badge">רשימה</span>
-                </h3>
-                <div class="form-input-wrapper">
-                  <textarea id="ingredients" class="glass-input" placeholder="רשמו כאן את כל המצרכים, כל מצרך בשורה חדשה...
-למשל:
-2 כוסות קמח
-1 כפית אבקת אפייה
-3 ביצים L" rows="6"></textarea>
-                  <div class="form-input-action">
-                    <button type="button" class="ai-format-btn" title="הדביקו כאן את הרשימה ואני אעצב אותה">
-                      <span class="material-symbols-outlined">auto_awesome</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              <!-- הוראות הכנה -->
-              <div class="form-section">
-                <h3 class="form-section-header">
-                  <span class="material-symbols-outlined form-section-icon text-orange-400">menu_book</span>
-                  הוראות הכנה
-                </h3>
-                <textarea id="instructions" class="glass-input" placeholder="תארו כאן את שלבי ההכנה בפירוט..." rows="8"></textarea>
-              </div>
-
-              <!-- הערות -->
-              <div class="form-section">
-                <h3 class="form-section-header">
-                  <span class="material-symbols-outlined form-section-icon text-yellow-500">lightbulb</span>
-                  הערות
-                </h3>
-                <textarea id="notes" class="glass-input" placeholder="טיפים קטנים לשדרוג המנה..." rows="3"></textarea>
-              </div>
-
-              <!-- קישורים -->
-              <div class="form-section form-section-links">
-                <div class="form-field">
-                  <label class="form-label" for="recipeLink">קישור למתכון</label>
-                  <input type="url" id="recipeLink" name="recipeLink" class="glass-input" placeholder="https://">
-                </div>
-                <div class="form-field">
-                  <label class="form-label" for="recipeVideo">קישור ליוטיוב</label>
-                  <div class="form-input-with-icon">
-                    <span class="material-symbols-outlined input-icon text-red-500">play_circle</span>
-                    <input type="url" id="recipeVideo" name="recipeVideo" class="glass-input has-icon" placeholder="הדביקו כאן קישור (אופציונלי)">
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- כפתור שמירה צף -->
-            <div class="form-save-area">
-              <button type="submit" class="form-save-btn">
-                <span class="material-symbols-outlined">save</span>
-                שמור מתכון
-              </button>
-            </div>
+      <header class="form-add-recipe-header">
+        <div class="form-add-recipe-header-title-wrap">
+          <div class="form-add-recipe-header-icon" aria-hidden="true">
+            <span class="material-symbols-outlined">restaurant_menu</span>
           </div>
+          <h2 class="form-add-recipe-title">הוספת מתכון חדש</h2>
+        </div>
+        <div class="form-add-recipe-header-actions">
+          <button type="button" class="form-add-recipe-dark-btn" onclick="toggleDarkMode()" title="מצב כהה">
+            <span class="material-symbols-outlined">dark_mode</span>
+          </button>
+          <button type="submit" form="recipeForm" class="form-add-recipe-save-btn">
+            <span>שמירת מתכון</span>
+            <span class="material-symbols-outlined">save</span>
+          </button>
+        </div>
+      </header>
+
+      <form id="recipeForm" class="form-add-recipe-grid">
+        <input type="hidden" id="formRating" value="0">
+
+        <div class="form-add-recipe-main">
+          <section class="form-add-recipe-card form-add-recipe-section-basics">
+            <div class="form-add-recipe-basics">
+              <input type="text" id="recipeName" class="form-add-recipe-input" placeholder="שם המתכון" aria-label="שם המתכון" required style="border: 1px solid #cbd5e1;">
+              <input type="text" id="recipeSource" class="form-add-recipe-input" placeholder="מקור המתכון" aria-label="מקור המתכון" style="border: 1px solid #cbd5e1;">
+            </div>
+          </section>
+
+          <!-- 3. מצרכים + 4. שלבי הכנה -->
+          <div class="form-add-recipe-ingredients-instructions-row">
+            <section class="form-add-recipe-card">
+              <div class="form-add-recipe-section-head form-add-recipe-section-head-single">
+                <span class="form-add-recipe-step-num form-add-recipe-step-num-small" aria-hidden="true">3</span>
+                <span class="material-symbols-outlined form-add-recipe-section-icon">shopping_basket</span>
+                <h3 class="form-add-recipe-section-title">מצרכים</h3>
+              </div>
+              <textarea id="ingredients" class="form-add-recipe-block-textarea" placeholder="רשמו כאן את כל המצרכים, כל מצרך בשורה חדשה או בפסקה...&#10;למשל: 2 כפות שמן זית, בצל בינוני קצוץ דק"></textarea>
+            </section>
+            <section class="form-add-recipe-card">
+              <div class="form-add-recipe-section-head form-add-recipe-section-head-single">
+                <span class="form-add-recipe-step-num form-add-recipe-step-num-small" aria-hidden="true">4</span>
+                <span class="material-symbols-outlined form-add-recipe-section-icon">format_list_numbered</span>
+                <h3 class="form-add-recipe-section-title">שלבי הכנה</h3>
+              </div>
+              <textarea id="instructions" class="form-add-recipe-block-textarea" placeholder="רשמו כאן את שלבי ההכנה...&#10;למשל: מחממים שמן זית במחבת. מטגנים בצל עד שהוא רך ושקוף."></textarea>
+            </section>
+          </div>
+
+          <section class="form-add-recipe-card">
+            <h3 class="form-add-recipe-sidebar-heading">הערות וטיפים</h3>
+            <textarea id="notes" class="form-add-recipe-notes-input" placeholder="כאן אפשר להוסיף טיפים מיוחדים, הערות על התיבול או הצעות הגשה..." rows="1"></textarea>
+          </section>
         </div>
 
-        <!-- עמודה ימנית - מידע בסיסי -->
-        <div class="form-column form-column-right">
-          <!-- כותרת -->
-          <header class="form-header">
-            <h2 class="form-title">מתכון חדש</h2>
-            <p class="form-subtitle">שתפו את העולם ביצירה הקולינרית שלכם</p>
-          </header>
-
-          <!-- העלאת תמונה -->
-          <div class="image-upload-area" onclick="document.getElementById('image').click()">
-            <div class="image-upload-content">
-              <div class="image-upload-icon">
-                <span class="material-symbols-outlined">add_a_photo</span>
+        <div class="form-add-recipe-sidebar">
+          <!-- 2. תכונות המתכון -->
+          <section class="form-add-recipe-card form-add-recipe-section-attrs">
+            <h3 class="form-add-recipe-section-heading-main">
+              <span class="form-add-recipe-step-num" aria-hidden="true">2</span>
+              <span class="material-symbols-outlined">tune</span>
+              תכונות המתכון
+            </h3>
+            <div class="form-add-recipe-attr-cards">
+              <div class="form-add-recipe-attr-card form-attr-time">
+                <span class="form-attr-label">זמן הכנה</span>
+                <div class="form-attr-time-inner">
+                  <input type="number" id="preparationTime" class="form-attr-time-input" placeholder="30" min="0">
+                  <span class="form-attr-unit">דק׳</span>
+                </div>
+                <span class="material-symbols-outlined form-attr-icon">schedule</span>
               </div>
-              <h3 class="image-upload-title">העלאת תמונה</h3>
-              <p class="image-upload-hint">PNG, JPG עד 10MB</p>
-            </div>
-            <div class="image-upload-sparkle">
-              <span class="material-symbols-outlined">auto_awesome</span>
-            </div>
-            <div id="imagePreviewContainer" class="image-preview-container" style="display: none;">
-              <img id="imagePreview" src="" alt="תצוגה מקדימה">
-            </div>
-          </div>
-          <input type="file" id="image" accept="image/*" style="display: none;" onchange="previewFormImage(event)">
-          
-          <!-- OCR Button -->
-          <div class="ocr-upload-area">
-            <button type="button" class="ocr-btn" onclick="document.getElementById('ocrImage').click()">
-              <span class="material-symbols-outlined">document_scanner</span>
-              זיהוי טקסט מתמונה (OCR)
-            </button>
-            <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
-          </div>
-
-          <!-- שדות מידע בסיסי -->
-          <div class="form-basic-fields">
-            <!-- שם המתכון -->
-            <div class="form-field">
-              <label class="form-label" for="recipeName">שם המתכון</label>
-              <input type="text" id="recipeName" class="glass-input form-input-underline" placeholder="למשל: פסטה ברוטב שמנת">
-            </div>
-
-            <!-- מקור המתכון -->
-            <div class="form-field">
-              <label class="form-label" for="recipeSource">מקור המתכון</label>
-              <div class="form-input-with-icon">
-                <span class="material-symbols-outlined input-icon">person</span>
-                <input type="text" id="recipeSource" class="glass-input has-icon" placeholder="מאיפה המתכון?">
+              <div class="form-add-recipe-attr-card form-attr-difficulty">
+                <span class="form-attr-label">רמת קושי</span>
+                <div class="form-difficulty-bars" id="formDifficultyBars" aria-hidden="true" role="group" aria-label="רמת קושי">
+                  <span class="form-diff-bar" data-level="1" title="קל"></span>
+                  <span class="form-diff-bar" data-level="2" title="בינוני"></span>
+                  <span class="form-diff-bar form-diff-empty" data-level="3" title="קשה"></span>
+                </div>
+                <span class="form-difficulty-text" id="formDifficultyText">בינוני</span>
               </div>
-            </div>
-
-            <!-- זמן הכנה -->
-            <div class="form-field">
-              <label class="form-label" for="preparationTime">זמן הכנה (דקות)</label>
-              <div class="form-input-with-icon">
-                <span class="material-symbols-outlined input-icon">schedule</span>
-                <input type="number" id="preparationTime" class="glass-input has-icon" placeholder="30" min="0">
-              </div>
-            </div>
-
-            <!-- קטגוריה -->
-            <div class="form-field">
-              <label class="form-label" for="category">קטגוריה</label>
-              <div class="category-input-container">
-                <div class="form-select-wrapper">
-                  <select id="category" class="glass-input form-select" required>
+              <div class="form-add-recipe-attr-card form-attr-category">
+                <span class="form-attr-label">
+                  <span class="material-symbols-outlined form-attr-label-icon-inline" aria-hidden="true">category</span>
+                  קטגוריה
+                </span>
+                <div class="form-category-inline">
+                  <select id="category" class="form-add-recipe-select-inline" required>
                     <option value="" disabled selected>בחירת קטגוריה</option>
                   </select>
-                  <span class="material-symbols-outlined select-arrow">expand_more</span>
+                  <button type="button" class="form-category-add-btn" onclick="toggleCategoryInput()" id="toggleNewCategory" title="קטגוריה חדשה">
+                    <span class="material-symbols-outlined">add</span>
+                  </button>
                 </div>
-                <input type="text" id="newCategory" class="glass-input" placeholder="או הוסף קטגוריה חדשה" style="display: none;">
-                <button type="button" id="toggleNewCategory" class="toggle-category-btn" onclick="toggleCategoryInput()">+ חדשה</button>
+                <input type="text" id="newCategory" class="form-add-recipe-input form-new-category-input" placeholder="שם קטגוריה חדשה" style="display: none;">
+              </div>
+              <div class="form-add-recipe-attr-card form-attr-rating">
+                <span class="form-attr-label">דירוג</span>
+                <div class="form-rating-stars" id="formRatingStars" aria-label="דירוג כוכבים">
+                  <span class="form-star material-symbols-outlined" data-rating="1">star</span>
+                  <span class="form-star material-symbols-outlined" data-rating="2">star</span>
+                  <span class="form-star material-symbols-outlined" data-rating="3">star</span>
+                  <span class="form-star material-symbols-outlined" data-rating="4">star</span>
+                  <span class="form-star material-symbols-outlined" data-rating="5">star</span>
+                </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section class="form-add-recipe-card form-add-recipe-links-section">
+            <h3 class="form-add-recipe-sidebar-heading">קישורים חיצוניים</h3>
+            <div class="form-add-recipe-link-row">
+              <span class="material-symbols-outlined form-add-recipe-link-icon form-add-recipe-link-yt">play_circle</span>
+              <input type="url" id="recipeVideo" name="recipeVideo" class="form-add-recipe-link-input" placeholder="קישור ליוטיוב">
+            </div>
+            <div class="form-add-recipe-link-row">
+              <span class="material-symbols-outlined form-add-recipe-link-icon form-add-recipe-link-src">link</span>
+              <input type="url" id="recipeLink" name="recipeLink" class="form-add-recipe-link-input" placeholder="לינק למקור">
+            </div>
+          </section>
+
+          <section class="form-add-recipe-card form-add-recipe-upload-card">
+            <input type="file" id="image" accept="image/*" style="display: none;" onchange="previewFormImage(event)">
+            <input type="file" id="ocrImage" accept="image/*" onchange="processOCR(event)" style="display: none;">
+            <div class="form-add-recipe-upload-zone image-upload-area" onclick="document.getElementById('image').click()">
+              <div id="inlineImageUploadContent" class="form-add-recipe-upload-content image-upload-content">
+                <span class="material-symbols-outlined form-add-recipe-upload-icon">cloud_upload</span>
+                <p class="form-add-recipe-upload-title">גרור תמונה לכאן</p>
+                <p class="form-add-recipe-upload-hint">או לחץ לבחירת קובץ</p>
+              </div>
+              <div id="inlineImagePreview" class="form-add-recipe-upload-preview" style="display: none;">
+                <img id="inlinePreviewImg" src="" alt="תצוגה מקדימה">
+              </div>
+            </div>
+            <div class="form-add-recipe-upload-btns">
+              <button type="button" class="form-add-recipe-ocr-btn" onclick="document.getElementById('ocrImage').click()">
+                <span class="material-symbols-outlined">document_scanner</span>
+                סרוק מתכון (OCR)
+              </button>
+              <button type="button" class="form-add-recipe-generate-image-btn" onclick="regenerateImageForForm()">
+                <span class="material-symbols-outlined">image</span>
+                צור תמונה חדשה
+              </button>
+            </div>
+          </section>
         </div>
       </form>
 
-      <!-- כפתור עוזר AI -->
-      <div class="form-ai-assistant">
-        <button type="button" class="ai-assistant-btn" onclick="openAiChat()">
-          <span class="material-symbols-outlined">smart_toy</span>
-          <span class="ai-pulse"></span>
-        </button>
-        <div class="ai-assistant-tooltip">היי! צריך עזרה בניסוח המתכון?</div>
-      </div>
+      <button type="button" class="form-add-recipe-help-btn" onclick="openAiChat()" title="עזרה בניסוח המתכון">
+        <span class="material-symbols-outlined">help_outline</span>
+      </button>
     </div>
   </div>
 
@@ -418,16 +413,16 @@
     <button onclick="closeBackupReminder()">×</button>
   </div>
 
-  <!-- פאנל צ'אט AI - עיצוב חדש כמו בדוגמה -->
+  <!-- פאנל צ'אט AI - עיצוב סמארטפון מודרני -->
   <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
-    <div class="ai-chat-container">
+    <div class="ai-chat-container ai-chat-phone">
       <div class="ai-chat-panel">
         <!-- Header -->
         <div class="ai-chat-header">
           <div class="ai-chat-header-top">
             <div class="ai-chat-header-info">
               <div class="ai-chat-header-avatar">
-                <span class="material-symbols-outlined">robot_2</span>
+                <img src="chef-serving.png" alt="שף" class="ai-chat-header-chef-img">
               </div>
               <div class="ai-chat-header-text">
                 <h3>AI עוזר בישול</h3>
@@ -437,9 +432,6 @@
                 </div>
               </div>
             </div>
-            <button class="close-btn" onclick="closeAiChat()" title="סגור">
-              <span class="material-symbols-outlined">close</span>
-            </button>
           </div>
           <!-- History Dropdown -->
           <div class="ai-chat-history-select-wrapper">
@@ -492,7 +484,7 @@
   <!-- Floating Action Buttons -->
   <div class="floating-actions">
     <button class="floating-action-btn ai-chat" onclick="openAiChat()" title="שיחה עם AI">
-      <img src="/chef-main.png" alt="שף" class="chat-btn-chef-icon">
+      <img src="chef-main.png" alt="שף" class="chat-btn-chef-icon">
     </button>
     <button class="floating-action-btn" onclick="openFormPopup()" title="הוסף מתכון">
       <span class="material-symbols-outlined">add</span>

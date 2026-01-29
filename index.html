@@ -171,6 +171,14 @@
                 <span>עצור</span>
               </button>
             </div>
+            <div class="timer-volume-row">
+              <label for="timer-volume" class="timer-volume-label">
+                <span class="material-symbols-outlined timer-volume-icon">volume_up</span>
+                עוצמת צליל
+              </label>
+              <input type="range" id="timer-volume" class="timer-volume-slider" min="0" max="100" value="80" step="1" title="עוצמת צליל ההתראה">
+              <span class="timer-volume-value" id="timer-volume-value">80%</span>
+            </div>
             <div class="timer-presets">
               <span class="timer-presets-label">זמנים מהירים:</span>
               <div class="timer-presets-grid">
@@ -405,16 +413,16 @@
     <button onclick="closeBackupReminder()">×</button>
   </div>
 
-  <!-- פאנל צ'אט AI - עיצוב חדש כמו בדוגמה -->
+  <!-- פאנל צ'אט AI - עיצוב סמארטפון מודרני -->
   <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
-    <div class="ai-chat-container">
+    <div class="ai-chat-container ai-chat-phone">
       <div class="ai-chat-panel">
         <!-- Header -->
         <div class="ai-chat-header">
           <div class="ai-chat-header-top">
             <div class="ai-chat-header-info">
               <div class="ai-chat-header-avatar">
-                <span class="material-symbols-outlined">robot_2</span>
+                <img src="chef-serving.png" alt="שף" class="ai-chat-header-chef-img">
               </div>
               <div class="ai-chat-header-text">
                 <h3>AI עוזר בישול</h3>
@@ -424,9 +432,6 @@
                 </div>
               </div>
             </div>
-            <button class="close-btn" onclick="closeAiChat()" title="סגור">
-              <span class="material-symbols-outlined">close</span>
-            </button>
           </div>
           <!-- History Dropdown -->
           <div class="ai-chat-history-select-wrapper">
@@ -479,7 +484,7 @@
   <!-- Floating Action Buttons -->
   <div class="floating-actions">
     <button class="floating-action-btn ai-chat" onclick="openAiChat()" title="שיחה עם AI">
-      <img src="/chef-main.png" alt="שף" class="chat-btn-chef-icon">
+      <img src="chef-main.png" alt="שף" class="chat-btn-chef-icon">
     </button>
     <button class="floating-action-btn" onclick="openFormPopup()" title="הוסף מתכון">
       <span class="material-symbols-outlined">add</span>

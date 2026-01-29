@@ -18,6 +18,14 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     let imagesDeferred = false;
     let isSharedRecipeMode = false; // Track if loaded via shared link
 
+    // Base URL for static assets (works with Vite base path, e.g. GitHub Pages)
+    function chefImageUrl(filename) {
+        const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL)
+            ? import.meta.env.BASE_URL.replace(/\/$/, '')
+            : '';
+        return base + '/' + (filename.startsWith('/') ? filename.slice(1) : filename);
+    }
+
     function recipeToRow(r) {
         console.log('🔄 [recipeToRow] Converting recipe to DB row:', r.name);
         console.log('  - imagePath (JS) → image_path (DB):', r.imagePath || 'null');
@@ -67,6 +75,32 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     const CACHE_VERSION_KEY = 'recipes_cache_version';
     const CURRENT_CACHE_VERSION = '1.0.1'; // Update this when cache structure changes
     const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 דקות
+
+    // Category icon and color mappings (must be initialized early so updateCategoryButtons can run)
+    const categoryIcons = {
+        'כל הקטגוריות': 'restaurant',
+        'לחמים': 'bakery_dining',
+        'מרקים': 'soup_kitchen',
+        'מנה עיקרית': 'dinner_dining',
+        'תוספות': 'lunch_dining',
+        'סלטים': 'eco',
+        'שונות': 'restaurant_menu',
+        'עוגות': 'cake',
+        'קינוחים': 'icecream',
+        'פינוקים': 'cookie'
+    };
+    const categoryColors = {
+        'כל הקטגוריות': 'teal',
+        'לחמים': 'amber',
+        'מרקים': 'blue',
+        'מנה עיקרית': 'red',
+        'תוספות': 'purple',
+        'סלטים': 'emerald',
+        'שונות': 'blue',
+        'עוגות': 'amber',
+        'קינוחים': 'rose',
+        'פינוקים': 'orange'
+    };
     
     // Clear old cache if version changed
     (function clearOldCacheIfNeeded() {
@@ -354,7 +388,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     // טעינת והגדרת ההגדרות (מחליף localStorage)
     async function loadSettings() {
-        if (!supabase) return { lastBackup: null, recipesPerRow: 4, timerVisible: false };
+        if (!supabase) {
+            const storedVol = localStorage.getItem('timerVolume');
+            const v = storedVol != null ? parseFloat(storedVol) : 80;
+            return { lastBackup: null, recipesPerRow: 4, timerVisible: false, timerVolume: Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 80 };
+        }
 
         const { data } = await supabase.from('recipe_book_settings').select('key, value');
         const m = (data || []).reduce((a, r) => { a[r.key] = r.value; return a; }, {});
@@ -371,7 +409,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         return {
             lastBackup: m.lastBackup ?? null,
             recipesPerRow: m.recipesPerRow || 4,
-            timerVisible: m.timerVisible === true
+            timerVisible: m.timerVisible === true,
+            timerVolume: Math.min(100, Math.max(0, parseFloat(m.timerVolume)) || 80)
         };
     }
 
@@ -429,7 +468,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 setRecipesPerRow(settings.recipesPerRow || 4);
                 setupGridSelector();
                 applyTimerVisibility(settings.timerVisible);
-                initializeTimer();
+                initializeTimer(settings);
                 setupPopupCloseOnOverlayClick();
                 
                 // הסתר את רשימת המתכונים והפילטרים
@@ -448,6 +487,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 const recipe = await loadSingleRecipeFromDB(sharedRecipeId);
                 if (recipe) {
                     recipes = [recipe];
+                    await migrateLegacyBase64ToStorage();
                     displaySharedRecipeCard();
                 } else {
                     alert('המתכון לא נמצא');
@@ -476,7 +516,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             setRecipesPerRow(settings.recipesPerRow || 4);
             setupGridSelector();
             applyTimerVisibility(settings.timerVisible);
-            initializeTimer();
+            initializeTimer(settings);
             setupPopupCloseOnOverlayClick();
 
             // שלב 2: טעינה מהשרת (תמיד, כדי לקבל תמונות ועדכונים)
@@ -487,6 +527,8 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                     
                     // תמיד עדכן עם הנתונים מהשרת (כולל תמונות)
                     recipes = freshRecipes;
+                    // Migrate any legacy base64 images to Storage (one-time per recipe)
+                    await migrateLegacyBase64ToStorage();
                     displayRecipes(recipes);
                     updateCategoryList();
                     updateCategoryButtons();
@@ -538,7 +580,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             setRecipesPerRow(4);
             setupGridSelector();
             applyTimerVisibility(false);
-            initializeTimer();
+            initializeTimer({ timerVisible: false, timerVolume: 80 });
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
             // הוסף event listener רק פעם אחת כדי למנוע הוספה חוזרת
@@ -1311,7 +1353,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         gap: 2rem;
       `;
       loadingDiv.innerHTML = `
-        <img src="/chef-cooking.png" alt="שף מבשל" style="width: 250px; max-width: 80vw; height: auto; border-radius: 1.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: bounce 1s ease-in-out infinite;">
+        <img src="${chefImageUrl('chef-cooking.png')}" alt="שף מבשל" style="width: 250px; max-width: 80vw; height: auto; border-radius: 1.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: bounce 1s ease-in-out infinite;">
         <span style="color: white; font-size: 1.5rem; font-weight: 500; text-align: center;">מייצר תמונה חדשה...</span>
         <style>@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }</style>
       `;
@@ -1407,7 +1449,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         gap: 2rem;
       `;
       loadingDiv.innerHTML = `
-        <img src="/chef-cooking.png" alt="שף מבשל" style="width: 250px; max-width: 80vw; height: auto; border-radius: 1.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: bounce 1s ease-in-out infinite;">
+        <img src="${chefImageUrl('chef-cooking.png')}" alt="שף מבשל" style="width: 250px; max-width: 80vw; height: auto; border-radius: 1.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: bounce 1s ease-in-out infinite;">
         <span style="color: white; font-size: 1.5rem; font-weight: 500; text-align: center;">מייצר תמונה חדשה...</span>
         <style>@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }</style>
       `;
@@ -2273,7 +2315,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       dateSeparator.innerHTML = '<span>היום</span>';
       el.appendChild(dateSeparator);
       
-      aiChatMessages.forEach(function(m) {
+      aiChatMessages.forEach(function(m, msgIndex) {
         // Create wrapper for avatar layout
         const wrapper = document.createElement('div');
         wrapper.className = 'ai-chat-msg-wrapper ' + (m.role === 'user' ? 'user' : 'assistant');
@@ -2282,7 +2324,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         if (m.role !== 'user') {
           const avatar = document.createElement('div');
           avatar.className = 'ai-chat-avatar chef';
-          avatar.innerHTML = '<img src="/chef-serving.png" alt="שף" class="chef-avatar-img">';
+          avatar.innerHTML = '<img src="' + chefImageUrl('chef-serving.png') + '" alt="שף" class="chef-avatar-img">';
           wrapper.appendChild(avatar);
         }
 
@@ -2331,6 +2373,57 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           d.appendChild(recipeCard);
         }
 
+        // Add inline suggested recipe preview (inside the message bubble)
+        if (m.suggestedRecipe && typeof m.suggestedRecipe === 'object') {
+          var sr = m.suggestedRecipe;
+          var srImg = sr.image || '';
+          var srIngredients = (sr.ingredients || '').replace(/\n/g, '<br>');
+          var srInstructions = (sr.instructions || '').replace(/\n/g, '<br>');
+          var srCategory = sr.category || 'שונות';
+          var isAdded = !!m.recipeAdded;
+          const srCard = document.createElement('div');
+          srCard.className = 'ai-chat-suggested-recipe-card';
+          srCard.innerHTML = `
+            ${srImg ? `<div class="sr-card-image"><img src="${srImg}" alt="${sr.name || ''}" onerror="this.parentElement.style.display='none'"><div class="sr-card-badge">${srCategory}</div></div>` : ''}
+            <div class="sr-card-body">
+              <div class="sr-card-title">${sr.name || ''}</div>
+              ${!srImg ? `<span class="sr-card-category">${srCategory}</span>` : ''}
+              ${srIngredients ? `
+                <div class="sr-card-section open">
+                  <div class="sr-card-section-header" onclick="this.parentElement.classList.toggle('open')">
+                    <span><i class="fas fa-list-ul"></i> מצרכים</span>
+                    <i class="fas fa-chevron-down sr-card-chevron"></i>
+                  </div>
+                  <div class="sr-card-section-content">${srIngredients}</div>
+                </div>` : ''}
+              ${srInstructions ? `
+                <div class="sr-card-section">
+                  <div class="sr-card-section-header" onclick="this.parentElement.classList.toggle('open')">
+                    <span><i class="fas fa-utensils"></i> הוראות הכנה</span>
+                    <i class="fas fa-chevron-down sr-card-chevron"></i>
+                  </div>
+                  <div class="sr-card-section-content">${srInstructions}</div>
+                </div>` : ''}
+            </div>
+            <div class="sr-card-actions">
+              ${isAdded ? `
+                <div class="sr-card-added"><i class="fas fa-check-circle"></i> המתכון נוסף לספר!</div>
+              ` : `
+                <button class="sr-card-add-btn" onclick="addSuggestedRecipeDirectly(${msgIndex})">
+                  <i class="fas fa-plus"></i> הוסף לספר
+                </button>
+                <button class="sr-card-edit-btn" onclick="editSuggestedRecipeFromMsg(${msgIndex})">
+                  <i class="fas fa-edit"></i> ערוך
+                </button>
+                <button class="sr-card-dismiss-btn" onclick="dismissSuggestedRecipe(${msgIndex})">
+                  <i class="fas fa-times"></i>
+                </button>
+              `}
+            </div>
+          `;
+          d.appendChild(srCard);
+        }
+
         contentContainer.appendChild(d);
 
         // Add timestamp
@@ -2344,60 +2437,95 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         el.appendChild(wrapper);
       });
 
-      // Show pending recipe confirmation buttons if there's a suggested recipe waiting
-      if (pendingSuggestedRecipe) {
-        const confirmDiv = document.createElement('div');
-        confirmDiv.className = 'ai-chat-recipe-confirm';
-        confirmDiv.innerHTML = `
-          <div class="recipe-preview">
-            <strong>${pendingSuggestedRecipe.name}</strong>
-            <p>קטגוריה: ${pendingSuggestedRecipe.category || 'שונות'}</p>
-          </div>
-          <div class="recipe-confirm-buttons">
-            <button class="confirm-add-btn" onclick="confirmAddSuggestedRecipe()">
-              <i class="fas fa-plus"></i> הוסף לספר
-            </button>
-            <button class="confirm-edit-btn" onclick="editSuggestedRecipe()">
-              <i class="fas fa-edit"></i> ערוך לפני הוספה
-            </button>
-            <button class="confirm-cancel-btn" onclick="cancelSuggestedRecipe()">
-              <i class="fas fa-times"></i> לא תודה
-            </button>
-          </div>
-        `;
-        el.appendChild(confirmDiv);
+      // pendingSuggestedRecipe confirmation card removed - buttons are now inline in each message
+
+      if (el.scrollTo) {
+        requestAnimationFrame(function() {
+          el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        });
+      } else {
+        el.scrollTop = el.scrollHeight;
       }
-
-      el.scrollTop = el.scrollHeight;
     }
 
-    // Add suggested recipe to the book after user confirmation
-    async function confirmAddSuggestedRecipe() {
-      if (!pendingSuggestedRecipe) return;
+    // Add suggested recipe directly to DB from chat message
+    async function addSuggestedRecipeDirectly(msgIndex) {
+      var m = aiChatMessages[msgIndex];
+      if (!m || !m.suggestedRecipe) return;
+      var sr = m.suggestedRecipe;
 
-      // Send confirmation message to AI
-      var input = document.getElementById('aiChatInput');
-      if (input) input.value = 'כן, תוסיף את המתכון לספר';
-      await sendAiMessage();
+      try {
+        // Build recipe object
+        var newRecipe = {
+          name: sr.name || '',
+          source: sr.source || 'נוצר על ידי AI',
+          ingredients: sr.ingredients || '',
+          instructions: sr.instructions || '',
+          category: sr.category || 'שונות',
+          notes: null,
+          rating: 0,
+          image: sr.image || null,
+          imagePath: null,
+          recipeLink: null,
+          videoUrl: null
+        };
+
+        // Upload AI image to Storage if available
+        if (sr.image && typeof uploadImageToStorage === 'function') {
+          try {
+            var imgResp = await fetch(sr.image);
+            var imgBlob = await imgResp.blob();
+            var imgExt = imgBlob.type === 'image/png' ? 'png' : 'jpg';
+            var imgFile = new File([imgBlob], 'ai-recipe.' + imgExt, { type: imgBlob.type });
+            var storagePath = await uploadImageToStorage(imgFile);
+            if (storagePath) {
+              newRecipe.imagePath = storagePath;
+              newRecipe.image = null;
+            }
+          } catch (imgErr) {
+            console.warn('Failed to upload AI image to Storage:', imgErr);
+          }
+        }
+
+        await saveRecipeToDB(newRecipe);
+        recipes.push(newRecipe);
+
+        // Mark message as added so buttons change
+        m.recipeAdded = true;
+        m.addedRecipeId = newRecipe.id;
+        pendingSuggestedRecipe = null;
+
+        renderAiChatMessages();
+        displayRecipes(recipes);
+        updateCategoryList();
+        updateCategoryButtons();
+      } catch (err) {
+        console.error('Failed to add recipe directly:', err);
+        alert('שגיאה בהוספת המתכון: ' + (err.message || err));
+      }
     }
+    window.addSuggestedRecipeDirectly = addSuggestedRecipeDirectly;
 
-    // Open form to edit recipe before adding
-    function editSuggestedRecipe() {
-      if (!pendingSuggestedRecipe) return;
-      applySuggestedRecipe(pendingSuggestedRecipe);
+    // Open form to edit recipe from chat message
+    function editSuggestedRecipeFromMsg(msgIndex) {
+      var m = aiChatMessages[msgIndex];
+      if (!m || !m.suggestedRecipe) return;
+      applySuggestedRecipe(m.suggestedRecipe);
+      m.suggestedRecipe = null;
       pendingSuggestedRecipe = null;
-    }
-
-    // Cancel adding the suggested recipe
-    function cancelSuggestedRecipe() {
-      pendingSuggestedRecipe = null;
-      aiChatMessages.push({
-        role: 'assistant',
-        content: 'בסדר, לא הוספתי את המתכון. אם תרצה משהו אחר, אני כאן!',
-        timestamp: new Date()
-      });
       renderAiChatMessages();
     }
+    window.editSuggestedRecipeFromMsg = editSuggestedRecipeFromMsg;
+
+    // Dismiss suggested recipe from chat message
+    function dismissSuggestedRecipe(msgIndex) {
+      var m = aiChatMessages[msgIndex];
+      if (!m) return;
+      m.suggestedRecipe = null;
+      pendingSuggestedRecipe = null;
+      renderAiChatMessages();
+    }
+    window.dismissSuggestedRecipe = dismissSuggestedRecipe;
 
     // View recipe from chat card
     window.viewRecipeFromChat = function(recipeId) {
@@ -2865,7 +2993,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
       var loadingAvatar = document.createElement('div');
       loadingAvatar.className = 'ai-chat-avatar chef';
-      loadingAvatar.innerHTML = '<img src="/chef-typing.png" alt="שף מקליד" class="chef-avatar-img">';
+      loadingAvatar.innerHTML = '<img src="' + chefImageUrl('chef-typing.png') + '" alt="שף מקליד" class="chef-avatar-img">';
 
       var loadingContent = document.createElement('div');
       loadingContent.className = 'ai-chat-msg-content';
@@ -2879,7 +3007,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       loadingWrapper.appendChild(loadingAvatar);
       loadingWrapper.appendChild(loadingContent);
       var msgsEl = document.getElementById('aiChatMessages');
-      if (msgsEl) msgsEl.appendChild(loadingWrapper);
+      if (msgsEl) {
+        msgsEl.appendChild(loadingWrapper);
+        msgsEl.scrollTo({ top: msgsEl.scrollHeight, behavior: 'smooth' });
+      }
 
       var url = supabaseUrl + '/functions/v1/recipe-ai';
       fetch(url, {
@@ -2892,6 +3023,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         .then(async function(_ref) {
           var res = _ref.res;
           var data = _ref.data;
+          console.log('[AI Chat] Response data:', JSON.stringify(data, null, 2));
           var loadEl = document.getElementById('aiChatLoading');
           if (loadEl) loadEl.remove();
           if (sendBtn) sendBtn.disabled = false;
@@ -2900,6 +3032,12 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           if (!reply && res && !res.ok) reply = 'שגיאה מהשרת (' + (res.status || '') + '). נא לבדוק GEMINI_API_KEY ב-Supabase Secrets.';
 
           var assistantMessage = { role: 'assistant', content: reply, timestamp: new Date() };
+
+          // Attach suggested recipe data to the message for inline display
+          if (data && data.suggestedRecipe && typeof data.suggestedRecipe === 'object') {
+            assistantMessage.suggestedRecipe = data.suggestedRecipe;
+          }
+
           aiChatMessages.push(assistantMessage);
 
           // Save assistant message to database
@@ -2953,9 +3091,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             var filtered = recipes.filter(function(r) { return r.id && recipeIds.indexOf(r.id) !== -1; });
             displayRecipes(filtered);
           } else if (data && data.suggestedRecipe) {
-            // Store suggested recipe for user confirmation (don't auto-add)
+            // suggestedRecipe is already attached to the assistant message above
+            // Re-render to show the inline recipe card with action buttons
             pendingSuggestedRecipe = data.suggestedRecipe;
-            renderAiChatMessages(); // Re-render to show confirmation buttons
+            renderAiChatMessages();
           }
         })
         .catch(function(err) {
@@ -3113,11 +3252,19 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     const TIMER_MAX_MINUTES = 59;
     const TIMER_MAX_SECONDS = 59;
 
+    function getTimerVolumePercent() {
+        const el = document.getElementById('timer-volume');
+        if (!el) return 80;
+        const v = parseFloat(el.value);
+        return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 80;
+    }
+
     function playMelodyOnce() {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         currentMelodyContext = audioContext;
         const masterGain = audioContext.createGain();
-        masterGain.gain.value = 0.12;
+        const volPct = getTimerVolumePercent();
+        masterGain.gain.value = (volPct / 100) * 0.9;
         masterGain.connect(audioContext.destination);
 
         const notes = [
@@ -3385,7 +3532,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         saveSetting('timerVisible', !isOpen);
     }
 
-    function initializeTimer() {
+    function initializeTimer(settings) {
         const startButton = document.getElementById('start-timer');
         const pauseButton = document.getElementById('pause-timer');
         const stopButton = document.getElementById('stop-timer');
@@ -3395,11 +3542,25 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         const hoursInput = document.getElementById('timer-hours');
         const minutesInput = document.getElementById('timer-minutes');
         const secondsInput = document.getElementById('timer-seconds');
+        const volumeSlider = document.getElementById('timer-volume');
+        const volumeValueEl = document.getElementById('timer-volume-value');
 
         // בדיקה שכל האלמנטים קיימים לפני הוספת event listeners
         if (!startButton || !pauseButton || !stopButton || !toggleButton || !timerWidget || !hoursInput || !minutesInput || !secondsInput) {
             console.warn('Timer elements not found, skipping timer initialization');
             return;
+        }
+
+        const timerVolume = (settings && settings.timerVolume != null) ? settings.timerVolume : 80;
+        if (volumeSlider) {
+            volumeSlider.value = timerVolume;
+            if (volumeValueEl) volumeValueEl.textContent = Math.round(timerVolume) + '%';
+            volumeSlider.addEventListener('input', () => {
+                const v = Math.round(getTimerVolumePercent());
+                if (volumeValueEl) volumeValueEl.textContent = v + '%';
+                saveSetting('timerVolume', v);
+                if (!supabase) localStorage.setItem('timerVolume', String(v));
+            });
         }
 
         // טיימר טוגל - פתיחה וסגירה
@@ -3572,7 +3733,11 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     // Get image URL from Supabase Storage
     function getImageUrl(imagePathOrUrl, options = {}) {
-        console.log('🔗 [getImageUrl] Input:', imagePathOrUrl);
+        // Log a short preview only (avoid flooding console with huge base64 strings)
+        const preview = typeof imagePathOrUrl === 'string' && imagePathOrUrl.length > 60
+            ? imagePathOrUrl.substring(0, 60) + '...'
+            : imagePathOrUrl;
+        console.log('🔗 [getImageUrl] Input:', preview);
         
         // If no image, return null
         if (!imagePathOrUrl) {
@@ -3603,11 +3768,45 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         return '';
     }
 
+    // Migrate legacy base64 recipe images to Supabase Storage (one-time per recipe)
+    async function migrateLegacyBase64ToStorage() {
+        if (!supabase) return;
+        const legacy = recipes.filter(r =>
+            r && r.id &&
+            typeof r.image === 'string' && r.image.startsWith('data:') &&
+            !r.imagePath
+        );
+        if (legacy.length === 0) return;
+        console.log(`🔄 [migrateLegacyBase64ToStorage] Migrating ${legacy.length} recipe(s) with base64 images to Storage...`);
+        for (const recipe of legacy) {
+            try {
+                const res = await fetch(recipe.image);
+                const blob = await res.blob();
+                const mime = blob.type || (recipe.image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg');
+                const ext = mime === 'image/png' ? 'png' : 'jpg';
+                const file = new File([blob], `migrated-${recipe.id}.${ext}`, { type: mime });
+                const imagePath = await uploadImageToStorage(file);
+                if (imagePath) {
+                    recipe.imagePath = imagePath;
+                    recipe.image = null;
+                    await saveRecipeToDB(recipe);
+                    saveRecipesToCache(recipes);
+                    console.log(`  ✅ Migrated image for recipe "${recipe.name}" (id: ${recipe.id})`);
+                } else {
+                    console.warn(`  ⚠️ Upload failed for recipe "${recipe.name}", keeping base64`);
+                }
+            } catch (err) {
+                console.warn(`  ⚠️ Migration failed for recipe "${recipe.name}":`, err);
+            }
+        }
+    }
+
     // Make functions available globally
     window.uploadImageToStorage = uploadImageToStorage;
     window.resizeImageToBlob = resizeImageToBlob;
     window.getImageUrl = getImageUrl;
     window.getImageSrcSet = getImageSrcSet;
+    window.migrateLegacyBase64ToStorage = migrateLegacyBase64ToStorage;
 
     // ============================================
     // END: Supabase Storage Image Functions
@@ -3818,34 +4017,6 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             select.value = currentValue;
         }
     }
-
-    // Category icon mapping
-    const categoryIcons = {
-      'כל הקטגוריות': 'restaurant',
-      'לחמים': 'bakery_dining',
-      'מרקים': 'soup_kitchen',
-      'מנה עיקרית': 'dinner_dining',
-      'תוספות': 'lunch_dining',
-      'סלטים': 'eco',
-      'שונות': 'restaurant_menu',
-      'עוגות': 'cake',
-      'קינוחים': 'icecream',
-      'פינוקים': 'cookie'
-    };
-
-    // Category color mapping for icons and backgrounds (matching the design example)
-    const categoryColors = {
-      'כל הקטגוריות': 'teal',    // Teal/green for "All"
-      'לחמים': 'amber',           // Amber/yellow for bakery
-      'מרקים': 'blue',            // Blue for soups
-      'מנה עיקרית': 'red',        // Red for main dishes
-      'תוספות': 'purple',         // Purple for sides
-      'סלטים': 'emerald',         // Bright green for salads/healthy
-      'שונות': 'blue',            // Blue for other
-      'עוגות': 'amber',           // Amber/yellow for cakes
-      'קינוחים': 'rose',          // Bright pink for desserts
-      'פינוקים': 'orange'         // Orange for treats/snacks
-    };
 
     function getCategoryIcon(category) {
       return categoryIcons[category] || 'restaurant_menu';
