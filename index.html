@@ -84,7 +84,7 @@
   </script>
   
   <!-- Custom Styles (?v= forces browser to load latest in dev) -->
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
   <link rel="stylesheet" href="styles/timer.css">
   
   <script>
@@ -236,7 +236,6 @@
   <!-- חלון המתכון -->
   <div class="popup-overlay" id="popup">
     <div class="popup-content">
-      <button class="close-btn" onclick="closePopup()">&times;</button>
       <div id="popupBody"></div>
     </div>
   </div>
@@ -384,6 +383,10 @@
               <button type="button" class="form-add-recipe-ocr-btn" onclick="document.getElementById('ocrImage').click()">
                 <span class="material-symbols-outlined">document_scanner</span>
                 סרוק מתכון (OCR)
+              </button>
+              <button type="button" class="form-add-recipe-generate-image-btn" onclick="regenerateImageForForm()">
+                <span class="material-symbols-outlined">image</span>
+                צור תמונה חדשה
               </button>
             </div>
           </section>
