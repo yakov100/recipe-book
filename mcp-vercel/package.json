@@ -1,0 +1,27 @@
+{
+  "name": "mcp-vercel",
+  "version": "1.0.0",
+  "description": "MCP server for Vercel API - list projects, deployments, get logs, cancel deployments",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "mcp-vercel": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "prepare": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": ["build"]
+}

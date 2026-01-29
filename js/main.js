@@ -780,7 +780,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 const srcset = getImageSrcSet(imageSource);
                 if (srcset) {
                     img.srcset = srcset;
-                    img.sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px';
+                    img.sizes = '(max-width: 480px) 100vw, (max-width: 1024px) 50vw, 400px';
                 }
                 
                 console.log('  ✅ Image URL set successfully');
