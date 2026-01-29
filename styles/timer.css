@@ -389,7 +389,7 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 640px) {
+@media (max-width: 480px) {
     .timer-expanded {
         width: 260px;
         top: 60px;

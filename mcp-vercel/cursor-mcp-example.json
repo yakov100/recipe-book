@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "vercel": {
+      "command": "node",
+      "args": ["C:\\recipe-book-gh-pages\\mcp-vercel\\build\\index.js"],
+      "env": {
+        "VERCEL_TOKEN": "<YOUR_VERCEL_TOKEN>"
+      }
+    }
+  }
+}

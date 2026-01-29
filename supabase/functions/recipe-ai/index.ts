@@ -29,7 +29,7 @@ async function generateRecipeImage(recipeName: string, category: string): Promis
   const categoryEn = CATEGORY_EN[category] || "food";
   const bgColors = ["warm beige", "soft gray", "muted sage", "cream white", "light taupe", "dusty blue"];
   const randomBg = bgColors[Math.floor(Math.random() * bgColors.length)];
-  const prompt = `Minimalist studio food photography of ${recipeName}, ${categoryEn}, premium modern style. Single dish centered in frame, clean composition, lots of negative space. Solid smooth ${randomBg} background. Soft studio lighting, no harsh shadows, natural highlights. Simple neutral plate, no props, no hands. Ultra realistic, high detail texture, balanced natural colors. App-style presentation, food menu card aesthetic. No text or watermarks.`;
+  const prompt = `Minimalist studio food photography of ${recipeName}, ${categoryEn}, premium modern style. Single dish centered in frame, clean composition, lots of negative space. Solid smooth ${randomBg} background. Soft studio lighting, no harsh shadows, natural highlights. Simple neutral plate, no props, no hands, no phones, no screens, no electronic devices. Ultra realistic, high detail texture, balanced natural colors. Clean editorial food photo style. No text or watermarks.`;
 
   console.log("Generating image with prompt:", prompt);
 
