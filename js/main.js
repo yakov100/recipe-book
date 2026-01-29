@@ -4,11 +4,13 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     let recipes = [];
     let editingIndex = -1;
     let formSelectedRating = 0;
+    let formSelectedDifficulty = 2; // 1=קל, 2=בינוני, 3=קשה
     let selectedCategory = null;
     let backupReminderTimeout;
     let aiChatMessages = [];
     let aiChatAbortController = null;
     let aiGeneratedImage = null; // Stores AI-generated image for suggested recipes
+    let formRegeneratedImage = null; // { imagePath } or { image } - from "צור תמונה חדשה" in add/edit form
     let currentConversationId = null;
     let conversationHistory = [];
     let chatAttachments = [];
@@ -28,6 +30,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             category: r.category || 'שונות',
             notes: r.notes || null,
             rating: r.rating ?? 0,
+            difficulty: r.difficulty ?? null,
             image: r.image || null, // Keep for backward compatibility
             image_path: r.imagePath || null, // New: Storage path
             recipe_link: r.recipeLink || null,
@@ -49,6 +52,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             category: row.category,
             notes: row.notes,
             rating: row.rating,
+            difficulty: row.difficulty ?? null,
             image: row.image, // Keep for backward compatibility during migration
             imagePath: row.image_path, // New: Storage path
             recipeLink: row.recipe_link,
@@ -264,7 +268,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         imagesDeferred = false;
         const { data, error } = await supabase
             .from('recipes')
-            .select('id,name,source,ingredients,instructions,category,notes,rating,recipe_link,video_url,preparation_time,image_path,image,created_at')
+            .select('id,name,source,ingredients,instructions,category,notes,rating,difficulty,recipe_link,video_url,preparation_time,image_path,image,created_at')
             .order('created_at', { ascending: true });
 
         if (error) {
@@ -916,6 +920,15 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         ratingStars += `<span class="material-symbols-outlined text-[16px] ${starClass}" onclick="rateRecipe(${index}, ${i})">star</span>`;
       }
 
+      // Difficulty display (1=קל, 2=בינוני, 3=קשה)
+      const currentDifficulty = recipe.difficulty >= 1 && recipe.difficulty <= 3 ? recipe.difficulty : 2;
+      const difficultyLabel = DIFFICULTY_LABELS[currentDifficulty] || 'בינוני';
+      let difficultyBarsHtml = '';
+      for (let i = 1; i <= 3; i++) {
+        const barClass = i <= currentDifficulty ? 'text-orange-400 fill-current' : 'text-gray-300';
+        difficultyBarsHtml += `<span class="material-symbols-outlined text-[14px] ${barClass}">star</span>`;
+      }
+
       // Generate ingredients list with checkboxes
       const ingredientsList = recipe.ingredients.split('\n').map((ingredient, i) => {
         if (!ingredient.trim()) return '';
@@ -948,6 +961,23 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         <div class="recipe-full">
           <!-- Image Section (Left) -->
           <div class="recipe-image-section">
+            <div class="recipe-actions-row recipe-actions-above-image">
+              <button class="recipe-action-btn" onclick="editRecipe(${index})" title="ערוך">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button class="recipe-action-btn" onclick="confirmDeleteRecipe(${index})" title="מחק">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+              <button class="recipe-action-btn" onclick="copyRecipeLink(${index})" title="העתק קישור">
+                <span class="material-symbols-outlined">link</span>
+              </button>
+              <button class="recipe-action-btn" onclick="shareRecipe(${index})" title="שתף">
+                <span class="material-symbols-outlined">share</span>
+              </button>
+              <button class="recipe-action-btn" onclick="downloadRecipe(${index})" title="הורד">
+                <span class="material-symbols-outlined">download</span>
+              </button>
+            </div>
             <img 
               loading="lazy"
               class="recipe-popup-image"
@@ -960,7 +990,6 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
             <div class="recipe-image-overlay"></div>
             <div class="recipe-image-content">
               <span class="recipe-category-badge">${recipe.category}</span>
-              <h2 class="recipe-image-title">הצצה למנה המושלמת</h2>
             </div>
           </div>
 
@@ -971,32 +1000,6 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
               <div class="recipe-header-info">
                 <h1 class="recipe-main-title">${recipe.name}</h1>
                 <p class="recipe-source-link">מקור: <a href="${recipe.recipeLink || '#'}" target="_blank">${recipe.source || 'לא ידוע'}</a></p>
-              </div>
-              <div class="recipe-header-actions">
-                <button class="recipe-create-image-btn" onclick="regenerateImage(${index})">
-                    צור תמונה חדשה
-                </button>
-                <button class="recipe-create-image-btn" onclick="reuploadRecipeImage(${recipe.id})" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);">
-                    <span class="material-symbols-outlined" style="font-size: 18px; margin-left: 6px;">upload</span>
-                    החלף תמונה
-                </button>
-                <div class="recipe-actions-row">
-                    <button class="recipe-action-btn" onclick="editRecipe(${index})" title="ערוך">
-                        <span class="material-symbols-outlined">edit</span>
-                    </button>
-                    <button class="recipe-action-btn" onclick="confirmDeleteRecipe(${index})" title="מחק">
-                        <span class="material-symbols-outlined">delete</span>
-                    </button>
-                    <button class="recipe-action-btn" onclick="copyRecipeLink(${index})" title="העתק קישור">
-                        <span class="material-symbols-outlined">link</span>
-                    </button>
-                    <button class="recipe-action-btn" onclick="shareRecipe(${index})" title="שתף">
-                        <span class="material-symbols-outlined">share</span>
-                    </button>
-                    <button class="recipe-action-btn" onclick="downloadRecipe(${index})" title="הורד">
-                        <span class="material-symbols-outlined">download</span>
-                    </button>
-                </div>
               </div>
             </div>
 
@@ -1012,11 +1015,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                 <div class="meta-item">
                   <span class="material-symbols-outlined meta-icon" style="color: #fb923c;">star</span>
                   <span class="meta-label">רמת קושי</span>
-                  <div class="flex">
-                    <span class="material-symbols-outlined text-[14px] text-orange-400 fill-current">star</span>
-                    <span class="material-symbols-outlined text-[14px] text-orange-400 fill-current">star</span>
-                    <span class="material-symbols-outlined text-[14px] text-gray-300">star</span>
+                  <div class="flex items-center gap-0.5" title="${difficultyLabel}">
+                    ${difficultyBarsHtml}
                   </div>
+                  <span class="meta-value meta-value-difficulty">${difficultyLabel}</span>
                 </div>
                 <div class="meta-item">
                   <span class="material-symbols-outlined meta-icon" style="color: #60a5fa;">category</span>
@@ -1377,17 +1379,113 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       }
     }
 
+    async function regenerateImageForForm() {
+      const name = document.getElementById('recipeName')?.value?.trim();
+      const categoryEl = document.getElementById('category');
+      const category = (categoryEl && categoryEl.value) ? categoryEl.value : 'שונות';
+      if (!name) {
+        alert('נא להזין שם מתכון לפני יצירת תמונה.');
+        return;
+      }
+
+      const recipeId = editingIndex >= 0 && recipes[editingIndex]?.id ? recipes[editingIndex].id : null;
+
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'regenerateLoading';
+      loadingDiv.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        gap: 2rem;
+      `;
+      loadingDiv.innerHTML = `
+        <img src="/chef-cooking.png" alt="שף מבשל" style="width: 250px; max-width: 80vw; height: auto; border-radius: 1.5rem; box-shadow: 0 15px 50px rgba(0,0,0,0.5); animation: bounce 1s ease-in-out infinite;">
+        <span style="color: white; font-size: 1.5rem; font-weight: 500; text-align: center;">מייצר תמונה חדשה...</span>
+        <style>@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }</style>
+      `;
+      document.body.appendChild(loadingDiv);
+
+      try {
+        const url = supabaseUrl + '/functions/v1/regenerate-image';
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + supabaseAnonKey
+          },
+          body: JSON.stringify({
+            recipeId: recipeId,
+            recipeName: name,
+            category: category
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.image) {
+          let imagePath = null;
+          try {
+            const imgResponse = await fetch(data.image);
+            const blob = await imgResponse.blob();
+            const ext = blob.type === 'image/png' ? 'png' : 'jpg';
+            const file = new File([blob], `regenerated.${ext}`, { type: blob.type });
+            imagePath = await uploadImageToStorage(file);
+          } catch (uploadErr) {
+            console.warn('Failed to upload regenerated image to Storage:', uploadErr);
+          }
+
+          if (imagePath) {
+            formRegeneratedImage = { imagePath };
+          } else {
+            formRegeneratedImage = { image: data.image };
+          }
+
+          const inlinePreview = document.getElementById('inlineImagePreview');
+          const inlineImg = document.getElementById('inlinePreviewImg');
+          const inlineContent = document.getElementById('inlineImageUploadContent');
+          const uploadArea = document.querySelector('.image-upload-area');
+          const imageInput = document.getElementById('image');
+          const imageUrl = imagePath ? getImageUrl(imagePath) : data.image;
+          if (inlineImg) inlineImg.src = imageUrl;
+          if (inlinePreview) inlinePreview.style.display = 'block';
+          if (inlineContent) inlineContent.style.display = 'none';
+          if (uploadArea) uploadArea.classList.add('has-image');
+          if (imageInput) imageInput.value = '';
+
+          alert('התמונה נוצרה. שמור את המתכון כדי לשמור את התמונה.');
+        } else {
+          alert('שגיאה ביצירת תמונה: ' + (data.error || 'שגיאה לא ידועה'));
+        }
+      } catch (error) {
+        console.error('Error regenerating image:', error);
+        alert('שגיאה ביצירת תמונה. נסה שוב.');
+      } finally {
+        const loading = document.getElementById('regenerateLoading');
+        if (loading) loading.remove();
+      }
+    }
+    window.regenerateImageForForm = regenerateImageForForm;
+
     const DIFFICULTY_LABELS = { 1: 'קל', 2: 'בינוני', 3: 'קשה' };
 
     function setFormDifficulty(level) {
+        formSelectedDifficulty = level >= 1 && level <= 3 ? level : 2;
         const bars = document.querySelectorAll('#formDifficultyBars .form-diff-bar');
         const textEl = document.getElementById('formDifficultyText');
         if (!bars.length || !textEl) return;
         bars.forEach((bar, i) => {
             const barLevel = i + 1;
-            bar.classList.toggle('form-diff-empty', barLevel > level);
+            bar.classList.toggle('form-diff-empty', barLevel > formSelectedDifficulty);
         });
-        textEl.textContent = DIFFICULTY_LABELS[level] || 'בינוני';
+        textEl.textContent = DIFFICULTY_LABELS[formSelectedDifficulty] || 'בינוני';
     }
 
     function updateFormRatingStars(rating) {
@@ -1413,6 +1511,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         setFormDifficulty(2);
         updateFormRatingStars(0);
         aiGeneratedImage = null; // איפוס תמונה שנוצרה ע"י AI
+        formRegeneratedImage = null; // איפוס תמונה שנוצרה ב"צור תמונה חדשה" בטופס
         
         // עדכון רשימת הקטגוריות
         const select = document.getElementById('category');
@@ -1458,6 +1557,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       document.getElementById('formPopup').style.display = 'none';
       document.getElementById('recipeForm').reset();
       editingIndex = -1;
+      formRegeneratedImage = null;
       // Reset image preview
       const previewContainer = document.getElementById('imagePreviewContainer');
       const uploadArea = document.querySelector('.image-upload-area');
@@ -1506,7 +1606,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     window.removeIngredientRow = removeIngredientRow;
 
     function syncIngredientsToTextarea() {
-      const rows = document.querySelectorAll('#ingredientsTableRows .form-ingredient-row');
+      const container = document.getElementById('ingredientsTableRows');
+      if (!container) return; // No table UI – keep textarea as-is (user types in textarea)
+      const rows = container.querySelectorAll('.form-ingredient-row');
       const lines = [];
       rows.forEach(row => {
         const name = row.querySelector('.ing-input-name')?.value?.trim() || '';
@@ -3806,6 +3908,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       if (!recipes[index]) return;
       
       closePopup();  // סוגרים את חלון הצפייה במתכון
+      formRegeneratedImage = null; // איפוס תמונה שנוצרה ב"צור תמונה חדשה"
       
       const recipe = recipes[index];
       editingIndex = index;
@@ -3830,7 +3933,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
       formSelectedRating = recipe.rating || 0;
       updateFormRatingStars(formSelectedRating);
-      setFormDifficulty(2);
+      setFormDifficulty(recipe.difficulty ?? 2);
 
       // הצגת התמונה הקיימת בתצוגה מקדימה
       const previewContainer = document.getElementById('imagePreviewContainer');
@@ -4019,13 +4122,21 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
           imagePath = null; // Will use default image
           console.log('ℹ️ Continuing with default image');
         }
-      } else if (editingIndex >= 0) {
-        // Editing existing recipe - keep existing image
+      } else if (editingIndex >= 0 && !formRegeneratedImage) {
+        // Editing existing recipe - keep existing image (unless user generated new one in form)
         if (recipes[editingIndex].imagePath) {
           imagePath = recipes[editingIndex].imagePath;
         } else if (recipes[editingIndex].image) {
           imageData = recipes[editingIndex].image;
         }
+      } else if (formRegeneratedImage) {
+        // תמונה שנוצרה ב"צור תמונה חדשה" בטופס
+        if (formRegeneratedImage.imagePath) {
+          imagePath = formRegeneratedImage.imagePath;
+        } else if (formRegeneratedImage.image) {
+          imageData = formRegeneratedImage.image;
+        }
+        formRegeneratedImage = null;
       } else if (aiGeneratedImage) {
         // AI generated image
         if (aiGeneratedImage.startsWith('http')) {
@@ -4048,6 +4159,7 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
         notes,
         preparationTime,
         rating: formSelectedRating,
+        difficulty: formSelectedDifficulty,
         image: imageData,
         imagePath: imagePath,
         recipeLink,
