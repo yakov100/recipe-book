@@ -149,6 +149,23 @@ const SYSTEM = `אתה עוזר מתכונים מקצועי ויצירתי בע�
 
 תמיד החזר JSON בלבד.`;
 
+/** מצב "עיצוב מצרכים בלבד" – מחזיר רק רשימה מעוצבת ב-reply */
+const SYSTEM_FORMAT_INGREDIENTS_ONLY = `אתה עוזר שמעצב רשימת מצרכים בלבד.
+המשתמש שולח טקסט גולמי של מצרכים (למשל הועתק מאתר).
+המשימה שלך: להחזיר רק את הרשימה המעוצבת – כל מצרך בשורה נפרדת, עם כמות ויחידת מידה ברורה (כוסות, כפיות, גרם וכו').
+אל תכתוב שום דבר אחר – רק את הרשימה המעוצבת בשדה reply.
+החזר JSON עם שדה reply בלבד.`;
+
+/** מצב "פיצול מתכון מלא" – מפצל טקסט גולמי למצרכים, הוראות הכנה והערות */
+const SYSTEM_PARSE_FULL_RECIPE = `אתה עוזר שמפצל מתכון גולמי (טקסט שהועתק מאתר או ממקור אחר) לשלושה חלקים:
+1. ingredients – רשימת מצרכים מעוצבת: כל מצרך בשורה נפרדת, עם כמות ויחידת מידה (כוסות, כפיות, גרם וכו').
+2. instructions – הוראות ההכנה: שלבים ברורים, כל שלב בשורה או ממוספר.
+3. notes – הערות/טיפים (אם אין – מחזיר מחרוזת ריקה "").
+
+המשתמש שולח טקסט אחד שמכיל מתכון מלא או חלקי. פצל את התוכן לשלושת השדות.
+אל תכתוב שום דבר נוסף – רק JSON עם שלושת השדות: ingredients, instructions, notes (כולם מחרוזות).
+אם אין הוראות או הערות בטקסט – השאר מחרוזת ריקה "" בשדה המתאים.`;
+
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
@@ -229,7 +246,8 @@ interface Message {
 
 function buildContents(
   messages: Message[],
-  recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]
+  recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[],
+  formatIngredientsOnly = false
 ): { role: string; parts: MessagePart[] }[] {
   const contents: { role: string; parts: MessagePart[] }[] = [];
   let firstUserSeen = false;
@@ -240,7 +258,7 @@ function buildContents(
 
     // Add text content
     let text = m.content || "";
-    if (m.role === "user") {
+    if (m.role === "user" && !formatIngredientsOnly) {
       if (!firstUserSeen) {
         text = "הקשר – רשימת המתכונים בספר:\n" + JSON.stringify(recipes) + "\n\n---\n\n" + text;
         firstUserSeen = true;
@@ -287,12 +305,15 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let body: { messages?: Message[]; recipes?: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[] };
+  let body: { messages?: Message[]; recipes?: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]; formatIngredientsOnly?: boolean; parseFullRecipe?: boolean };
   try {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
+
+  const formatIngredientsOnly = body?.formatIngredientsOnly === true;
+  const parseFullRecipe = body?.parseFullRecipe === true;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   // Try built-in SUPABASE_SERVICE_ROLE_KEY first, then custom SERVICE_ROLE_KEY as fallback
@@ -325,7 +346,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const messages = (Array.isArray(body?.messages) ? body.messages : []).slice(0, 50);
-  const contents = buildContents(messages, recipes);
+  const contents = buildContents(messages, recipes, formatIngredientsOnly || parseFullRecipe);
   if (contents.length === 0) {
     return new Response(
       JSON.stringify({ reply: "לא התקבלו הודעות.", recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
@@ -333,16 +354,21 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  const useFormatOnly = formatIngredientsOnly && !parseFullRecipe;
+  const systemPrompt = parseFullRecipe ? SYSTEM_PARSE_FULL_RECIPE : (useFormatOnly ? SYSTEM_FORMAT_INGREDIENTS_ONLY : SYSTEM);
+  const schemaForParse = parseFullRecipe
+    ? { type: "object" as const, properties: { ingredients: { type: "string" }, instructions: { type: "string" }, notes: { type: "string" } }, required: ["ingredients", "instructions", "notes"] }
+    : (useFormatOnly ? { type: "object" as const, properties: { reply: { type: "string" } }, required: ["reply"] } : RESPONSE_SCHEMA);
   const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(key)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      systemInstruction: { parts: [ { text: SYSTEM } ] },
+      systemInstruction: { parts: [ { text: systemPrompt } ] },
       contents,
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
-        temperature: 0.3
+        responseSchema: schemaForParse,
+        temperature: 0.2
       }
     })
   });
@@ -374,6 +400,29 @@ Deno.serve(async (req: Request) => {
   }
 
   const reply = parsed?.reply ?? "לא התקבלה תשובה.";
+
+  if (parseFullRecipe) {
+    const ingredients = typeof parsed?.ingredients === "string" ? parsed.ingredients : "";
+    const instructions = typeof parsed?.instructions === "string" ? parsed.instructions : "";
+    const notes = typeof parsed?.notes === "string" ? parsed.notes : "";
+    return new Response(
+      JSON.stringify({
+        reply: "ok",
+        recipeIds: [],
+        suggestedRecipe: null,
+        insertedRecipeId: null,
+        parsedRecipe: { ingredients, instructions, notes }
+      }),
+      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+    );
+  }
+
+  if (formatIngredientsOnly) {
+    return new Response(
+      JSON.stringify({ reply, recipeIds: [], suggestedRecipe: null, insertedRecipeId: null }),
+      { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+    );
+  }
   const recipeIds = Array.isArray(parsed?.recipeIds) ? parsed.recipeIds : [];
   const suggestedRecipe = parsed?.suggestedRecipe && typeof parsed.suggestedRecipe === "object" ? parsed.suggestedRecipe : undefined;
   const confirmAddRecipe = parsed?.confirmAddRecipe === true;

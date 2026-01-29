@@ -3906,4 +3906,81 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     window.toggleCategoryInput = toggleCategoryInput;
+
+    // --- AI: פיצול מתכון מלא למצרכים / הוראות / הערות ---
+    async function formatIngredientsWithAI() {
+        const ingredientsTextarea = document.getElementById('ingredients');
+        const instructionsTextarea = document.getElementById('instructions');
+        const notesTextarea = document.getElementById('notes');
+        const formatBtn = document.querySelector('.ai-format-btn');
+        
+        if (!ingredientsTextarea) return;
+        
+        const currentText = ingredientsTextarea.value.trim();
+        
+        if (!currentText) {
+            alert('הדבק כאן מתכון מלא (מצרכים, הוראות, הערות) ולחץ על הכפתור ✨');
+            return;
+        }
+        
+        if (formatBtn) {
+            formatBtn.disabled = true;
+            formatBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span>';
+        }
+        
+        try {
+            const messages = [
+                {
+                    role: 'user',
+                    content: `הנה מתכון גולמי שהדבקתי. פצל אותו לשדות: מצרכים (רשימה מעוצבת), הוראות הכנה, והערות (אם יש).\n\n${currentText}`
+                }
+            ];
+            
+            const url = supabaseUrl + '/functions/v1/recipe-ai';
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': 'Bearer ' + supabaseAnonKey 
+                },
+                body: JSON.stringify({ messages: messages, recipes: [], parseFullRecipe: true })
+            });
+            
+            const data = await response.json();
+            
+            if (data && data.parsedRecipe) {
+                const p = data.parsedRecipe;
+                ingredientsTextarea.value = p.ingredients || '';
+                if (instructionsTextarea) instructionsTextarea.value = p.instructions || '';
+                if (notesTextarea) notesTextarea.value = p.notes || '';
+                
+                [ingredientsTextarea, instructionsTextarea, notesTextarea].forEach(function(el) {
+                    if (!el) return;
+                    el.style.transition = 'background-color 0.3s';
+                    el.style.backgroundColor = '#d1fae5';
+                    setTimeout(function() { el.style.backgroundColor = ''; }, 1000);
+                });
+            } else {
+                throw new Error('לא התקבלה תשובה מובנית מה-AI');
+            }
+        } catch (error) {
+            console.error('Error parsing recipe:', error);
+            alert('שגיאה בפיצול המתכון. נא לנסות שוב.');
+        } finally {
+            if (formatBtn) {
+                formatBtn.disabled = false;
+                formatBtn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span>';
+            }
+        }
+    }
+    
+    // Attach event listener to AI format button
+    document.addEventListener('DOMContentLoaded', function() {
+        const formatBtn = document.querySelector('.ai-format-btn');
+        if (formatBtn) {
+            formatBtn.addEventListener('click', formatIngredientsWithAI);
+        }
+    });
+    
+    window.formatIngredientsWithAI = formatIngredientsWithAI;
 })();

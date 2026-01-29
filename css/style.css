@@ -4186,6 +4186,24 @@ input[type="text"]::placeholder {
     gap: 0.75rem;
 }
 
+/* Horizontal sections for ingredients and instructions */
+.form-sections-horizontal {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-sections-horizontal .form-section {
+    flex: 1;
+    min-width: 0;
+}
+
+.form-sections-horizontal .glass-input {
+    height: 100%;
+    min-height: 200px;
+}
+
 .form-section-header {
     display: flex;
     align-items: center;
@@ -4847,6 +4865,12 @@ input[type="text"]::placeholder {
         position: relative;
         background: transparent;
     }
+
+    /* Responsive: stack ingredients and instructions vertically on tablet */
+    .form-sections-horizontal {
+        flex-direction: column;
+        gap: 1rem;
+    }
 }
 
 /* Mobile (600px and below) */
@@ -4962,6 +4986,16 @@ input[type="text"]::placeholder {
         justify-content: center;
         padding: 0.875rem 1.5rem;
         font-size: 1rem;
+    }
+
+    /* Responsive: stack ingredients and instructions vertically on mobile */
+    .form-sections-horizontal {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-sections-horizontal .glass-input {
+        min-height: 150px;
     }
 
     .form-ai-assistant {
@@ -5221,4 +5255,18 @@ img[loading="lazy"]:not([src=""]) {
 .recipe-popup-image[style*="display: none"] {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   opacity: 0.3;
+}
+
+/* Animation for AI format button loading state */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
