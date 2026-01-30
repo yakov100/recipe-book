@@ -525,14 +525,16 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
                     const freshRecipes = await loadRecipesFromDB();
                     if (!Array.isArray(freshRecipes)) return;
                     
-                    // תמיד עדכן עם הנתונים מהשרת (כולל תמונות)
-                    recipes = freshRecipes;
+                    // Merge server data with locally-saved recipes (avoid race: user saved after our SELECT started)
+                    const serverIds = new Set((freshRecipes || []).map(r => r && r.id).filter(Boolean));
+                    const localOnly = (recipes || []).filter(r => r && r.id && !serverIds.has(r.id));
+                    recipes = [...(freshRecipes || []), ...localOnly];
+                    console.log('[loadFromServer] Merged: ' + (freshRecipes || []).length + ' from server, ' + localOnly.length + ' local-only preserved. Total: ' + recipes.length);
                     // Migrate any legacy base64 images to Storage (one-time per recipe)
                     await migrateLegacyBase64ToStorage();
                     displayRecipes(recipes);
                     updateCategoryList();
                     updateCategoryButtons();
-                    console.log('Updated with', recipes.length, 'recipes from server');
                     
                     if (imagesDeferred) {
                         await loadImagesForRecipes();
@@ -3237,9 +3239,6 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     window.startNewConversation = startNewConversation;
     window.toggleChatHistory = toggleChatHistory;
     window.handleChatFileSelect = handleChatFileSelect;
-    window.confirmAddSuggestedRecipe = confirmAddSuggestedRecipe;
-    window.editSuggestedRecipe = editSuggestedRecipe;
-    window.cancelSuggestedRecipe = cancelSuggestedRecipe;
 
     // Timer functionality
     let timerInterval;
@@ -4033,8 +4032,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
     }
 
     function updateCategoryButtons() {
-      const categories = getUniqueCategories();
       const categoryFilter = document.getElementById('categoryFilter');
+      if (!categoryFilter) return;
+      const categories = getUniqueCategories();
       categoryFilter.innerHTML = '';
 
       const allButton = document.createElement('button');
@@ -4223,7 +4223,9 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
 
     document.getElementById('recipeForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      console.log('📝 [Form] Submit triggered');
 
+      try {
       // Sync ingredient rows to textarea before reading
       syncIngredientsToTextarea();
 
@@ -4355,6 +4357,10 @@ import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
       updateCategoryList();
       updateCategoryButtons();
       closeFormPopup();
+      } catch (err) {
+        console.error('Error in recipe form submit:', err);
+        alert('שגיאה: ' + (err?.message || String(err)));
+      }
     });
 
     // Event listeners for difficulty bars and rating stars in the add/edit form
