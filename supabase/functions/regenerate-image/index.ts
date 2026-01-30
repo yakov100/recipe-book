@@ -97,8 +97,8 @@ Deno.serve(async (req: Request) => {
 
   const { recipeId, recipeName, category } = body;
 
-  if (!recipeId || !recipeName) {
-    return new Response(JSON.stringify({ error: "recipeId and recipeName are required" }), {
+  if (!recipeName) {
+    return new Response(JSON.stringify({ error: "recipeName is required" }), {
       status: 400,
       headers: { "Content-Type": "application/json", ...corsHeaders }
     });
@@ -113,18 +113,19 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Setup Supabase admin client
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "";
-
-  if (!supabaseUrl || !serviceKey) {
-    return new Response(JSON.stringify({ error: "Supabase not configured" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
-    });
+  // Setup Supabase admin client only when updating an existing recipe
+  let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+  if (recipeId) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "";
+    if (!supabaseUrl || !serviceKey) {
+      return new Response(JSON.stringify({ error: "Supabase not configured" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+    supabaseAdmin = createClient(supabaseUrl, serviceKey);
   }
-
-  const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
   // Generate new image
   console.log("Regenerating image for recipe:", recipeName, "category:", category);
@@ -137,26 +138,27 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Update recipe in database
-  const { error } = await supabaseAdmin
-    .from("recipes")
-    .update({ image: newImage })
-    .eq("id", recipeId);
+  // Update recipe in database only when recipeId is provided (existing recipe)
+  if (recipeId && supabaseAdmin) {
+    const { error } = await supabaseAdmin
+      .from("recipes")
+      .update({ image: newImage })
+      .eq("id", recipeId);
 
-  if (error) {
-    console.error("Failed to update recipe image:", error);
-    return new Response(JSON.stringify({ error: "Failed to update recipe: " + error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders }
-    });
+    if (error) {
+      console.error("Failed to update recipe image:", error);
+      return new Response(JSON.stringify({ error: "Failed to update recipe: " + error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders }
+      });
+    }
+    console.log("Recipe image updated successfully for:", recipeId);
   }
-
-  console.log("Recipe image updated successfully for:", recipeId);
 
   return new Response(JSON.stringify({
     success: true,
     image: newImage,
-    message: "התמונה עודכנה בהצלחה!"
+    message: recipeId ? "התמונה עודכנה בהצלחה!" : "התמונה נוצרה. שמור את המתכון כדי לשמור את התמונה."
   }), {
     status: 200,
     headers: { "Content-Type": "application/json", ...corsHeaders }

@@ -10,6 +10,12 @@
 Downloads/
 node_modules/
 
+# Supabase CLI temp
+supabase/.temp/
+
+# Junk (e.g. Windows nul)
+nul
+
 # OS generated files
 .DS_Store
 .DS_Store?
