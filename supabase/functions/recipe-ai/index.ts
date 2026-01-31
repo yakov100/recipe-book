@@ -307,20 +307,80 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let body: { messages?: Message[]; recipes?: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]; formatIngredientsOnly?: boolean; parseFullRecipe?: boolean };
+  let body: {
+    messages?: Message[];
+    recipes?: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[];
+    formatIngredientsOnly?: boolean;
+    parseFullRecipe?: boolean;
+    insertSuggestedRecipe?: boolean;
+    suggestedRecipe?: { name?: string; ingredients?: string; instructions?: string; category?: string; source?: string };
+  };
   try {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  const formatIngredientsOnly = body?.formatIngredientsOnly === true;
-  const parseFullRecipe = body?.parseFullRecipe === true;
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  // Try built-in SUPABASE_SERVICE_ROLE_KEY first, then custom SERVICE_ROLE_KEY as fallback
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "";
   const supabaseAdmin = supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey) : null;
+
+  // Mode: insert suggested recipe from "הוסף לספר" button – generate image, insert to DB, no Gemini
+  if (body?.insertSuggestedRecipe === true && body.suggestedRecipe && typeof body.suggestedRecipe === "object") {
+    const sr = body.suggestedRecipe;
+    const name = (sr.name || "").trim() || "מתכון חדש";
+    const category = sr.category || "שונות";
+    const jsonHeaders = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
+    if (!supabaseAdmin) {
+      return new Response(
+        JSON.stringify({
+          reply: "לא ניתן להוסיף מתכון אוטומטית - חסרה הגדרת SUPABASE_SERVICE_ROLE_KEY.",
+          insertedRecipeId: null,
+          suggestedRecipe: null
+        }),
+        { status: 200, headers: jsonHeaders }
+      );
+    }
+    console.log("Insert suggested recipe (button):", name);
+    const generatedImage = await generateRecipeImage(name, category);
+    const row = {
+      name,
+      source: sr.source || null,
+      ingredients: sr.ingredients || "",
+      instructions: sr.instructions || "",
+      category,
+      notes: null,
+      recipe_link: null,
+      video_url: null,
+      image: generatedImage,
+      rating: 0
+    };
+    const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
+    if (error) {
+      console.error("Insert suggested recipe failed:", error);
+      return new Response(
+        JSON.stringify({
+          reply: "שגיאה בהוספת המתכון: " + error.message,
+          insertedRecipeId: null,
+          suggestedRecipe: { ...sr, image: generatedImage }
+        }),
+        { status: 200, headers: jsonHeaders }
+      );
+    }
+    const insertedRecipeId = inserted?.id ?? null;
+    console.log("Recipe inserted (button):", insertedRecipeId);
+    return new Response(
+      JSON.stringify({
+        reply: "ok",
+        insertedRecipeId,
+        suggestedRecipe: { ...sr, image: generatedImage }
+      }),
+      { status: 200, headers: jsonHeaders }
+    );
+  }
+
+  const formatIngredientsOnly = body?.formatIngredientsOnly === true;
+  const parseFullRecipe = body?.parseFullRecipe === true;
 
   console.log("Environment check:", {
     hasSupabaseUrl: !!supabaseUrl,
@@ -434,18 +494,15 @@ Deno.serve(async (req: Request) => {
   let insertionError: string | null = null;
   let generatedImage: string | null = null;
 
-  // Generate image for any suggested recipe (both suggestion and confirmation)
-  if (suggestedRecipe) {
-    console.log("Generating image for recipe:", suggestedRecipe.name);
-    generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
-  }
-
-  // Only insert to DB if user explicitly confirmed (confirmAddRecipe: true)
+  // Only insert to DB if user explicitly confirmed (confirmAddRecipe: true). Generate image only when adding to book.
   if (suggestedRecipe && confirmAddRecipe) {
+    console.log("Adding recipe to book, generating image:", suggestedRecipe.name);
+    generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
     if (!supabaseAdmin) {
       console.error("Cannot insert recipe: supabaseAdmin is null (SUPABASE_SERVICE_ROLE_KEY not set)");
       insertionError = "לא ניתן להוסיף מתכון אוטומטית - חסרה הגדרת SUPABASE_SERVICE_ROLE_KEY. המתכון יוצג בטופס לשמירה ידנית.";
     } else {
+      // When OPENAI_API_KEY is not set, generatedImage is null – client will show default category image
       const row = {
         name: suggestedRecipe.name || "",
         source: suggestedRecipe.source || null,
@@ -468,7 +525,7 @@ Deno.serve(async (req: Request) => {
       }
     }
   } else if (suggestedRecipe) {
-    // Just suggesting a recipe, don't insert to DB
+    // Just suggesting a recipe, don't insert to DB, don't generate image
     console.log("Recipe suggested (not confirmed):", suggestedRecipe.name);
   }
 
@@ -495,8 +552,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // Add generated image to suggestedRecipe for client-side use
-  const suggestedRecipeWithImage = suggestedRecipe ? { ...suggestedRecipe, image: generatedImage } : null;
+  // Return suggestedRecipe without image when just suggesting; with image only when we added to book (confirmAddRecipe)
+  const suggestedRecipeWithImage = suggestedRecipe
+    ? (confirmAddRecipe ? { ...suggestedRecipe, image: generatedImage } : { ...suggestedRecipe, image: undefined })
+    : null;
 
   // If insertion failed, append error info to reply
   const finalReply = insertionError ? `${reply}\n\n⚠️ ${insertionError}` : reply;
