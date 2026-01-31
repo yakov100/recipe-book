@@ -18,6 +18,24 @@ const CATEGORY_EN: Record<string, string> = {
   "קינוחים": "dessert"
 };
 
+/** Upload base64 data URL to Storage and return object key (e.g. uuid.png), or null on failure. */
+async function uploadImageToStorage(
+  supabase: ReturnType<typeof createClient>,
+  dataUrl: string
+): Promise<string | null> {
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const fileName = `${crypto.randomUUID()}.png`;
+    const { error } = await supabase.storage
+      .from("recipe-images")
+      .upload(fileName, blob, { contentType: "image/png", cacheControl: "31536000", upsert: false });
+    return error ? null : fileName;
+  } catch {
+    return null;
+  }
+}
+
 /** Generate a recipe image using DALL-E 3 */
 async function generateRecipeImage(recipeName: string, category: string): Promise<string | null> {
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
@@ -342,7 +360,11 @@ Deno.serve(async (req: Request) => {
       );
     }
     console.log("Insert suggested recipe (button):", name);
-    const generatedImage = await generateRecipeImage(name, category);
+    const generatedImageDataUrl = await generateRecipeImage(name, category);
+    let imagePath: string | null = null;
+    if (generatedImageDataUrl && supabaseAdmin) {
+      imagePath = await uploadImageToStorage(supabaseAdmin, generatedImageDataUrl);
+    }
     const row = {
       name,
       source: sr.source || null,
@@ -352,7 +374,7 @@ Deno.serve(async (req: Request) => {
       notes: null,
       recipe_link: null,
       video_url: null,
-      image: generatedImage,
+      image_path: imagePath,
       rating: 0
     };
     const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
@@ -362,7 +384,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           reply: "שגיאה בהוספת המתכון: " + error.message,
           insertedRecipeId: null,
-          suggestedRecipe: { ...sr, image: generatedImage }
+          suggestedRecipe: { ...sr, image_path: imagePath }
         }),
         { status: 200, headers: jsonHeaders }
       );
@@ -373,7 +395,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         reply: "ok",
         insertedRecipeId,
-        suggestedRecipe: { ...sr, image: generatedImage }
+        suggestedRecipe: { ...sr, image_path: imagePath }
       }),
       { status: 200, headers: jsonHeaders }
     );
@@ -493,16 +515,20 @@ Deno.serve(async (req: Request) => {
   let insertedRecipeId: string | null = null;
   let insertionError: string | null = null;
   let generatedImage: string | null = null;
+  let generatedImagePath: string | null = null;
 
   // Only insert to DB if user explicitly confirmed (confirmAddRecipe: true). Generate image only when adding to book.
   if (suggestedRecipe && confirmAddRecipe) {
     console.log("Adding recipe to book, generating image:", suggestedRecipe.name);
-    generatedImage = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
+    const generatedImageDataUrl = await generateRecipeImage(suggestedRecipe.name, suggestedRecipe.category || "שונות");
+    if (generatedImageDataUrl && supabaseAdmin) {
+      generatedImagePath = await uploadImageToStorage(supabaseAdmin, generatedImageDataUrl);
+    }
+    generatedImage = generatedImagePath || generatedImageDataUrl;
     if (!supabaseAdmin) {
       console.error("Cannot insert recipe: supabaseAdmin is null (SUPABASE_SERVICE_ROLE_KEY not set)");
       insertionError = "לא ניתן להוסיף מתכון אוטומטית - חסרה הגדרת SUPABASE_SERVICE_ROLE_KEY. המתכון יוצג בטופס לשמירה ידנית.";
     } else {
-      // When OPENAI_API_KEY is not set, generatedImage is null – client will show default category image
       const row = {
         name: suggestedRecipe.name || "",
         source: suggestedRecipe.source || null,
@@ -512,7 +538,7 @@ Deno.serve(async (req: Request) => {
         notes: null,
         recipe_link: null,
         video_url: null,
-        image: generatedImage,
+        image_path: generatedImagePath,
         rating: 0
       };
       const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
@@ -529,32 +555,32 @@ Deno.serve(async (req: Request) => {
     console.log("Recipe suggested (not confirmed):", suggestedRecipe.name);
   }
 
-  // Handle image regeneration request
-  let regeneratedImage: string | null = null;
+  // Handle image regeneration request: upload to Storage, update image_path
+  let regeneratedImagePath: string | null = null;
   if (regenerateImageForRecipeId && supabaseAdmin) {
-    // Find the recipe to get its name and category
     const targetRecipe = recipes.find(r => r.id === regenerateImageForRecipeId);
     if (targetRecipe) {
       console.log("Regenerating image for recipe:", targetRecipe.name);
-      regeneratedImage = await generateRecipeImage(targetRecipe.name, targetRecipe.category || "שונות");
-      if (regeneratedImage) {
-        // Update the recipe in DB
-        const { error } = await supabaseAdmin
-          .from("recipes")
-          .update({ image: regeneratedImage })
-          .eq("id", regenerateImageForRecipeId);
-        if (error) {
-          console.error("Failed to update recipe image:", error);
-        } else {
-          console.log("Recipe image updated successfully");
+      const dataUrl = await generateRecipeImage(targetRecipe.name, targetRecipe.category || "שונות");
+      if (dataUrl) {
+        regeneratedImagePath = await uploadImageToStorage(supabaseAdmin, dataUrl);
+        if (regeneratedImagePath) {
+          const { error } = await supabaseAdmin
+            .from("recipes")
+            .update({ image_path: regeneratedImagePath })
+            .eq("id", regenerateImageForRecipeId);
+          if (error) {
+            console.error("Failed to update recipe image_path:", error);
+          } else {
+            console.log("Recipe image_path updated successfully");
+          }
         }
       }
     }
   }
 
-  // Return suggestedRecipe without image when just suggesting; with image only when we added to book (confirmAddRecipe)
   const suggestedRecipeWithImage = suggestedRecipe
-    ? (confirmAddRecipe ? { ...suggestedRecipe, image: generatedImage } : { ...suggestedRecipe, image: undefined })
+    ? (confirmAddRecipe ? { ...suggestedRecipe, image_path: generatedImagePath || undefined } : { ...suggestedRecipe })
     : null;
 
   // If insertion failed, append error info to reply
@@ -566,8 +592,8 @@ Deno.serve(async (req: Request) => {
       recipeIds,
       suggestedRecipe: suggestedRecipeWithImage,
       insertedRecipeId,
-      regenerateImageForRecipeId: regeneratedImage ? regenerateImageForRecipeId : null,
-      regeneratedImage
+      regenerateImageForRecipeId: regeneratedImagePath ? regenerateImageForRecipeId : null,
+      regeneratedImagePath
     }),
     { status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
   );

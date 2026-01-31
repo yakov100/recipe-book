@@ -127,38 +127,58 @@ Deno.serve(async (req: Request) => {
     supabaseAdmin = createClient(supabaseUrl, serviceKey);
   }
 
-  // Generate new image
+  // Generate new image (base64 data URL)
   console.log("Regenerating image for recipe:", recipeName, "category:", category);
-  const newImage = await generateRecipeImage(recipeName, category || "שונות");
+  const newImageDataUrl = await generateRecipeImage(recipeName, category || "שונות");
 
-  if (!newImage) {
+  if (!newImageDataUrl) {
     return new Response(JSON.stringify({ error: "Failed to generate image" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders }
     });
   }
 
-  // Update recipe in database only when recipeId is provided (existing recipe)
-  if (recipeId && supabaseAdmin) {
-    const { error } = await supabaseAdmin
-      .from("recipes")
-      .update({ image: newImage })
-      .eq("id", recipeId);
+  let imagePath: string | null = null;
 
-    if (error) {
-      console.error("Failed to update recipe image:", error);
-      return new Response(JSON.stringify({ error: "Failed to update recipe: " + error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders }
-      });
+  // Upload to Storage and update recipe with image_path (requires Supabase client)
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "";
+  if (supabaseUrl && serviceKey) {
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const fileName = `${crypto.randomUUID()}.png`;
+    try {
+      const res = await fetch(newImageDataUrl);
+      const blob = await res.blob();
+      const { error: uploadError } = await supabase.storage
+        .from("recipe-images")
+        .upload(fileName, blob, { contentType: "image/png", cacheControl: "31536000", upsert: false });
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+      } else {
+        imagePath = fileName;
+        if (recipeId) {
+          const { error } = await supabase
+            .from("recipes")
+            .update({ image_path: fileName })
+            .eq("id", recipeId);
+          if (error) {
+            console.error("Failed to update recipe image_path:", error);
+          } else {
+            console.log("Recipe image_path updated successfully for:", recipeId);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Upload/update failed:", e);
     }
-    console.log("Recipe image updated successfully for:", recipeId);
   }
 
+  const ok = imagePath != null;
   return new Response(JSON.stringify({
-    success: true,
-    image: newImage,
-    message: recipeId ? "התמונה עודכנה בהצלחה!" : "התמונה נוצרה. שמור את המתכון כדי לשמור את התמונה."
+    success: ok,
+    image_path: imagePath,
+    error: ok ? undefined : "העלאת התמונה ל-Storage נכשלה",
+    message: ok ? (recipeId ? "התמונה עודכנה בהצלחה!" : "התמונה נוצרה. שמור את המתכון כדי לשמור את התמונה.") : undefined
   }), {
     status: 200,
     headers: { "Content-Type": "application/json", ...corsHeaders }
