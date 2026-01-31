@@ -260,7 +260,7 @@ body::after {
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
-    max-width: 90rem;
+    max-width: 52rem;
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
