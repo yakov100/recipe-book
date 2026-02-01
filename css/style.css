@@ -845,12 +845,14 @@ body::after {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.06);
     backdrop-filter: blur(2px);
     display: none;
     justify-content: center;
     align-items: center;
-    gap: min(1rem, 3%);
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
     z-index: 2;
     pointer-events: auto;
     opacity: 0;
@@ -860,6 +862,101 @@ body::after {
 .recipe-card:hover .action-buttons-overlay {
     display: flex;
     opacity: 1;
+}
+
+.action-buttons-overlay .recipe-action-btn {
+    flex-shrink: 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    background: rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    color: var(--primary-color);
+}
+.action-buttons-overlay .recipe-action-btn .material-symbols-outlined {
+    color: #065f46;
+    font-size: 1.25rem !important;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.action-buttons-overlay .recipe-action-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.action-buttons-overlay .recipe-action-btn:hover .material-symbols-outlined {
+    color: #064e3b;
+}
+.dark .action-buttons-overlay .recipe-action-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    color: var(--primary-color);
+}
+.dark .action-buttons-overlay .recipe-action-btn .material-symbols-outlined {
+    color: #0d9488;
+}
+.dark .action-buttons-overlay .recipe-action-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+.dark .action-buttons-overlay .recipe-action-btn:hover .material-symbols-outlined {
+    color: #14b8a6;
+}
+
+/* תצוגת 6 כרטיסים בשורה: כפתורים מוקטנים כדי לא לברוח מהכרטיס */
+@container (max-width: 250px) {
+    .action-buttons-overlay .recipe-action-btn {
+        width: 2rem;
+        height: 2rem;
+        min-width: 2rem;
+        min-height: 2rem;
+    }
+    .action-buttons-overlay .recipe-action-btn .material-symbols-outlined {
+        font-size: 1.125rem !important;
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 22;
+    }
+    .action-buttons-overlay {
+        gap: 0.35rem;
+        padding: 0.4rem;
+    }
+}
+/* תצוגת 6–7 כרטיסים בשורה: כפתורים בינוניים */
+@container (max-width: 200px) {
+    .action-buttons-overlay .recipe-action-btn {
+        width: 1.75rem;
+        height: 1.75rem;
+        min-width: 1.75rem;
+        min-height: 1.75rem;
+    }
+    .action-buttons-overlay .recipe-action-btn .material-symbols-outlined {
+        font-size: 1rem !important;
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .action-buttons-overlay {
+        gap: 0.3rem;
+        padding: 0.35rem;
+    }
+}
+/* כרטיסים מאוד צרים (7 בשורה) */
+@container (max-width: 130px) {
+    .action-buttons-overlay .recipe-action-btn {
+        width: 1.5rem;
+        height: 1.5rem;
+        min-width: 1.5rem;
+        min-height: 1.5rem;
+    }
+    .action-buttons-overlay .recipe-action-btn .material-symbols-outlined {
+        font-size: 0.875rem !important;
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 18;
+    }
+    .action-buttons-overlay {
+        gap: 0.25rem;
+        padding: 0.25rem;
+    }
 }
 
 @media (hover: none) {
