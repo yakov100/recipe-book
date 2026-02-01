@@ -84,7 +84,7 @@
   </script>
   
   <!-- Custom Styles (?v= forces browser to load latest in dev) -->
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
   <link rel="stylesheet" href="styles/timer.css">
   
   <script>
@@ -200,8 +200,12 @@
   <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
 
   <main class="main">
-    <!-- Filter Panel -->
+    <!-- Filter Panel (מוסתר בהתחלה – לא תופס מקום עד שפותחים סינון) -->
     <div class="main-filter-panel" id="searchContainer" style="display: none;">
+      <div class="filter-panel-header">
+        <span class="filter-results" id="filterResultsCount"></span>
+        <button type="button" class="clear-filters-btn is-hidden" id="clearFiltersBtn" onclick="resetSearch()">נקה הכל</button>
+      </div>
       <div class="search-filters-row">
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">shopping_basket</span>
@@ -210,6 +214,27 @@
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">schedule</span>
           <input type="number" id="searchPrepTime" class="search-filter-input" placeholder="זמן הכנה (דקות)" min="0" oninput="filterRecipes()">
+        </div>
+        <div class="search-filter-item">
+          <span class="material-symbols-outlined search-filter-icon">restaurant</span>
+          <div class="filter-select-wrap" id="dietarySelectWrap">
+            <select id="searchDietaryType" class="filter-select-native" onchange="filterRecipes()" aria-hidden="true" tabindex="-1">
+              <option value="">הכל (חלבי/בשרי/פרווה)</option>
+              <option value="חלבי">חלבי</option>
+              <option value="בשרי">בשרי</option>
+              <option value="פרווה">פרווה</option>
+            </select>
+            <button type="button" class="filter-select-trigger" id="dietarySelectTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="filter-select-trigger-text">הכל (חלבי/בשרי/פרווה)</span>
+              <span class="material-symbols-outlined filter-select-arrow">expand_more</span>
+            </button>
+            <div class="filter-select-dropdown" id="dietarySelectDropdown" role="listbox" aria-hidden="true">
+              <div class="filter-select-option" data-value="">הכל (חלבי/בשרי/פרווה)</div>
+              <div class="filter-select-option" data-value="חלבי">חלבי</div>
+              <div class="filter-select-option" data-value="בשרי">בשרי</div>
+              <div class="filter-select-option" data-value="פרווה">פרווה</div>
+            </div>
+          </div>
         </div>
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">star</span>
@@ -359,6 +384,18 @@
                   <span class="form-star material-symbols-outlined" data-rating="5">star</span>
                 </div>
               </div>
+              <div class="form-add-recipe-attr-card form-attr-dietary">
+                <span class="form-attr-label">
+                  <span class="material-symbols-outlined form-attr-label-icon-inline" aria-hidden="true">restaurant</span>
+                  סוג תזונה
+                </span>
+                <select id="dietaryType" class="form-add-recipe-select-inline">
+                  <option value="" selected>לא מוגדר</option>
+                  <option value="חלבי">חלבי</option>
+                  <option value="בשרי">בשרי</option>
+                  <option value="פרווה">פרווה</option>
+                </select>
+              </div>
             </div>
           </section>
 
@@ -493,6 +530,6 @@
 
   <!-- ספריה חיצונית ל-OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

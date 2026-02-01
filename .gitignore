@@ -3,6 +3,7 @@
 !.vscode/launch.json
 .idea/
 .cursor/
+.claude/settings.local.json
 *.swp
 *.swo
 
