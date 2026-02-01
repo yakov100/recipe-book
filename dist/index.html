@@ -97,8 +97,8 @@
       document.documentElement.classList.add('dark');
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-BGo6Syra.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CkeUFrNK.css">
+  <script type="module" crossorigin src="/assets/index-Bb9XOpAv.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Gb7JfaiP.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
   <!-- Animated Blobs -->
@@ -202,6 +202,10 @@
   <main class="main">
     <!-- Filter Panel -->
     <div class="main-filter-panel" id="searchContainer" style="display: none;">
+      <div class="filter-panel-header">
+        <span class="filter-results" id="filterResultsCount"></span>
+        <button type="button" class="clear-filters-btn is-hidden" id="clearFiltersBtn" onclick="resetSearch()">נקה הכל</button>
+      </div>
       <div class="search-filters-row">
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">shopping_basket</span>
@@ -210,6 +214,15 @@
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">schedule</span>
           <input type="number" id="searchPrepTime" class="search-filter-input" placeholder="זמן הכנה (דקות)" min="0" oninput="filterRecipes()">
+        </div>
+        <div class="search-filter-item">
+          <span class="material-symbols-outlined search-filter-icon">restaurant</span>
+          <select id="searchDietaryType" class="search-filter-input" onchange="filterRecipes()">
+            <option value="">הכל (חלבי/בשרי/פרווה)</option>
+            <option value="חלבי">חלבי</option>
+            <option value="בשרי">בשרי</option>
+            <option value="פרווה">פרווה</option>
+          </select>
         </div>
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">star</span>
@@ -358,6 +371,18 @@
                   <span class="form-star material-symbols-outlined" data-rating="4">star</span>
                   <span class="form-star material-symbols-outlined" data-rating="5">star</span>
                 </div>
+              </div>
+              <div class="form-add-recipe-attr-card form-attr-dietary">
+                <span class="form-attr-label">
+                  <span class="material-symbols-outlined form-attr-label-icon-inline" aria-hidden="true">restaurant</span>
+                  סוג
+                </span>
+                <select id="dietaryType" class="form-add-recipe-select-inline">
+                  <option value="" selected>לא מוגדר</option>
+                  <option value="חלבי">חלבי</option>
+                  <option value="בשרי">בשרי</option>
+                  <option value="פרווה">פרווה</option>
+                </select>
               </div>
             </div>
           </section>
