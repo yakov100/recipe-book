@@ -1591,6 +1591,35 @@ body::after {
     color: #f87171 !important; /* Soft red */
 }
 
+/* צבעים לאייקון סוכריה (ממתקים) – כמו ל-Material icons */
+.category-icon-candy.category-icon-rose { color: #fb7185 !important; }
+.category-icon-candy.category-icon-amber { color: #fbbf24 !important; }
+.category-icon-candy.category-icon-teal { color: #475569 !important; }
+.category-icon-candy.category-icon-emerald { color: #34d399 !important; }
+.category-icon-candy.category-icon-orange { color: #f97316 !important; }
+.category-icon-candy.category-icon-blue { color: #38bdf8 !important; }
+.category-icon-candy.category-icon-purple { color: #a78bfa !important; }
+.category-icon-candy.category-icon-red { color: #f87171 !important; }
+
+/* צבעים לאייקון סלט – כמו ל-Material icons */
+.category-icon-salad.category-icon-rose { color: #fb7185 !important; }
+.category-icon-salad.category-icon-amber { color: #fbbf24 !important; }
+.category-icon-salad.category-icon-teal { color: #475569 !important; }
+.category-icon-salad.category-icon-emerald { color: #34d399 !important; }
+.category-icon-salad.category-icon-orange { color: #f97316 !important; }
+.category-icon-salad.category-icon-blue { color: #38bdf8 !important; }
+.category-icon-salad.category-icon-purple { color: #a78bfa !important; }
+.category-icon-salad.category-icon-red { color: #f87171 !important; }
+
+.category-icon-fish.category-icon-rose { color: #fb7185 !important; }
+.category-icon-fish.category-icon-amber { color: #fbbf24 !important; }
+.category-icon-fish.category-icon-teal { color: #475569 !important; }
+.category-icon-fish.category-icon-emerald { color: #34d399 !important; }
+.category-icon-fish.category-icon-orange { color: #f97316 !important; }
+.category-icon-fish.category-icon-blue { color: #38bdf8 !important; }
+.category-icon-fish.category-icon-purple { color: #a78bfa !important; }
+.category-icon-fish.category-icon-red { color: #f87171 !important; }
+
 /* Dark mode icon colors */
 .dark .material-symbols-outlined.category-icon-teal {
     color: #94a3b8 !important;
@@ -1627,6 +1656,33 @@ body::after {
 .dark .material-symbols-outlined.category-icon-red {
     color: #fca5a5 !important;
 }
+
+.dark .category-icon-candy.category-icon-rose { color: #fda4af !important; }
+.dark .category-icon-candy.category-icon-amber { color: #fcd34d !important; }
+.dark .category-icon-candy.category-icon-teal { color: #94a3b8 !important; }
+.dark .category-icon-candy.category-icon-emerald { color: #6ee7b7 !important; }
+.dark .category-icon-candy.category-icon-orange { color: #fdba74 !important; }
+.dark .category-icon-candy.category-icon-blue { color: #7dd3fc !important; }
+.dark .category-icon-candy.category-icon-purple { color: #c4b5fd !important; }
+.dark .category-icon-candy.category-icon-red { color: #fca5a5 !important; }
+
+.dark .category-icon-salad.category-icon-rose { color: #fda4af !important; }
+.dark .category-icon-salad.category-icon-amber { color: #fcd34d !important; }
+.dark .category-icon-salad.category-icon-teal { color: #94a3b8 !important; }
+.dark .category-icon-salad.category-icon-emerald { color: #6ee7b7 !important; }
+.dark .category-icon-salad.category-icon-orange { color: #fdba74 !important; }
+.dark .category-icon-salad.category-icon-blue { color: #7dd3fc !important; }
+.dark .category-icon-salad.category-icon-purple { color: #c4b5fd !important; }
+.dark .category-icon-salad.category-icon-red { color: #fca5a5 !important; }
+
+.dark .category-icon-fish.category-icon-rose { color: #fda4af !important; }
+.dark .category-icon-fish.category-icon-amber { color: #fcd34d !important; }
+.dark .category-icon-fish.category-icon-teal { color: #94a3b8 !important; }
+.dark .category-icon-fish.category-icon-emerald { color: #6ee7b7 !important; }
+.dark .category-icon-fish.category-icon-orange { color: #fdba74 !important; }
+.dark .category-icon-fish.category-icon-blue { color: #7dd3fc !important; }
+.dark .category-icon-fish.category-icon-purple { color: #c4b5fd !important; }
+.dark .category-icon-fish.category-icon-red { color: #fca5a5 !important; }
 
 /* Search Inputs */
 input[type="text"] {
@@ -4681,6 +4737,15 @@ input[type="text"]::placeholder {
         font-size: 1.1rem;
     }
     
+    .category-button .category-icon-candy,
+    .category-button .category-icon-salad,
+    .category-button .category-icon-fish {
+        min-width: 1.1rem;
+        min-height: 1.1rem;
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+    
     .category-button span {
         font-size: 0.6rem;
     }
@@ -5361,6 +5426,45 @@ input[type="text"]::placeholder {
     background: rgba(139, 92, 246, 0.2);
 }
 
+.form-add-recipe-attr-card.form-attr-dietary {
+    background: #fff1f2;
+    color: #be185d;
+    height: 6rem !important;
+    max-height: 6rem !important;
+}
+
+.dark .form-add-recipe-attr-card.form-attr-dietary {
+    background: rgba(190, 24, 93, 0.2);
+}
+
+/* סוג תזונה – ה-select בתוך הכרטיס בורוד-רדוד (לא סגול כמו קטגוריה) */
+.form-add-recipe-attr-card.form-attr-dietary .form-add-recipe-select-inline {
+    border-color: rgba(190, 24, 93, 0.45);
+}
+
+.form-add-recipe-attr-card.form-attr-dietary .form-add-recipe-select-inline:hover {
+    border-color: rgba(190, 24, 93, 0.65);
+    box-shadow: 0 0 0 1px rgba(190, 24, 93, 0.15);
+}
+
+.form-add-recipe-attr-card.form-attr-dietary .form-add-recipe-select-inline:focus {
+    border-color: rgba(190, 24, 93, 0.7);
+    box-shadow: 0 0 0 2px rgba(190, 24, 93, 0.2);
+}
+
+.dark .form-add-recipe-attr-card.form-attr-dietary .form-add-recipe-select-inline {
+    border-color: rgba(251, 113, 133, 0.4);
+}
+
+.dark .form-add-recipe-attr-card.form-attr-dietary .form-add-recipe-select-inline:hover {
+    border-color: rgba(251, 113, 133, 0.6);
+}
+
+.dark .form-add-recipe-attr-card.form-attr-dietary .form-add-recipe-select-inline:focus {
+    border-color: rgba(251, 113, 133, 0.8);
+    box-shadow: 0 0 0 2px rgba(190, 24, 93, 0.25);
+}
+
 .form-attr-label {
     font-size: 0.78rem;
     font-weight: 700;
@@ -5519,6 +5623,207 @@ input[type="text"]::placeholder {
     justify-content: center;
     gap: 0.25rem;
     position: relative;
+}
+
+/* בחירת קטגוריה – טריגר + dropdown עם אייקונים */
+.form-category-dropdown-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.form-category-select-hidden {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.form-category-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.35rem 0.6rem;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px dashed rgba(109, 40, 217, 0.45);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    color: inherit;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-align: right;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-category-trigger:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(109, 40, 217, 0.65);
+    box-shadow: 0 0 0 1px rgba(109, 40, 217, 0.15);
+}
+
+.form-category-trigger-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.form-category-trigger-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.form-category-trigger-arrow {
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.form-category-dropdown-wrap.open .form-category-trigger-arrow {
+    transform: rotate(180deg);
+}
+
+.form-category-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    margin-top: 0.2rem;
+    max-height: 14rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(109, 40, 217, 0.3);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+}
+
+.form-category-dropdown::-webkit-scrollbar {
+    display: none;
+}
+
+.form-category-dropdown-wrap.open {
+    z-index: 100;
+    overflow: visible;
+}
+
+/* מאפשרים לרשימת הקטגוריות להופיע מעל – בלי חיתוך */
+.form-add-recipe-attr-card.form-attr-category:has(.form-category-dropdown-wrap.open),
+.form-add-recipe-attr-cards:has(.form-category-dropdown-wrap.open),
+.form-add-recipe-sidebar:has(.form-category-dropdown-wrap.open),
+.form-popup-content.form-add-recipe:has(.form-category-dropdown-wrap.open) {
+    overflow: visible;
+}
+
+.form-category-dropdown-wrap.open .form-category-dropdown {
+    display: block;
+}
+
+.form-category-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #374151;
+    transition: background 0.15s ease;
+    text-align: right;
+}
+
+.form-category-option:hover {
+    background: rgba(109, 40, 217, 0.1);
+}
+
+.form-category-option-icon-wrap,
+.form-category-option-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.category-icon-candy,
+.category-icon-salad,
+.category-icon-fish {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+}
+
+.category-icon-candy svg,
+.category-icon-salad svg,
+.category-icon-fish svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* גודל אייקון ברשימת הקטגוריות (dropdown) – כמו שאר האייקונים */
+.form-category-option-icon-wrap .category-icon-candy,
+.form-category-option-icon-wrap .category-icon-salad,
+.form-category-option-icon-wrap .category-icon-fish {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* גודל אייקון סוכריה בכפתור "בחירת קטגוריה" */
+.form-category-trigger .category-icon-candy,
+.form-category-trigger .category-icon-salad,
+.form-category-trigger .category-icon-fish {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* גודל אייקון בכפתורי קטגוריה (שורת הסינון) – תואם ל־Material Symbols 1.5rem */
+.category-button .category-icon-candy,
+.category-button .category-icon-salad,
+.category-button .category-icon-fish {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.dark .form-category-trigger {
+    background: rgba(0, 0, 0, 0.25);
+    border-color: rgba(167, 139, 250, 0.4);
+}
+
+.dark .form-category-trigger:hover {
+    background: rgba(0, 0, 0, 0.35);
+    border-color: rgba(167, 139, 250, 0.6);
+}
+
+.dark .form-category-dropdown {
+    background: rgba(30, 27, 75, 0.98);
+    border-color: rgba(167, 139, 250, 0.3);
+}
+
+.dark .form-category-option {
+    color: #e9d5ff;
+}
+
+.dark .form-category-option:hover {
+    background: rgba(139, 92, 246, 0.2);
 }
 
 .form-add-recipe-select-inline {

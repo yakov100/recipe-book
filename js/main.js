@@ -73,31 +73,43 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     const CURRENT_CACHE_VERSION = '1.0.2'; // Update this when cache structure changes
     const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 דקות
 
-    // Category icon and color mappings (must be initialized early so updateCategoryButtons can run)
-    const categoryIcons = {
-        'כל הקטגוריות': 'restaurant',
-        'לחמים': 'bakery_dining',
-        'מרקים': 'soup_kitchen',
-        'מנה עיקרית': 'dinner_dining',
-        'תוספות': 'lunch_dining',
-        'סלטים': 'eco',
-        'שונות': 'restaurant_menu',
-        'עוגות': 'cake',
-        'קינוחים': 'icecream',
-        'פינוקים': 'cookie'
-    };
-    const categoryColors = {
-        'כל הקטגוריות': 'teal',
-        'לחמים': 'amber',
-        'מרקים': 'blue',
-        'מנה עיקרית': 'red',
-        'תוספות': 'purple',
-        'סלטים': 'emerald',
-        'שונות': 'blue',
-        'עוגות': 'amber',
-        'קינוחים': 'rose',
-        'פינוקים': 'orange'
-    };
+    // אייקון SVG לסוכריה עטופה (ממתקים) – גוף אליפסה, קצוות מפותלים בולטים, פסים אלכסוניים
+    const CANDY_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><ellipse cx="12" cy="12" rx="5" ry="3" fill="currentColor"/><circle cx="5.5" cy="12" r="2.8" fill="currentColor"/><circle cx="18.5" cy="12" r="2.8" fill="currentColor"/><line x1="8" y1="14.5" x2="11" y2="9.5" stroke="currentColor" stroke-width=".8" opacity=".85"/><line x1="12" y1="14.2" x2="15" y2="9.8" stroke="currentColor" stroke-width=".8" opacity=".85"/><line x1="16" y1="13.8" x2="19" y2="10.2" stroke="currentColor" stroke-width=".8" opacity=".85"/></svg>';
+    // אייקון SVG לסלט – קערה רחבה למעלה + עלים (לא משולש)
+    const SALAD_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 11h14v1c0 4-2 8-7 8s-7-4-7-8v-1z" fill="currentColor" opacity=".9"/><ellipse cx="12" cy="11.5" rx="7" ry="2" fill="none" stroke="currentColor" stroke-width="1"/><path d="M10 9v2M14 9v2M12 7.5v1.5M8 10.5q1.5-1.5 2-2M16 10.5q-1.5-1.5-2-2" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>';
+    // אייקון SVG לדגים – דג ברור: גוף אליפסה, זנב מפוצל (V), עין
+    const FISH_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M20 12a6 4 0 0 1-12 0 6 4 0 0 1 12 0z" fill="currentColor" opacity=".92"/><path d="M8 10L4 12l4 2.5V10z" fill="currentColor" opacity=".92"/><circle cx="16" cy="11.5" r="1.3" fill="currentColor"/></svg>';
+
+    // מקור אמת יחיד לקטגוריות – שם, אייקון Material Symbols, צבע
+    const CATEGORY_DEFINITIONS = [
+        { name: 'מנות ראשונות', icon: 'tapas', color: 'purple' },
+        { name: 'מנות עיקריות', icon: 'dinner_dining', color: 'red' },
+        { name: 'תוספות', icon: 'lunch_dining', color: 'purple' },
+        { name: 'סלטים', icon: 'lunch_dining', color: 'emerald' },      // מוצג כ-SALAD_ICON_SVG
+        { name: 'מרקים', icon: 'soup_kitchen', color: 'blue' },
+        { name: 'מאפים', icon: 'bakery_dining', color: 'amber' },
+        { name: 'פסטות ואורז', icon: 'ramen_dining', color: 'orange' },
+        { name: 'בשרים', icon: 'kebab_dining', color: 'red' },
+        { name: 'דגים', icon: 'fish', color: 'blue' },
+        { name: 'ירקות', icon: 'eco', color: 'emerald' },
+        { name: 'עוגות', icon: 'cake', color: 'amber' },
+        { name: 'עוגיות', icon: 'cookie', color: 'orange' },
+        { name: 'ממתקים', icon: 'cookie', color: 'rose' },              // מוצג כ-CANDY_ICON_SVG
+        { name: 'קינוחים', icon: 'icecream', color: 'rose' },
+        { name: 'לחמים', icon: 'bakery_dining', color: 'amber' },
+        { name: 'שונות', icon: 'restaurant_menu', color: 'blue' },
+        { name: 'פינוקים', icon: 'brunch_dining', color: 'orange' },
+    ];
+
+    const PREDEFINED_CATEGORIES = CATEGORY_DEFINITIONS.map(c => c.name);
+
+    const categoryIcons = Object.fromEntries(
+        [['כל הקטגוריות', 'restaurant'], ['מנה עיקרית', 'dinner_dining'], ...CATEGORY_DEFINITIONS.map(c => [c.name, c.icon])]
+    );
+
+    const categoryColors = Object.fromEntries(
+        [['כל הקטגוריות', 'teal'], ['מנה עיקרית', 'red'], ...CATEGORY_DEFINITIONS.map(c => [c.name, c.color])]
+    );
     
     // Clear old cache if version changed
     (function clearOldCacheIfNeeded() {
@@ -1297,8 +1309,6 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         document.getElementById('newCategory').style.display = 'none';
         const toggleBtn = document.getElementById('toggleNewCategory');
         if (toggleBtn) toggleBtn.innerHTML = '<span class="material-symbols-outlined">add</span>';
-        document.getElementById('category').style.display = 'block';
-
         // איפוס הטופס
         document.getElementById('recipeForm').reset();
         editingIndex = -1;
@@ -1308,31 +1318,19 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         aiGeneratedImage = null; // איפוס תמונה שנוצרה ע"י AI
         formRegeneratedImage = null; // איפוס תמונה שנוצרה ב"צור תמונה חדשה" בטופס
         
-        // עדכון רשימת הקטגוריות
-        const select = document.getElementById('category');
-        select.innerHTML = '<option value="" disabled selected>בחר קטגוריה</option>';
-        
-        // הקטגוריות הקבועות
-        const fixedCategories = ['לחמים', 'מרקים', 'מנה עיקרית', 'תוספות', 'סלטים', 'שונות', 'עוגות', 'קינוחים'];
-        
-        // הוספת הקטגוריות הקבועות
-        fixedCategories.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category;
-            select.appendChild(option);
-        });
-        
-        // הוספת קטגוריות נוספות מהמתכונים הקיימים
-        const existingCategories = [...new Set(recipes.map(recipe => recipe.category))];
-        existingCategories.forEach(category => {
-            if (category && !fixedCategories.includes(category)) {
-                const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
-                select.appendChild(option);
-            }
-        });
+        // עדכון רשימת הקטגוריות (select + dropdown עם אייקונים)
+        populateCategorySelectAndDropdown();
+        updateCategoryTriggerDisplay();
+
+        // קישור כפתור בחירת קטגוריה – וידוא שהרשימה נפתחת בלחיצה
+        const categoryTrigger = document.getElementById('categoryTrigger');
+        if (categoryTrigger) {
+            categoryTrigger.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleCategoryDropdown();
+            };
+        }
 
         // Reset ingredient rows
         const ingContainer = document.getElementById('ingredientsTableRows');
@@ -2830,6 +2828,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       var cat = suggestedRecipe.category || 'שונות';
       var sel = document.getElementById('category');
       if (sel) {
+        populateCategorySelectAndDropdown();
         if (![].slice.call(sel.options).some(function(o) { return o.value === cat; })) {
           var opt = document.createElement('option');
           opt.value = cat;
@@ -2837,6 +2836,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           sel.appendChild(opt);
         }
         sel.value = cat;
+        updateCategoryTriggerDisplay();
       }
       // Store AI-generated image/path for use when saving
       aiGeneratedImage = suggestedRecipe.image_path ? { imagePath: suggestedRecipe.image_path } : (suggestedRecipe.image ? suggestedRecipe.image : null);
@@ -3929,7 +3929,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         const nameMatch = !searchName || recipe.name.toLowerCase().includes(searchName);
         const ingredientsMatch = !searchIngredients || recipe.ingredients.toLowerCase().includes(searchIngredients);
         // אם אין קטגוריה נבחרת או שהקטגוריה תואמת
-        const categoryMatch = !selectedCategory || (recipe.category && recipe.category.trim() === selectedCategory.trim());
+        const cat = recipe.category && recipe.category.trim();
+        const sel = selectedCategory && selectedCategory.trim();
+        const categoryMatch = !sel || (cat && (cat === sel || (sel === 'מנות עיקריות' && cat === 'מנה עיקרית')));
         const ratingMatch = !selectedRating || (recipe.rating && recipe.rating === selectedRating);
         // סינון לפי זמן הכנה - אם יש זמן הכנה במתכון והוא קטן או שווה לזמן המבוקש
         const prepTimeMatch = !searchPrepTime || !recipe.preparationTime || recipe.preparationTime <= searchPrepTime;
@@ -3959,41 +3961,127 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
     function updateCategoryList() {
         const select = document.getElementById('category');
-        // שמירת הערך הנוכחי
+        // שמירת הערך הנוכחי והרענון עם הרשימה המעודכנת
         const currentValue = select.value;
-        // ניקוי האפשרויות הקיימות
+        populateCategorySelectAndDropdown();
+        if (currentValue) {
+            select.value = currentValue;
+            updateCategoryTriggerDisplay();
+        }
+    }
+
+    /** ממלא את ה-select הנסתר ואת ה-dropdown של הקטגוריה (עם אייקונים) */
+    function populateCategorySelectAndDropdown() {
+        const select = document.getElementById('category');
+        const dropdown = document.getElementById('categoryDropdownList');
+        if (!select) return;
+
         select.innerHTML = '<option value="" disabled selected>בחר קטגוריה</option>';
-        
-        // הקטגוריות המוגדרות מראש
-        const predefinedCategories = ['לחמים', 'מרקים', 'מנה עיקרית', 'תוספות', 'סלטים', 'שונות', 'עוגות', 'קינוחים'];
-        
-        // הוספת הקטגוריות המוגדרות מראש
-        predefinedCategories.forEach(category => {
+        const allCategories = [...PREDEFINED_CATEGORIES];
+        const existingCategories = [...new Set(recipes.map(recipe => recipe.category).filter(Boolean))];
+        existingCategories.forEach(cat => {
+            if (!allCategories.includes(cat)) allCategories.push(cat);
+        });
+
+        allCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category;
             select.appendChild(option);
         });
 
-        // הוספת קטגוריות קיימות מהמתכונים
-        const existingCategories = [...new Set(recipes.map(recipe => recipe.category))];
-        existingCategories.forEach(category => {
-            if (category && !predefinedCategories.includes(category)) {
-                const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
-                select.appendChild(option);
-            }
-        });
-
-        // החזרת הערך הנוכחי אם הוא קיים
-        if (currentValue) {
-            select.value = currentValue;
+        if (dropdown) {
+            dropdown.innerHTML = '';
+            allCategories.forEach(category => {
+                const colorClass = getCategoryColorClass(category);
+                const iconHtml = getCategoryIconHtml(category, 'form-category-option-icon ' + colorClass);
+                const item = document.createElement('div');
+                item.className = 'form-category-option';
+                item.setAttribute('data-value', category);
+                item.setAttribute('role', 'option');
+                item.innerHTML = `
+                    <span class="form-category-option-icon-wrap">${iconHtml}</span>
+                    <span class="form-category-option-text">${category}</span>
+                `;
+                item.onclick = () => {
+                    select.value = category;
+                    updateCategoryTriggerDisplay();
+                    closeCategoryDropdown();
+                };
+                dropdown.appendChild(item);
+            });
         }
     }
 
+    /** מעדכן את התצוגה של כפתור בחירת הקטגוריה (אייקון + טקסט) */
+    function updateCategoryTriggerDisplay() {
+        const select = document.getElementById('category');
+        const triggerIcon = document.getElementById('categoryTriggerIcon');
+        const triggerText = document.getElementById('categoryTriggerText');
+        if (!select || !triggerIcon || !triggerText) return;
+        const value = select.value;
+        if (value) {
+            triggerIcon.innerHTML = getCategoryIconHtml(value, 'form-category-trigger-icon ' + (getCategoryColorClass(value) || ''));
+            triggerText.textContent = value;
+        } else {
+            triggerIcon.innerHTML = '<span class="material-symbols-outlined form-category-trigger-icon">category</span>';
+            triggerText.textContent = 'בחירת קטגוריה';
+        }
+    }
+
+    function openCategoryDropdown() {
+        const wrap = document.getElementById('categoryDropdownWrap');
+        if (wrap) {
+            wrap.classList.add('open');
+            const trigger = document.getElementById('categoryTrigger');
+            if (trigger) trigger.setAttribute('aria-expanded', 'true');
+            setTimeout(() => {
+                const onDocClick = (e) => {
+                    if (wrap.contains(e.target)) return;
+                    closeCategoryDropdown();
+                    document.removeEventListener('click', onDocClick);
+                };
+                document.addEventListener('click', onDocClick);
+            }, 0);
+        }
+    }
+
+    function closeCategoryDropdown() {
+        const wrap = document.getElementById('categoryDropdownWrap');
+        if (wrap) {
+            wrap.classList.remove('open');
+            const trigger = document.getElementById('categoryTrigger');
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function toggleCategoryDropdown() {
+        const wrap = document.getElementById('categoryDropdownWrap');
+        if (wrap && wrap.classList.contains('open')) closeCategoryDropdown();
+        else openCategoryDropdown();
+    }
+
+    window.toggleCategoryDropdown = toggleCategoryDropdown;
+    window.closeCategoryDropdown = closeCategoryDropdown;
+    window.updateCategoryTriggerDisplay = updateCategoryTriggerDisplay;
+
     function getCategoryIcon(category) {
       return categoryIcons[category] || 'restaurant_menu';
+    }
+
+    /** מחזיר HTML לאייקון הקטגוריה – לממתקים/סלטים/דגים SVG מותאם, לשאר Material icon */
+    function getCategoryIconHtml(category, colorClass) {
+      const cls = colorClass || getCategoryColorClass(category) || '';
+      if (category === 'ממתקים') {
+        return `<span class="category-icon-candy ${cls}">${CANDY_ICON_SVG}</span>`;
+      }
+      if (category === 'סלטים') {
+        return `<span class="category-icon-salad ${cls}">${SALAD_ICON_SVG}</span>`;
+      }
+      if (category === 'דגים') {
+        return `<span class="category-icon-fish ${cls}">${FISH_ICON_SVG}</span>`;
+      }
+      return `<span class="material-symbols-outlined ${cls}">${getCategoryIcon(category)}</span>`;
     }
 
     function getCategoryColorClass(category) {
@@ -4020,7 +4108,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       allButton.setAttribute('data-category', 'all');
       allButton.innerHTML = `
         <div class="glass-btn-3d category-bg-${allBgColor} ${allIsActive ? 'active' : ''}">
-          <span class="material-symbols-outlined ${allColorClass}">${getCategoryIcon('כל הקטגוריות')}</span>
+          ${getCategoryIconHtml('כל הקטגוריות', allColorClass)}
         </div>
         <span>כל הקטגוריות</span>
       `;
@@ -4036,7 +4124,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         const bgColor = getCategoryBgColor(category);
         button.innerHTML = `
           <div class="glass-btn-3d category-bg-${bgColor} ${isActive ? 'active' : ''}">
-            <span class="material-symbols-outlined ${colorClass}">${getCategoryIcon(category)}</span>
+            ${getCategoryIconHtml(category, colorClass)}
           </div>
           <span>${category}</span>
         `;
@@ -4046,8 +4134,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     function getUniqueCategories() {
-      const categories = recipes.map(recipe => recipe.category);
-      return [...new Set(categories)];
+      const normalized = recipes.map(recipe => (recipe.category === 'מנה עיקרית' ? 'מנות עיקריות' : recipe.category));
+      return [...new Set(normalized)];
     }
 
     function editRecipe(index) {
@@ -4072,7 +4160,17 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       populateIngredientRows(recipe.ingredients || '');
       document.getElementById('instructions').value = recipe.instructions || '';
       document.getElementById('preparationTime').value = recipe.preparationTime || '';
+      populateCategorySelectAndDropdown();
       document.getElementById('category').value = recipe.category || 'שונות';
+      updateCategoryTriggerDisplay();
+      const categoryTriggerEdit = document.getElementById('categoryTrigger');
+      if (categoryTriggerEdit) {
+          categoryTriggerEdit.onclick = function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleCategoryDropdown();
+          };
+      }
       document.getElementById('notes').value = recipe.notes || '';
       document.getElementById('recipeVideo').value = recipe.videoUrl || '';
       document.getElementById('recipeLink').value = recipe.recipeLink || '';
@@ -4330,21 +4428,22 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     })();
 
     function toggleCategoryInput() {
-        const select = document.getElementById('category');
+        const categoryWrap = document.getElementById('categoryDropdownWrap');
         const newCategoryInput = document.getElementById('newCategory');
         const toggleButton = document.getElementById('toggleNewCategory');
+        const select = document.getElementById('category');
 
         if (newCategoryInput.style.display === 'none') {
-            select.style.display = 'none';
+            if (categoryWrap) categoryWrap.style.display = 'none';
             newCategoryInput.style.display = 'block';
             if (toggleButton) toggleButton.innerHTML = 'חזור לרשימת הקטגוריות';
-            select.required = false;
+            if (select) select.required = false;
             newCategoryInput.required = true;
         } else {
-            select.style.display = 'block';
+            if (categoryWrap) categoryWrap.style.display = '';
             newCategoryInput.style.display = 'none';
             if (toggleButton) toggleButton.innerHTML = '<span class="material-symbols-outlined">add</span>';
-            select.required = true;
+            if (select) select.required = true;
             newCategoryInput.required = false;
             newCategoryInput.value = '';
         }
