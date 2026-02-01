@@ -699,7 +699,27 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         
         card.appendChild(infoOverlay);
 
-        // כפתורי הפעולה (ערוך, שתף, מחק וכו') מוצגים רק בחלון המתכון (popup) – לא על הכרטיס בדף הראשי
+        // כפתורי פעולה על הכרטיס (מוצגים במרחף) – stopPropagation כדי שלחיצה על כפתור לא תפתח את המתכון
+        const actionsOverlay = document.createElement('div');
+        actionsOverlay.className = 'action-buttons-overlay';
+        actionsOverlay.innerHTML = `
+          <button type="button" class="recipe-action-btn" onclick="event.stopPropagation(); editRecipe(${actualIndex})" title="ערוך">
+            <span class="material-symbols-outlined">edit</span>
+          </button>
+          <button type="button" class="recipe-action-btn" onclick="event.stopPropagation(); confirmDeleteRecipe(${actualIndex})" title="מחק">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+          <button type="button" class="recipe-action-btn" onclick="event.stopPropagation(); copyRecipeLink(${actualIndex})" title="העתק קישור">
+            <span class="material-symbols-outlined">link</span>
+          </button>
+          <button type="button" class="recipe-action-btn" onclick="event.stopPropagation(); shareRecipe(${actualIndex})" title="שתף">
+            <span class="material-symbols-outlined">share</span>
+          </button>
+          <button type="button" class="recipe-action-btn" onclick="event.stopPropagation(); downloadRecipe(${actualIndex})" title="הורד">
+            <span class="material-symbols-outlined">download</span>
+          </button>
+        `;
+        card.appendChild(actionsOverlay);
 
         // הוספת הכרטיס למיכל
         container.appendChild(card);
