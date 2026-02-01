@@ -365,7 +365,15 @@
                   קטגוריה
                 </span>
                 <div class="form-category-inline">
-                  <select id="category" class="form-add-recipe-select-inline">
+                  <div id="categoryDropdownWrap" class="form-category-dropdown-wrap">
+                    <button type="button" class="form-category-trigger" id="categoryTrigger" onclick="event.stopPropagation(); toggleCategoryDropdown();" aria-haspopup="listbox" aria-expanded="false" aria-label="בחירת קטגוריה">
+                      <span class="material-symbols-outlined form-category-trigger-icon" id="categoryTriggerIcon">category</span>
+                      <span class="form-category-trigger-text" id="categoryTriggerText">בחירת קטגוריה</span>
+                      <span class="material-symbols-outlined form-category-trigger-arrow">expand_more</span>
+                    </button>
+                    <div id="categoryDropdownList" class="form-category-dropdown" role="listbox" aria-hidden="true"></div>
+                  </div>
+                  <select id="category" class="form-add-recipe-select-inline form-category-select-hidden" aria-hidden="true" tabindex="-1">
                     <option value="" disabled selected>בחירת קטגוריה</option>
                   </select>
                   <button type="button" class="form-category-add-btn" onclick="toggleCategoryInput()" id="toggleNewCategory" title="קטגוריה חדשה">
