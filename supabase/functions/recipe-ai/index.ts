@@ -6,6 +6,10 @@ const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 
 const CATEGORIES = ["לחמים", "מרקים", "מנה עיקרית", "תוספות", "סלטים", "שונות", "עוגות", "קינוחים"];
 
+// Module-level cache for recipes - persists across requests within the same cold-start instance
+const RECIPES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let recipesCache: { data: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]; fetchedAt: number } | null = null;
+
 // Map Hebrew categories to English for better image generation prompts
 const CATEGORY_EN: Record<string, string> = {
   "לחמים": "bread and baked goods",
@@ -389,6 +393,7 @@ Deno.serve(async (req: Request) => {
         { status: 200, headers: jsonHeaders }
       );
     }
+    recipesCache = null; // invalidate cache after insert
     const insertedRecipeId = inserted?.id ?? null;
     console.log("Recipe inserted (button):", insertedRecipeId);
     return new Response(
@@ -416,15 +421,23 @@ Deno.serve(async (req: Request) => {
 
   let recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[];
   if (supabaseAdmin) {
-    const { data: recipesFromDb } = await supabaseAdmin.from("recipes").select("id, name, category, ingredients, instructions, rating").order("created_at", { ascending: true });
-    recipes = (recipesFromDb || []).map((r: { id: string; name?: string; category?: string; ingredients?: string; instructions?: string; rating?: number }) => ({
-      id: r.id,
-      name: r.name || "",
-      category: r.category || "שונות",
-      ingredients: (r.ingredients || "").slice(0, 250),
-      instructions: (r.instructions || "").slice(0, 250),
-      rating: r.rating ?? 0
-    }));
+    const now = Date.now();
+    if (recipesCache && (now - recipesCache.fetchedAt) < RECIPES_CACHE_TTL_MS) {
+      recipes = recipesCache.data;
+      console.log("[recipe-ai] Using cached recipes:", recipes.length);
+    } else {
+      const { data: recipesFromDb } = await supabaseAdmin.from("recipes").select("id, name, category, ingredients, instructions, rating").order("created_at", { ascending: true }).limit(500);
+      recipes = (recipesFromDb || []).map((r: { id: string; name?: string; category?: string; ingredients?: string; instructions?: string; rating?: number }) => ({
+        id: r.id,
+        name: r.name || "",
+        category: r.category || "שונות",
+        ingredients: (r.ingredients || "").slice(0, 250),
+        instructions: (r.instructions || "").slice(0, 250),
+        rating: r.rating ?? 0
+      }));
+      recipesCache = { data: recipes, fetchedAt: now };
+      console.log("[recipe-ai] Fetched recipes from DB:", recipes.length);
+    }
   } else {
     recipes = Array.isArray(body?.recipes) ? body.recipes : [];
   }
@@ -546,6 +559,7 @@ Deno.serve(async (req: Request) => {
         console.error("Failed to insert recipe:", error);
         insertionError = `שגיאה בהוספת המתכון: ${error.message}. המתכון יוצג בטופס לשמירה ידנית.`;
       } else if (inserted?.id) {
+        recipesCache = null; // invalidate cache after insert
         insertedRecipeId = inserted.id;
         console.log("Recipe inserted successfully:", insertedRecipeId);
       }
