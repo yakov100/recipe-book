@@ -71,7 +71,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     const CACHE_META_KEY = 'recipes_cache_meta';
     const CACHE_VERSION_KEY = 'recipes_cache_version';
     const CURRENT_CACHE_VERSION = '1.0.2'; // Update this when cache structure changes
-    const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 דקות
+    const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 דקות
 
     // אייקון SVG לסוכריה עטופה (ממתקים) – גוף אליפסה, קצוות מפותלים בולטים, פסים אלכסוניים
     const CANDY_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><ellipse cx="12" cy="12" rx="5" ry="3" fill="currentColor"/><circle cx="5.5" cy="12" r="2.8" fill="currentColor"/><circle cx="18.5" cy="12" r="2.8" fill="currentColor"/><line x1="8" y1="14.5" x2="11" y2="9.5" stroke="currentColor" stroke-width=".8" opacity=".85"/><line x1="12" y1="14.2" x2="15" y2="9.8" stroke="currentColor" stroke-width=".8" opacity=".85"/><line x1="16" y1="13.8" x2="19" y2="10.2" stroke="currentColor" stroke-width=".8" opacity=".85"/></svg>';
@@ -258,7 +258,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         try {
             const { data, error } = await supabase
                 .from('recipes')
-                .select('*')
+                .select('id,name,source,ingredients,instructions,category,dietary_type,notes,rating,difficulty,recipe_link,video_url,preparation_time,image_path,created_at')
                 .eq('id', recipeId)
                 .single();
 
@@ -422,7 +422,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             setupPopupCloseOnOverlayClick();
             initDietaryDropdown();
 
-            // שלב 2: טעינה מהשרת (תמיד, כדי לקבל תמונות ועדכונים)
+            // שלב 2: טעינה מהשרת רק אם ה-cache לא תקף
             const loadFromServer = async () => {
                 try {
                     const freshRecipes = await loadRecipesFromDB();
@@ -442,11 +442,15 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                 }
             };
 
-            if (cachedRecipes && cachedRecipes.length > 0) {
-                // אם יש cache, טען מהשרת ברקע
+            if (cachedRecipes && cachedRecipes.length > 0 && isCacheValid()) {
+                // cache תקף – אין צורך לפנות לשרת
+                console.log('[loadRecipesAndDisplay] Cache is fresh, skipping server fetch');
+                migrateLegacyBase64ToStorage();
+            } else if (cachedRecipes && cachedRecipes.length > 0) {
+                // cache קיים אך פג תוקפו – רענן ברקע
                 loadFromServer();
             } else {
-                // אם אין cache, חכה לטעינה מהשרת
+                // אין cache – חכה לטעינה מהשרת
                 await loadFromServer();
             }
 
@@ -2366,8 +2370,29 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
         if (data && data.insertedRecipeId) {
           removeAddingIndicator();
-          recipes = await loadRecipesFromDB();
+          // Add the new recipe to the local array and update cache without a full DB refetch
+          var newRecipeRow = data.suggestedRecipe || {};
+          var newRecipe = {
+            id: data.insertedRecipeId,
+            name: newRecipeRow.name || sr.name || '',
+            source: newRecipeRow.source || sr.source || 'נוצר על ידי AI',
+            ingredients: newRecipeRow.ingredients || sr.ingredients || '',
+            instructions: newRecipeRow.instructions || sr.instructions || '',
+            category: newRecipeRow.category || sr.category || 'שונות',
+            dietaryType: null,
+            notes: null,
+            rating: 0,
+            difficulty: null,
+            imagePath: newRecipeRow.image_path || null,
+            image: null,
+            recipeLink: null,
+            videoUrl: null,
+            preparationTime: null
+          };
           if (!Array.isArray(recipes)) recipes = [];
+          recipes = recipes.filter(function(r) { return r && r.id !== data.insertedRecipeId; });
+          recipes.push(newRecipe);
+          saveRecipesToCache(recipes);
           m.recipeAdded = true;
           m.addedRecipeId = data.insertedRecipeId;
           pendingSuggestedRecipe = null;
@@ -2969,8 +2994,29 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             // Recipe was confirmed and inserted to DB
             pendingSuggestedRecipe = null;
             closeAiChat();
-            recipes = await loadRecipesFromDB();
+            // Update local array and cache without a full DB refetch
+            var aiNewRecipeRow = (data.suggestedRecipe && typeof data.suggestedRecipe === 'object') ? data.suggestedRecipe : {};
+            var aiNewRecipe = {
+              id: data.insertedRecipeId,
+              name: aiNewRecipeRow.name || '',
+              source: aiNewRecipeRow.source || 'נוצר על ידי AI',
+              ingredients: aiNewRecipeRow.ingredients || '',
+              instructions: aiNewRecipeRow.instructions || '',
+              category: aiNewRecipeRow.category || 'שונות',
+              dietaryType: null,
+              notes: null,
+              rating: 0,
+              difficulty: null,
+              imagePath: aiNewRecipeRow.image_path || null,
+              image: null,
+              recipeLink: null,
+              videoUrl: null,
+              preparationTime: null
+            };
             if (!Array.isArray(recipes)) recipes = [];
+            recipes = recipes.filter(function(r) { return r && r.id !== data.insertedRecipeId; });
+            recipes.push(aiNewRecipe);
+            saveRecipesToCache(recipes);
             filterRecipes();
             updateCategoryList();
             updateCategoryButtons();
