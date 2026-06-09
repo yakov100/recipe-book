@@ -25,6 +25,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     let currentConversationId = null;
     let conversationHistory = [];
     let chatAttachments = [];
+    let chatClosedAt = null;
+    const CHAT_RESUME_THRESHOLD_MS = 10 * 60 * 1000;
     let pendingSuggestedRecipe = null; // Stores recipe waiting for user confirmation
     let isSharedRecipeMode = false; // Track if loaded via shared link
 
@@ -419,6 +421,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         aiChatMessages = [];
         currentConversationId = null;
         conversationHistory = [];
+        chatClosedAt = null;
         pendingSuggestedRecipe = null;
         isSharedRecipeMode = false;
         const container = document.getElementById('recipesContainer');
@@ -2809,36 +2812,34 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       return date.toLocaleDateString('he-IL');
     }
 
-    function renderConversationHistory() {
-      // Update the select dropdown
-      const selectEl = document.getElementById('aiChatHistorySelect');
-      if (!selectEl) return;
+    function showChatView(view) {
+      const homeView = document.getElementById('aiChatHomeView');
+      const threadView = document.getElementById('aiChatThreadView');
+      if (!homeView || !threadView) return;
 
-      // Clear existing options except the first one (new chat)
-      selectEl.innerHTML = '<option value="new">שיחה חדשה - מה מבשלים היום?</option>';
+      const isHome = view === 'home';
+      homeView.classList.toggle('ai-chat-view-active', isHome);
+      threadView.classList.toggle('ai-chat-view-active', !isHome);
 
-      conversationHistory.forEach(function(conv) {
-        const option = document.createElement('option');
-        option.value = conv.id;
-        option.textContent = (conv.title || 'שיחה ללא כותרת') + ' (' + formatRelativeDate(conv.updated_at) + ')';
-        if (conv.id === currentConversationId) {
-          option.selected = true;
-        }
-        selectEl.appendChild(option);
-      });
-    }
-
-    // Load conversation from select dropdown
-    async function loadSelectedConversation(value) {
-      if (value === 'new') {
-        await startNewConversation();
+      if (isHome) {
+        homeView.setAttribute('aria-hidden', 'false');
+        threadView.setAttribute('aria-hidden', 'true');
       } else {
-        await loadPastConversation(value);
+        homeView.setAttribute('aria-hidden', 'true');
+        threadView.setAttribute('aria-hidden', 'false');
+        updateThreadTitle();
       }
     }
-    window.loadSelectedConversation = loadSelectedConversation;
 
-    function renderConversationHistoryOld() {
+    function updateThreadTitle() {
+      const titleEl = document.getElementById('aiChatThreadTitle');
+      if (!titleEl) return;
+
+      const conv = conversationHistory.find(function(c) { return c.id === currentConversationId; });
+      titleEl.textContent = conv && conv.title ? conv.title : 'שיחה חדשה';
+    }
+
+    function renderConversationList() {
       const listEl = document.getElementById('aiChatHistoryList');
       if (!listEl) return;
 
@@ -2847,15 +2848,22 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       if (conversationHistory.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'history-empty';
-        empty.textContent = 'אין שיחות קודמות';
+        empty.textContent = 'אין שיחות עדיין — התחילו שיחה חדשה';
         listEl.appendChild(empty);
         return;
       }
 
       conversationHistory.forEach(function(conv) {
-        const item = document.createElement('div');
+        const item = document.createElement('button');
+        item.type = 'button';
         item.className = 'history-item' + (conv.id === currentConversationId ? ' active' : '');
         item.onclick = function() { loadPastConversation(conv.id); };
+
+        const row = document.createElement('div');
+        row.className = 'history-item-row';
+
+        const main = document.createElement('div');
+        main.className = 'history-item-main';
 
         const title = document.createElement('div');
         title.className = 'history-item-title';
@@ -2863,17 +2871,26 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
         const preview = document.createElement('div');
         preview.className = 'history-item-preview';
-        preview.textContent = conv.last_message_preview || '';
+        preview.textContent = conv.last_message_preview || 'אין הודעות עדיין';
+
+        main.appendChild(title);
+        main.appendChild(preview);
 
         const date = document.createElement('div');
         date.className = 'history-item-date';
         date.textContent = formatRelativeDate(conv.updated_at);
 
-        item.appendChild(title);
-        item.appendChild(preview);
-        item.appendChild(date);
+        row.appendChild(main);
+        row.appendChild(date);
+        item.appendChild(row);
         listEl.appendChild(item);
       });
+    }
+
+    async function goBackToChatHome() {
+      conversationHistory = await loadConversationHistory();
+      renderConversationList();
+      showChatView('home');
     }
 
     async function loadPastConversation(conversationId) {
@@ -2890,11 +2907,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         return applyMessageMetadata(message, m.metadata);
       });
       renderAiChatMessages();
-      renderConversationHistory();
+      renderConversationList();
+      showChatView('thread');
+      clearAttachmentPreview();
 
-      // Hide history dropdown after selecting conversation
-      const history = document.getElementById('aiChatHistory');
-      if (history) history.style.display = 'none';
+      var input = document.getElementById('aiChatInput');
+      if (input) input.focus();
+      var sendBtn = document.getElementById('aiChatSend');
+      if (sendBtn) sendBtn.disabled = false;
     }
 
     async function startNewConversation() {
@@ -2909,32 +2929,13 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       });
 
       conversationHistory = await loadConversationHistory();
-      renderConversationHistory();
+      renderConversationList();
       renderAiChatMessages();
       clearAttachmentPreview();
-
-      // Hide history dropdown after starting new conversation
-      const history = document.getElementById('aiChatHistory');
-      if (history) history.style.display = 'none';
+      showChatView('thread');
 
       var input = document.getElementById('aiChatInput');
       if (input) input.focus();
-    }
-
-    function toggleChatHistory() {
-      const history = document.getElementById('aiChatHistory');
-      if (history) {
-        // Toggle display for dropdown style
-        if (history.style.display === 'none' || !history.style.display) {
-          history.style.display = 'block';
-          loadConversationHistory().then(function(list) {
-            conversationHistory = list;
-            renderConversationHistory();
-          });
-        } else {
-          history.style.display = 'none';
-        }
-      }
     }
 
     function toggleChatMenu() {
@@ -3053,11 +3054,16 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       if (ov) ov.style.display = 'flex';
       initVoiceButton();
 
-      conversationHistory = await loadConversationHistory();
-      renderConversationHistory();
+      const shouldResume =
+        currentConversationId &&
+        aiChatMessages.length > 0 &&
+        chatClosedAt &&
+        Date.now() - chatClosedAt < CHAT_RESUME_THRESHOLD_MS;
 
-      // Resume the current session if the user only closed the overlay
-      if (currentConversationId && aiChatMessages.length > 0) {
+      if (shouldResume) {
+        conversationHistory = await loadConversationHistory();
+        renderConversationList();
+        showChatView('thread');
         renderAiChatMessages();
         clearAttachmentPreview();
         var resumedInput = document.getElementById('aiChatInput');
@@ -3067,25 +3073,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         return;
       }
 
-      // Otherwise restore the most recent conversation from history
-      if (conversationHistory.length > 0) {
-        await loadPastConversation(conversationHistory[0].id);
-        clearAttachmentPreview();
-        var restoredInput = document.getElementById('aiChatInput');
-        if (restoredInput) restoredInput.focus();
-        var restoredSendBtn = document.getElementById('aiChatSend');
-        if (restoredSendBtn) restoredSendBtn.disabled = false;
-        return;
-      }
-
-      await startNewConversation();
-      var input = document.getElementById('aiChatInput');
-      if (input) {
-        input.value = '';
-        input.focus();
-      }
-      var sendBtn = document.getElementById('aiChatSend');
-      if (sendBtn) sendBtn.disabled = false;
+      conversationHistory = await loadConversationHistory();
+      renderConversationList();
+      showChatView('home');
     }
 
     function closeAiChat() {
@@ -3093,6 +3083,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         aiChatAbortController.abort();
         aiChatAbortController = null;
       }
+      chatClosedAt = Date.now();
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'none';
     }
@@ -3795,7 +3786,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     window.toggleVoiceRecording = toggleVoiceRecording;
     window.regenerateImage = regenerateImage;
     window.startNewConversation = startNewConversation;
-    window.toggleChatHistory = toggleChatHistory;
+    window.goBackToChatHome = goBackToChatHome;
     window.handleChatFileSelect = handleChatFileSelect;
 
     // Timer functionality

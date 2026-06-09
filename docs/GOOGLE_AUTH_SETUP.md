@@ -47,10 +47,15 @@ http://localhost:3000/
 http://localhost:3000/**
 http://localhost:3001/
 http://localhost:3001/**
+http://localhost:3002/
+http://localhost:3002/**
+http://localhost:5173/
+http://localhost:5173/**
 https://recipe-book-gh-pages.vercel.app/
 https://recipe-book-gh-pages.vercel.app/**
 https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/
 https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/**
+https://*.vercel.app/**
 https://yakov100.github.io/recipe-book/
 https://yakov100.github.io/recipe-book/**
 ```

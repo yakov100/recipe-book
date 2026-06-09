@@ -12,13 +12,93 @@ export const RECIPE_BOOK_OAUTH_REDIRECT_URLS = [
     'http://localhost:3000/**',
     'http://localhost:3001/',
     'http://localhost:3001/**',
+    'http://localhost:3002/',
+    'http://localhost:3002/**',
+    'http://localhost:5173/',
+    'http://localhost:5173/**',
     'https://recipe-book-gh-pages.vercel.app/',
     'https://recipe-book-gh-pages.vercel.app/**',
     'https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/',
     'https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/**',
+    'https://*.vercel.app/**',
     'https://yakov100.github.io/recipe-book/',
     'https://yakov100.github.io/recipe-book/**',
 ];
+
+/**
+ * @param {string} pattern
+ * @returns {RegExp}
+ */
+function redirectPatternToRegExp(pattern) {
+    const escaped = pattern
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*\*/g, '___DOUBLE_WILD___')
+        .replace(/\*/g, '[^/]*')
+        .replace(/___DOUBLE_WILD___/g, '.*');
+    return new RegExp(`^${escaped}$`);
+}
+
+/**
+ * @param {string} url
+ * @returns {boolean}
+ */
+export function isOAuthRedirectUrlAllowed(url) {
+    return RECIPE_BOOK_OAUTH_REDIRECT_URLS.some((pattern) =>
+        redirectPatternToRegExp(pattern).test(url)
+    );
+}
+
+/**
+ * @param {string} baseUrl
+ * @param {string} queryString without leading ?
+ * @returns {string}
+ */
+function withOptionalQuery(baseUrl, queryString) {
+    const normalized = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    return queryString ? `${normalized}?${queryString}` : normalized;
+}
+
+/**
+ * URL Supabase should return to after Google OAuth (must be in Supabase Redirect URLs).
+ * Prefers allowlisted URLs so Supabase does not fall back to shared Site URL (Housing_units).
+ * @returns {string}
+ */
+export function getOAuthRedirectUrl() {
+    if (typeof window === 'undefined') return RECIPE_BOOK_PRODUCTION_URL;
+
+    const { origin, pathname, search, hostname } = window.location;
+    const params = new URLSearchParams(search);
+    for (const key of ['code', 'error', 'error_description', 'error_code']) {
+        params.delete(key);
+    }
+    const qs = params.toString();
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        const path = pathname && pathname.length > 0 ? pathname : '/';
+        const localUrl = origin + path + (qs ? `?${qs}` : '');
+        if (isOAuthRedirectUrlAllowed(localUrl)) {
+            return localUrl;
+        }
+        return withOptionalQuery('http://localhost:3000', qs);
+    }
+
+    if (hostname === 'yakov100.github.io' && pathname.startsWith('/recipe-book')) {
+        return withOptionalQuery('https://yakov100.github.io/recipe-book', qs);
+    }
+
+    // Vercel previews use varying hostnames — always return canonical production URL.
+    if (hostname.endsWith('.vercel.app')) {
+        return withOptionalQuery(RECIPE_BOOK_PRODUCTION_URL, qs);
+    }
+
+    const path = pathname && pathname.length > 0 ? pathname : '/';
+    const currentUrl = origin + path + (qs ? `?${qs}` : '');
+    if (isOAuthRedirectUrlAllowed(currentUrl)) {
+        return currentUrl;
+    }
+
+    return withOptionalQuery(RECIPE_BOOK_PRODUCTION_URL, qs);
+}
 
 /** @type {import('@supabase/supabase-js').User | null} */
 let currentUser = null;
@@ -34,37 +114,6 @@ export function getCurrentUser() {
 /** @returns {boolean} */
 export function isAuthenticated() {
     return currentUser != null;
-}
-
-/**
- * URL Supabase should return to after Google OAuth (must be in Supabase Redirect URLs).
- * Uses current origin + path so recipe-book works on localhost and GitHub Pages subpath.
- * @returns {string}
- */
-export function getOAuthRedirectUrl() {
-    if (typeof window === 'undefined') return RECIPE_BOOK_PRODUCTION_URL;
-    const { origin, pathname, search, hostname } = window.location;
-    const params = new URLSearchParams(search);
-    for (const key of ['code', 'error', 'error_description', 'error_code']) {
-        params.delete(key);
-    }
-    const qs = params.toString();
-
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        const path = pathname && pathname.length > 0 ? pathname : '/';
-        return origin + path + (qs ? `?${qs}` : '');
-    }
-
-    if (hostname.endsWith('.vercel.app') && hostname.includes('recipe-book')) {
-        return origin + '/' + (qs ? `?${qs}` : '');
-    }
-
-    if (hostname === 'yakov100.github.io' && pathname.startsWith('/recipe-book')) {
-        return 'https://yakov100.github.io/recipe-book/' + (qs ? `?${qs}` : '');
-    }
-
-    const path = pathname && pathname.length > 0 ? pathname : '/';
-    return origin + path + (qs ? `?${qs}` : '');
 }
 
 /**
@@ -171,6 +220,16 @@ export async function signInWithGoogle() {
     }
     const redirectTo = getOAuthRedirectUrl();
     console.info('[auth] OAuth redirectTo (must be in Supabase Redirect URLs):', redirectTo);
+    if (!isOAuthRedirectUrlAllowed(redirectTo)) {
+        console.warn('[auth] redirectTo is not in RECIPE_BOOK_OAUTH_REDIRECT_URLS — Supabase may redirect to Housing_units Site URL');
+        alert(
+            'כתובת החזרה אחרי Google לא מוגדרת ב-Supabase.\n' +
+            'הוסף ל-Redirect URLs:\n' +
+            redirectTo +
+            '\n\n(ראה docs/GOOGLE_AUTH_SETUP.md)'
+        );
+        return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

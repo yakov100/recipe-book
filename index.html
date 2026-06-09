@@ -84,7 +84,7 @@
   </script>
   
   <!-- Custom Styles (?v= forces browser to load latest in dev) -->
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
   <link rel="stylesheet" href="styles/timer.css">
   
   <script>
@@ -540,59 +540,75 @@
   </div>
 
   <!-- פאנל צ'אט AI - עיצוב סמארטפון מודרני -->
-  <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
+  <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;" onclick="if(event.target===this)closeAiChat()">
     <div class="ai-chat-container ai-chat-phone">
       <div class="ai-chat-panel">
-        <!-- Header -->
-        <div class="ai-chat-header">
-          <div class="ai-chat-header-top">
-            <div class="ai-chat-header-info">
+        <!-- Home: רשימת שיחות -->
+        <div class="ai-chat-view ai-chat-view-active" id="aiChatHomeView">
+          <div class="ai-chat-home-header">
+            <div class="ai-chat-home-header-info">
               <div class="ai-chat-header-avatar">
                 <img src="chef-serving.png" alt="שף" class="ai-chat-header-chef-img">
               </div>
-              <div class="ai-chat-header-text">
-                <h3>AI עוזר בישול</h3>
+              <div class="ai-chat-home-header-text">
+                <h3>שיחות עם השף</h3>
+                <p>בחרו שיחה או התחילו חדשה</p>
+              </div>
+            </div>
+            <button type="button" class="ai-chat-close-btn" onclick="closeAiChat()" title="סגור" aria-label="סגור צ'אט">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="ai-chat-home-body">
+            <button type="button" class="ai-chat-new-btn" onclick="startNewConversation()">
+              <span class="material-symbols-outlined">edit_square</span>
+              <span>שיחה חדשה</span>
+            </button>
+            <div class="ai-chat-home-section-label">שיחות אחרונות</div>
+            <div class="ai-chat-history-list" id="aiChatHistoryList"></div>
+          </div>
+        </div>
+
+        <!-- Thread: שיחה פעילה -->
+        <div class="ai-chat-view" id="aiChatThreadView">
+          <div class="ai-chat-header ai-chat-thread-header">
+            <div class="ai-chat-header-top">
+              <button type="button" class="ai-chat-back-btn" onclick="goBackToChatHome()" title="חזרה לרשימה" aria-label="חזרה לרשימת שיחות">
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </button>
+              <div class="ai-chat-header-info ai-chat-thread-title-wrap">
+                <h3 id="aiChatThreadTitle">שיחה חדשה</h3>
                 <div class="ai-chat-header-status">
                   <span class="status-dot"></span>
                   <span>מחובר ומוכן לעזור</span>
                 </div>
               </div>
+              <button type="button" class="ai-chat-close-btn" onclick="closeAiChat()" title="סגור" aria-label="סגור צ'אט">
+                <span class="material-symbols-outlined">close</span>
+              </button>
             </div>
           </div>
-          <!-- History Dropdown -->
-          <div class="ai-chat-history-select-wrapper">
-            <label>היסטוריית שיחות</label>
-            <div class="ai-chat-history-select">
-              <select id="aiChatHistorySelect" onchange="loadSelectedConversation(this.value)">
-                <option value="new">שיחה חדשה - מה מבשלים היום?</option>
-              </select>
-              <span class="material-symbols-outlined select-arrow">expand_more</span>
+
+          <div class="ai-chat-messages" id="aiChatMessages"></div>
+
+          <div class="ai-chat-attachments" id="aiChatAttachments" style="display: none;"></div>
+
+          <div class="ai-chat-input-area">
+            <div class="ai-chat-input-row">
+              <button type="button" id="aiChatAttach" onclick="document.getElementById('aiChatFileInput').click()" title="צרף תמונה">
+                <span class="material-symbols-outlined">attach_file</span>
+              </button>
+              <input type="text" id="aiChatInput" placeholder="הקלד כאן..." onkeydown="if(event.key==='Enter')sendAiMessage()">
+              <button type="button" id="aiChatVoice" title="הקלט קול">
+                <span class="material-symbols-outlined">mic</span>
+              </button>
+              <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח">
+                <span class="material-symbols-outlined">send</span>
+              </button>
+              <input type="file" id="aiChatFileInput" accept="image/*" multiple style="display: none;" onchange="handleChatFileSelect(event)">
             </div>
+            <p class="ai-chat-input-helper" id="aiChatInputHelper">ה-AI עשוי להציע שילובים יצירתיים, בדקו תמיד את זמני הבישול.</p>
           </div>
-        </div>
-
-        <!-- Messages -->
-        <div class="ai-chat-messages" id="aiChatMessages"></div>
-
-        <!-- Attachments Preview -->
-        <div class="ai-chat-attachments" id="aiChatAttachments" style="display: none;"></div>
-
-        <!-- Input Area -->
-        <div class="ai-chat-input-area">
-          <div class="ai-chat-input-row">
-            <button type="button" id="aiChatAttach" onclick="document.getElementById('aiChatFileInput').click()" title="צרף תמונה">
-              <span class="material-symbols-outlined">attach_file</span>
-            </button>
-            <input type="text" id="aiChatInput" placeholder="הקלד כאן..." onkeydown="if(event.key==='Enter')sendAiMessage()">
-            <button type="button" id="aiChatVoice" title="הקלט קול">
-              <span class="material-symbols-outlined">mic</span>
-            </button>
-            <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח">
-              <span class="material-symbols-outlined">send</span>
-            </button>
-            <input type="file" id="aiChatFileInput" accept="image/*" multiple style="display: none;" onchange="handleChatFileSelect(event)">
-          </div>
-          <p class="ai-chat-input-helper" id="aiChatInputHelper">ה-AI עשוי להציע שילובים יצירתיים, בדקו תמיד את זמני הבישול.</p>
         </div>
       </div>
     </div>
@@ -619,6 +635,6 @@
 
   <!-- ספריה חיצונית ל-OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
-  <script type="module" src="js/main.js?v=8"></script>
+  <script type="module" src="js/main.js?v=9"></script>
 </body>
 </html>
