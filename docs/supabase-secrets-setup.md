@@ -3,9 +3,9 @@
 ## הקישור הישיר לפרויקט ב-Supabase
 
 **דף ה-Secrets (הוספת מפתחות):**  
-https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions
+https://supabase.com/dashboard/project/nuaepmndtblpmzbutowy/settings/functions
 
-(זה הפרויקט שמחובר לאתר ספר המתכונים – `nklwzunoipplfkysaztl`.)
+(זה הפרויקט שמחובר לאתר ספר המתכונים – `nuaepmndtblpmzbutowy`.)
 
 ---
 
@@ -18,7 +18,7 @@ https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions
    → **Create API Key** → העתק את המפתח.
 
 2. **להוסיף ב-Supabase:**  
-   פתח: https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions  
+   פתח: https://supabase.com/dashboard/project/nuaepmndtblpmzbutowy/settings/functions  
    → גלול ל-**Edge Function Secrets** (או **Secrets**)  
    → **Add new secret** / **New secret**  
    - **Name:** `GEMINI_API_KEY`  
@@ -61,9 +61,9 @@ https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions
    - **צ'אט AI** → רוב הסיכויים: `GEMINI_API_KEY` חסר או שגוי. כעת האתר מציג את הודעת השגיאה מהשרת – קרא מה כתוב בתשובת ה-AI.
 
 2. **הודעות נפוצות בצ'אט**  
-   - *"נא להגדיר GEMINI_API_KEY ב-Supabase Secrets"* → הוסף את המפתח [בדף ה-Secrets](https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions).  
+   - *"נא להגדיר GEMINI_API_KEY ב-Supabase Secrets"* → הוסף את המפתח [בדף ה-Secrets](https://supabase.com/dashboard/project/nuaepmndtblpmzbutowy/settings/functions).  
    - *"לא ניתן להתחבר ל-AI"* → בעיית רשת או CORS; נסה דפדפן/רשת אחרת.  
-   - *"מפתח ה-API של Gemini לא תקף או חסר"* → הוסף או עדכן GEMINI_API_KEY [בדף ה-Secrets](https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/settings/functions); צור מפתח ב-[Google AI Studio](https://aistudio.google.com/apikey).  
+   - *"מפתח ה-API של Gemini לא תקף או חסר"* → הוסף או עדכן GEMINI_API_KEY [בדף ה-Secrets](https://supabase.com/dashboard/project/nuaepmndtblpmzbutowy/settings/functions); צור מפתח ב-[Google AI Studio](https://aistudio.google.com/apikey).  
    - *"אין הרשאה לשימוש ב-Gemini"* → המפתח חסום או מוגבל; בדוק הגבלות ב-Google AI Studio.  
    - *"חרגת ממכסת הבקשות"* → חכה כמה דקות ונסה שוב.  
    - *"לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות"* → שגיאה כללית מ-Gemini; בדוק לוגי ה-Edge Function ב-Supabase.

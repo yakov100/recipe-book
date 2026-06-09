@@ -12,7 +12,7 @@
     "generate-default-images": "node scripts/generate-default-images.mjs",
     "prepare-chef-masters": "node scripts/prepare-chef-masters.mjs",
     "generate-app-icons": "node scripts/generate-app-icons.mjs",
-    "deploy:functions": "npx supabase functions deploy recipe-ai regenerate-image --project-ref nklwzunoipplfkysaztl --use-api --import-map supabase/functions/deno.json",
+    "deploy:functions": "npx supabase functions deploy recipe-ai regenerate-image --project-ref nuaepmndtblpmzbutowy --use-api --import-map supabase/functions/deno.json",
     "preview": "vite preview",
     "deploy": "npm run build && git add dist && git commit -m \"chore: rebuild dist\" && git push origin main"
   },

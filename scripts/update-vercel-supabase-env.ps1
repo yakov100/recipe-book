@@ -6,7 +6,7 @@
 param(
     [string]$ProjectName = "recipe-book-gh-pages",
     [string]$TeamId = "team_FSL9SZgVqM9VPGXjNIzsBD45",
-    [string]$SupabaseProjectRef = "nklwzunoipplfkysaztl",
+    [string]$SupabaseProjectRef = "nuaepmndtblpmzbutowy",
     [string]$AnonKey = "",
     [switch]$DisableLegacyKeys
 )

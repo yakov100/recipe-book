@@ -94,7 +94,7 @@ npm run deploy:functions
 או ידנית:
 
 ```bash
-npx supabase functions deploy recipe-ai regenerate-image --project-ref nklwzunoipplfkysaztl --use-api --import-map supabase/functions/deno.json
+npx supabase functions deploy recipe-ai regenerate-image --project-ref nuaepmndtblpmzbutowy --use-api --import-map supabase/functions/deno.json
 ```
 
 אם ה-CLI נכשל על `.env.local` (BOM / תווים מיוחדים בהערות) — הסר BOM או השתמש בקובץ `.env` ASCII-only.
