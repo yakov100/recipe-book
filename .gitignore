@@ -26,5 +26,10 @@ debug.log
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Environment variables - NEVER commit these
 .env
+.env.local
+.env.*.local
+
 .vercel
