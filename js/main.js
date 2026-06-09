@@ -1,4 +1,12 @@
 import { supabase, supabaseUrl, edgeFunctionUrl, edgeFunctionHeaders, invokeEdgeFunction } from './supabase.js';
+import {
+    initAuth,
+    getCurrentUser,
+    isAuthenticated,
+    onAuthChange,
+    signInWithGoogle,
+    updateAuthHeaderUI,
+} from './auth.js';
 
 console.log('🚀 [main.js] Script loaded successfully!');
 console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...');
@@ -37,7 +45,11 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     function recipeToRow(r) {
-        return {
+        const user = getCurrentUser();
+        if (!user) {
+            throw new Error('נדרש להתחבר עם Google לפני שמירת מתכונים');
+        }
+        const row = {
             name: r.name,
             source: r.source || null,
             ingredients: r.ingredients || '',
@@ -52,6 +64,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             video_url: r.videoUrl || null,
             preparation_time: r.preparationTime || null
         };
+        if (!r.id) {
+            row.user_id = user.id;
+        }
+        return row;
     }
 
     function rowToRecipe(row) {
@@ -74,12 +90,18 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         };
     }
 
-    // Cache keys and version
-    const CACHE_KEY = 'recipes_cache';
-    const CACHE_META_KEY = 'recipes_cache_meta';
+    // Cache keys and version (scoped per user)
     const CACHE_VERSION_KEY = 'recipes_cache_version';
-    const CURRENT_CACHE_VERSION = '1.0.2'; // Update this when cache structure changes
+    const CURRENT_CACHE_VERSION = '2.0.0';
     const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 דקות
+
+    function getCacheStorageKeys() {
+        const userId = getCurrentUser()?.id || 'guest';
+        return {
+            cacheKey: `recipes_cache_${userId}`,
+            metaKey: `recipes_cache_meta_${userId}`,
+        };
+    }
 
     // אייקון SVG לסוכריה עטופה (ממתקים) – גוף אליפסה, קצוות מפותלים בולטים, פסים אלכסוניים
     const CANDY_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><ellipse cx="12" cy="12" rx="5" ry="3" fill="currentColor"/><circle cx="5.5" cy="12" r="2.8" fill="currentColor"/><circle cx="18.5" cy="12" r="2.8" fill="currentColor"/><line x1="8" y1="14.5" x2="11" y2="9.5" stroke="currentColor" stroke-width=".8" opacity=".85"/><line x1="12" y1="14.2" x2="15" y2="9.8" stroke="currentColor" stroke-width=".8" opacity=".85"/><line x1="16" y1="13.8" x2="19" y2="10.2" stroke="currentColor" stroke-width=".8" opacity=".85"/></svg>';
@@ -124,8 +146,11 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         const cachedVersion = localStorage.getItem(CACHE_VERSION_KEY);
         if (cachedVersion !== CURRENT_CACHE_VERSION) {
             console.log('Cache version changed, clearing old cache...');
-            localStorage.removeItem(CACHE_KEY);
-            localStorage.removeItem(CACHE_META_KEY);
+            Object.keys(localStorage).forEach((k) => {
+                if (k.startsWith('recipes_cache_') || k === 'recipes_cache' || k === 'recipes_cache_meta') {
+                    localStorage.removeItem(k);
+                }
+            });
             localStorage.setItem(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
         }
     })();
@@ -133,7 +158,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     // טעינת מתכונים מ-cache
     function loadRecipesFromCache() {
         try {
-            const cached = localStorage.getItem(CACHE_KEY);
+            const { cacheKey } = getCacheStorageKeys();
+            const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 return JSON.parse(cached);
             }
@@ -146,22 +172,23 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     // שמירת מתכונים ל-cache
     function saveRecipesToCache(recipesToCache) {
         try {
+            const { cacheKey, metaKey } = getCacheStorageKeys();
             // שמירה ללא תמונות base64 כדי לחסוך מקום, אבל שומרים imagePath
             const lightRecipes = recipesToCache.map(r => ({
                 ...r,
                 imagePath: r.imagePath || r.image_path
             }));
-            localStorage.setItem(CACHE_KEY, JSON.stringify(lightRecipes));
-            localStorage.setItem(CACHE_META_KEY, JSON.stringify({ 
+            localStorage.setItem(cacheKey, JSON.stringify(lightRecipes));
+            localStorage.setItem(metaKey, JSON.stringify({
                 timestamp: Date.now(),
-                count: recipesToCache.length 
+                count: recipesToCache.length
             }));
         } catch (e) {
             console.warn('Failed to save to cache:', e);
-            // אם נכשל (מקום מלא), ננסה לנקות cache ישן
             try {
-                localStorage.removeItem(CACHE_KEY);
-                localStorage.removeItem(CACHE_META_KEY);
+                const { cacheKey, metaKey } = getCacheStorageKeys();
+                localStorage.removeItem(cacheKey);
+                localStorage.removeItem(metaKey);
             } catch (e2) { /* ignore */ }
         }
     }
@@ -169,7 +196,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     // בדיקה אם ה-cache עדיין תקף
     function isCacheValid() {
         try {
-            const meta = localStorage.getItem(CACHE_META_KEY);
+            const { metaKey } = getCacheStorageKeys();
+            const meta = localStorage.getItem(metaKey);
             if (meta) {
                 const { timestamp } = JSON.parse(meta);
                 return (Date.now() - timestamp) < CACHE_MAX_AGE;
@@ -263,7 +291,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         saveRecipesToCache(recipesToSave);
     }
 
-    // טעינת מתכון בודד מ-Supabase לפי ID
+    // טעינת מתכון בודד מ-Supabase לפי ID (authenticated — own recipes via RLS)
     async function loadSingleRecipeFromDB(recipeId) {
         if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
 
@@ -278,6 +306,21 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             return data ? rowToRecipe(data) : null;
         } catch (err) {
             console.warn('Failed to load single recipe:', err);
+            return null;
+        }
+    }
+
+    /** Public share link — no auth required */
+    async function loadPublicRecipeFromDB(recipeId) {
+        if (!supabase) throw new Error('Supabase לא אותחל. ודא שסקריפט Supabase נטען.');
+
+        try {
+            const { data, error } = await supabase.rpc('get_public_recipe', { recipe_id: recipeId });
+            if (error) throw error;
+            const row = Array.isArray(data) ? data[0] : data;
+            return row ? rowToRecipe(row) : null;
+        } catch (err) {
+            console.warn('Failed to load public recipe:', err);
             return null;
         }
     }
@@ -302,7 +345,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
     // טעינת והגדרת ההגדרות (מחליף localStorage)
     async function loadSettings() {
-        if (!supabase) {
+        if (!supabase || !isAuthenticated()) {
             const storedVol = localStorage.getItem('timerVolume');
             const v = storedVol != null ? parseFloat(storedVol) : 80;
             return { lastBackup: null, recipesPerRow: 4, timerVisible: false, timerVolume: Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 80 };
@@ -329,8 +372,12 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     async function saveSetting(key, value) {
-        if (!supabase) return;
-        await supabase.from('recipe_book_settings').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        const user = getCurrentUser();
+        if (!supabase || !user) return;
+        await supabase.from('recipe_book_settings').upsert(
+            { user_id: user.id, key, value, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id,key' }
+        );
     }
 
     function applyTimerVisibility(visible) {
@@ -357,13 +404,94 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         if (index >= 0) showRecipe(index);
     }
 
+    function setAuthGateVisible(visible) {
+        const gate = document.getElementById('authGate');
+        if (gate) {
+            gate.style.display = visible ? 'flex' : 'none';
+            gate.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
+        document.body.classList.toggle('auth-locked', visible);
+    }
+
+    function resetAppStateForSignOut() {
+        recipes = [];
+        editingIndex = -1;
+        aiChatMessages = [];
+        currentConversationId = null;
+        conversationHistory = [];
+        pendingSuggestedRecipe = null;
+        isSharedRecipeMode = false;
+        const container = document.getElementById('recipesContainer');
+        if (container) container.innerHTML = '';
+    }
+
+    function setupAuthGateUI() {
+        const btn = document.getElementById('googleSignInBtn');
+        if (!btn || btn.dataset.bound === '1') return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                await signInWithGoogle();
+            } catch (e) {
+                console.error('[auth] Google sign-in failed:', e);
+                alert('שגיאה בהתחברות עם Google. נסה שוב.');
+                btn.disabled = false;
+            }
+        });
+    }
+
+    let appBootstrapped = false;
+
+    async function bootstrapAuthenticatedApp() {
+        if (appBootstrapped) return;
+        appBootstrapped = true;
+        setAuthGateVisible(false);
+        updateAuthHeaderUI(getCurrentUser());
+        await loadRecipesAndDisplay();
+        initVoiceButton();
+    }
+
+    function handleSignedOut() {
+        appBootstrapped = false;
+        resetAppStateForSignOut();
+        updateAuthHeaderUI(null);
+        if (!getRecipeIdFromPath()) {
+            setAuthGateVisible(true);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            await loadRecipesAndDisplay();
-            initVoiceButton();
+            setupAuthGateUI();
+            await initAuth();
+
+            const sharedRecipeId = getRecipeIdFromPath();
+            if (sharedRecipeId) {
+                setAuthGateVisible(false);
+                await loadRecipesAndDisplay();
+                initVoiceButton();
+                return;
+            }
+
+            if (isAuthenticated()) {
+                await bootstrapAuthenticatedApp();
+            } else {
+                setAuthGateVisible(true);
+                updateAuthHeaderUI(null);
+            }
+
+            onAuthChange(async (user) => {
+                if (getRecipeIdFromPath()) return;
+                if (user) {
+                    await bootstrapAuthenticatedApp();
+                } else {
+                    handleSignedOut();
+                }
+            });
         } catch (error) {
             console.error('שגיאה באתחול:', error);
-            alert('שגיאה בטעינת המתכונים. נא לרענן את הדף.');
+            alert('שגיאה בטעינת האפליקציה. נא לרענן את הדף.');
         }
     });
 
@@ -399,7 +527,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                 if (gridSelector) gridSelector.style.display = 'none';
                 
                 // טען את המתכון הספציפי
-                const recipe = await loadSingleRecipeFromDB(sharedRecipeId);
+                const recipe = await loadPublicRecipeFromDB(sharedRecipeId);
                 if (recipe) {
                     recipes = [recipe];
                     await migrateLegacyBase64ToStorage();
@@ -409,9 +537,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                     window.location.href = '/';
                 }
                 
-                return; // סיים כאן - לא צריך לטעון את כל המתכונים
+                return;
             }
-            
+
+            if (!isAuthenticated()) {
+                setAuthGateVisible(true);
+                return;
+            }
+
             // מצב רגיל - טען את כל המתכונים
             // שלב 1: טעינה מיידית מ-cache (להצגה מהירה)
             const cachedRecipes = loadRecipesFromCache();
@@ -2381,9 +2514,16 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       };
 
       try {
+        var addHeaders = await edgeFunctionHeaders();
+        if (!addHeaders) {
+          removeAddingIndicator();
+          alert('נא להתחבר עם Google כדי להוסיף מתכון');
+          setAuthGateVisible(true);
+          return;
+        }
         var res = await fetch(edgeFunctionUrl('recipe-ai'), {
           method: 'POST',
-          headers: edgeFunctionHeaders(),
+          headers: addHeaders,
           body: JSON.stringify(payload)
         });
         var data = res.ok ? (await res.json().catch(function() { return {}; })) : {};
@@ -2503,11 +2643,12 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
     // --- Chat Conversation Management ---
     async function createNewConversation() {
-      if (!supabase) return null;
+      const user = getCurrentUser();
+      if (!supabase || !user) return null;
       try {
         const { data, error } = await supabase
           .from('chat_conversations')
-          .insert({ title: 'שיחה חדשה' })
+          .insert({ title: 'שיחה חדשה', user_id: user.id })
           .select('id')
           .single();
         if (error) {
@@ -2903,6 +3044,11 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     async function openAiChat() {
+      if (!isAuthenticated()) {
+        setAuthGateVisible(true);
+        alert('נא להתחבר עם Google כדי לשוחח עם ה-AI');
+        return;
+      }
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'flex';
       initVoiceButton();
@@ -2994,6 +3140,19 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       // Allow sending with only attachments (no text required)
       if (!msg && chatAttachments.length === 0) return;
 
+      if (!isAuthenticated()) {
+        setAuthGateVisible(true);
+        alert('נא להתחבר עם Google כדי לשוחח עם ה-AI');
+        return;
+      }
+
+      var authHeaders = await edgeFunctionHeaders();
+      if (!authHeaders) {
+        setAuthGateVisible(true);
+        alert('נא להתחבר עם Google כדי לשוחח עם ה-AI');
+        return;
+      }
+
       if (aiChatAbortController) {
         aiChatAbortController.abort();
       }
@@ -3054,7 +3213,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
       fetch(edgeFunctionUrl('recipe-ai'), {
         method: 'POST',
-        headers: edgeFunctionHeaders(),
+        headers: authHeaders,
         body: JSON.stringify({ messages: aiChatMessages, recipes: compactRecipes(recipes) }),
         signal: aiChatAbortController.signal
       })
@@ -3068,7 +3227,12 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           if (sendBtn) sendBtn.disabled = false;
 
           var reply = (data && data.reply) ? data.reply : (data && data.error) ? data.error : 'לא התקבלה תשובה.';
-          if (!reply && res && !res.ok) reply = 'שגיאה מהשרת (' + (res.status || '') + '). נא לבדוק GEMINI_API_KEY ב-Supabase Secrets.';
+          if (res && res.status === 401) {
+            reply = 'נא להתחבר עם Google כדי להשתמש ב-AI';
+            setAuthGateVisible(true);
+          } else if (!reply && res && !res.ok) {
+            reply = 'שגיאה מהשרת (' + (res.status || '') + '). נא לבדוק GEMINI_API_KEY ב-Supabase Secrets.';
+          }
 
           var assistantMessage = { role: 'assistant', content: reply, timestamp: new Date() };
 

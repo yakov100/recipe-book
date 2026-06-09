@@ -6,9 +6,38 @@ const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 
 const CATEGORIES = ["לחמים", "מרקים", "מנה עיקרית", "תוספות", "סלטים", "שונות", "עוגות", "קינוחים"];
 
-// Module-level cache for recipes - persists across requests within the same cold-start instance
+// Module-level cache for recipes - per user, persists across requests within the same cold-start instance
 const RECIPES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-let recipesCache: { data: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[]; fetchedAt: number } | null = null;
+let recipesCache: {
+  userId: string;
+  data: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[];
+  fetchedAt: number;
+} | null = null;
+
+function createUserClient(req: Request) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? req.headers.get("apikey") ?? "";
+  const authHeader = req.headers.get("Authorization");
+  if (!supabaseUrl || !anonKey || !authHeader) return null;
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+}
+
+async function getAuthUserId(req: Request): Promise<string | null> {
+  const client = createUserClient(req);
+  if (!client) return null;
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user) return null;
+  return user.id;
+}
+
+function unauthorizedJson() {
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
+}
 
 // Map Hebrew categories to English for better image generation prompts
 const CATEGORY_EN: Record<string, string> = {
@@ -399,8 +428,11 @@ Deno.serve(async (req: Request) => {
 
   const jsonHeaders = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 
+  const authUserId = await getAuthUserId(req);
+
   // Mode: transcribe voice recording (MediaRecorder + Gemini fallback)
   if (body?.transcribeAudio === true && typeof body.audioBase64 === "string" && body.audioBase64.length > 0) {
+    if (!authUserId) return unauthorizedJson();
     const mime = typeof body.audioMimeType === "string" && body.audioMimeType.length > 0
       ? body.audioMimeType
       : "audio/webm";
@@ -423,6 +455,7 @@ Deno.serve(async (req: Request) => {
 
   // Mode: insert suggested recipe from "הוסף לספר" button – generate image, insert to DB, no Gemini
   if (body?.insertSuggestedRecipe === true && body.suggestedRecipe && typeof body.suggestedRecipe === "object") {
+    if (!authUserId) return unauthorizedJson();
     const sr = body.suggestedRecipe;
     const name = (sr.name || "").trim() || "מתכון חדש";
     const category = sr.category || "שונות";
@@ -453,7 +486,8 @@ Deno.serve(async (req: Request) => {
       recipe_link: null,
       video_url: null,
       image_path: imagePath,
-      rating: 0
+      rating: 0,
+      user_id: authUserId,
     };
     const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
     if (error) {
@@ -483,6 +517,10 @@ Deno.serve(async (req: Request) => {
   const formatIngredientsOnly = body?.formatIngredientsOnly === true;
   const parseFullRecipe = body?.parseFullRecipe === true;
 
+  if (!authUserId) {
+    return unauthorizedJson();
+  }
+
   console.log("Environment check:", {
     hasSupabaseUrl: !!supabaseUrl,
     hasServiceKey: !!serviceKey,
@@ -496,11 +534,16 @@ Deno.serve(async (req: Request) => {
   let recipes: { id: string; name: string; category: string; ingredients: string; instructions: string; rating: number }[];
   if (supabaseAdmin) {
     const now = Date.now();
-    if (recipesCache && (now - recipesCache.fetchedAt) < RECIPES_CACHE_TTL_MS) {
+    if (recipesCache && recipesCache.userId === authUserId && (now - recipesCache.fetchedAt) < RECIPES_CACHE_TTL_MS) {
       recipes = recipesCache.data;
       console.log("[recipe-ai] Using cached recipes:", recipes.length);
     } else {
-      const { data: recipesFromDb } = await supabaseAdmin.from("recipes").select("id, name, category, ingredients, instructions, rating").order("created_at", { ascending: true }).limit(500);
+      const { data: recipesFromDb } = await supabaseAdmin
+        .from("recipes")
+        .select("id, name, category, ingredients, instructions, rating")
+        .eq("user_id", authUserId)
+        .order("created_at", { ascending: true })
+        .limit(500);
       recipes = (recipesFromDb || []).map((r: { id: string; name?: string; category?: string; ingredients?: string; instructions?: string; rating?: number }) => ({
         id: r.id,
         name: r.name || "",
@@ -509,7 +552,7 @@ Deno.serve(async (req: Request) => {
         instructions: (r.instructions || "").slice(0, 250),
         rating: r.rating ?? 0
       }));
-      recipesCache = { data: recipes, fetchedAt: now };
+      recipesCache = { userId: authUserId, data: recipes, fetchedAt: now };
       console.log("[recipe-ai] Fetched recipes from DB:", recipes.length);
     }
   } else {
@@ -635,7 +678,8 @@ Deno.serve(async (req: Request) => {
         recipe_link: null,
         video_url: null,
         image_path: generatedImagePath,
-        rating: 0
+        rating: 0,
+        user_id: authUserId,
       };
       const { data: inserted, error } = await supabaseAdmin.from("recipes").insert(row).select("id").single();
       if (error) {
@@ -662,6 +706,7 @@ Deno.serve(async (req: Request) => {
         .from("recipes")
         .select("image_path")
         .eq("id", regenerateImageForRecipeId)
+        .eq("user_id", authUserId)
         .single();
       const dataUrl = await generateRecipeImage(targetRecipe.name, targetRecipe.category || "שונות");
       if (dataUrl) {
@@ -671,7 +716,8 @@ Deno.serve(async (req: Request) => {
           const { error } = await supabaseAdmin
             .from("recipes")
             .update({ image_path: regeneratedImagePath })
-            .eq("id", regenerateImageForRecipeId);
+            .eq("id", regenerateImageForRecipeId)
+            .eq("user_id", authUserId);
           if (error) {
             console.error("Failed to update recipe image_path:", error);
           } else {

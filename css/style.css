@@ -7463,3 +7463,250 @@ img[loading="lazy"]:not([src=""]) {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   opacity: 0.3;
 }
+
+/* --- Auth gate (Google sign-in) --- */
+body.auth-locked .floating-action-btn.ai-chat {
+  display: none;
+}
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(253, 251, 247, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .auth-gate {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.auth-gate-panel {
+  width: min(100%, 22rem);
+  padding: 2rem 1.75rem;
+  border-radius: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auth-gate-logo {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #93c5fd, var(--primary-color));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-glow, 0 0 25px -5px rgba(167, 243, 208, 0.6));
+  margin-bottom: 0.25rem;
+}
+
+.auth-gate-chef {
+  width: 3rem;
+  height: 3rem;
+  object-fit: contain;
+}
+
+.auth-gate-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.auth-gate-subtitle {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted, #64748b);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.auth-google-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+  background: var(--card-light, #fff);
+  color: var(--text-main, #1e293b);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--shadow-soft, 0 10px 40px -10px rgba(0,0,0,0.08));
+}
+
+.dark .auth-google-btn {
+  background: var(--card-dark, #1e293b);
+  color: #f1f5f9;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.auth-google-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-hover, 0 0 35px -5px rgba(167, 243, 208, 0.8));
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.auth-google-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.header-user-corner {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  left: auto;
+  z-index: 101;
+}
+
+.header-user-menu {
+  position: relative;
+}
+
+.header-user-profile {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid var(--primary-color, #a7f3d0);
+  overflow: hidden;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.header-user-profile:hover,
+.header-user-profile.is-open {
+  transform: translateY(-1px);
+  border-color: rgba(167, 243, 208, 0.9);
+  box-shadow: var(--glow-teal, 0 0 20px -5px rgba(45, 212, 191, 0.5));
+}
+
+.header-user-profile:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(167, 243, 208, 0.25);
+}
+
+.dark .header-user-profile {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(167, 243, 208, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
+.header-user-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.header-user-fallback-icon {
+  font-size: 1.75rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1;
+}
+
+.dark .header-user-fallback-icon {
+  color: #94a3b8;
+}
+
+.header-user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  min-width: 11rem;
+  padding: 0.35rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.header-user-dropdown-name {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main, #1e293b);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .header-user-dropdown-name {
+  color: #f1f5f9;
+}
+
+.dark .header-user-dropdown {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.header-user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: right;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-user-dropdown-item .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.header-user-dropdown-item:hover {
+  background: var(--pastel-green, #e8f5f1);
+  color: #1e293b;
+}
+
+.dark .header-user-dropdown-item {
+  color: #cbd5e1;
+}
+
+.dark .header-user-dropdown-item:hover {
+  background: rgba(167, 243, 208, 0.12);
+  color: #f1f5f9;
+}
+

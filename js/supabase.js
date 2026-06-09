@@ -28,10 +28,20 @@ let supabaseAnonKey = keyOk(rawKey) ? rawKey.trim() : null;
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
 
+/** @type {string | null} */
+let cachedAccessToken = null;
+
+/**
+ * @param {string | null} token
+ */
+function setCachedAccessToken(token) {
+  cachedAccessToken = token;
+}
+
 if (supabaseUrl && supabaseAnonKey) {
   try {
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { detectSessionInUrl: false },
+      auth: { detectSessionInUrl: true, persistSession: true },
     });
     if (supabaseAnonKey.startsWith('sb_publishable_')) {
       console.warn(
@@ -71,15 +81,31 @@ async function invokeEdgeFunction(functionName, body) {
 }
 
 /**
- * Headers for raw fetch() to Edge Functions (e.g. when AbortSignal is required).
- * @returns {Record<string, string>}
+ * Fresh session token for Edge Functions that require a logged-in user (verify_jwt + RLS).
+ * Never falls back to anon key — that causes 401 on recipe-ai / regenerate-image.
+ * @returns {Promise<Record<string, string> | null>}
  */
-function edgeFunctionHeaders() {
+async function edgeFunctionHeaders() {
+  if (!supabase || !supabaseAnonKey) return null;
+
+  let session = (await supabase.auth.getSession()).data.session;
+  if (!session?.access_token) return null;
+
+  const expiresAt = session.expires_at ?? 0;
+  if (expiresAt > 0 && expiresAt * 1000 < Date.now() + 60_000) {
+    const { data: refreshed, error } = await supabase.auth.refreshSession();
+    if (!error && refreshed.session?.access_token) {
+      session = refreshed.session;
+    }
+  }
+
+  setCachedAccessToken(session.access_token);
+
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${supabaseAnonKey}`,
-    apikey: supabaseAnonKey ?? '',
+    Authorization: `Bearer ${session.access_token}`,
+    apikey: supabaseAnonKey,
   };
 }
 
-export { supabase, supabaseUrl, supabaseAnonKey, edgeFunctionUrl, edgeFunctionHeaders, invokeEdgeFunction };
+export { supabase, supabaseUrl, supabaseAnonKey, edgeFunctionUrl, edgeFunctionHeaders, invokeEdgeFunction, setCachedAccessToken };

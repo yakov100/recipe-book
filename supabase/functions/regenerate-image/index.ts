@@ -81,6 +81,24 @@ async function deleteStorageImage(
   if (error) console.warn("Failed to delete old image from storage:", key, error.message);
 }
 
+function createUserClient(req: Request) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? req.headers.get("apikey") ?? "";
+  const authHeader = req.headers.get("Authorization");
+  if (!supabaseUrl || !anonKey || !authHeader) return null;
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+}
+
+async function getAuthUserId(req: Request): Promise<string | null> {
+  const client = createUserClient(req);
+  if (!client) return null;
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user) return null;
+  return user.id;
+}
+
 Deno.serve(async (req: Request) => {
   // CORS headers
   const corsHeaders = {
@@ -112,6 +130,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const { recipeId, recipeName, category } = body;
+
+  const authUserId = await getAuthUserId(req);
+  if (!authUserId) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...corsHeaders }
+    });
+  }
 
   if (!recipeName) {
     return new Response(JSON.stringify({ error: "recipeName is required" }), {
@@ -167,8 +193,15 @@ Deno.serve(async (req: Request) => {
         .from("recipes")
         .select("image_path")
         .eq("id", recipeId)
+        .eq("user_id", authUserId)
         .single();
-      previousImagePath = existingRow?.image_path ?? null;
+      if (!existingRow) {
+        return new Response(JSON.stringify({ error: "Recipe not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        });
+      }
+      previousImagePath = existingRow.image_path ?? null;
     }
     const fileName = `${crypto.randomUUID()}.png`;
     try {
@@ -186,7 +219,8 @@ Deno.serve(async (req: Request) => {
           const { error } = await supabase
             .from("recipes")
             .update({ image_path: fileName })
-            .eq("id", recipeId);
+            .eq("id", recipeId)
+            .eq("user_id", authUserId);
           if (error) {
             console.error("Failed to update recipe image_path:", error);
           } else {
