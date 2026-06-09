@@ -1,7 +1,24 @@
 import { supabase, setCachedAccessToken } from './supabase.js';
 
-/** Canonical production URL for OAuth allow-list documentation */
-export const RECIPE_BOOK_PRODUCTION_URL = 'https://yakov100.github.io/recipe-book/';
+/** Primary production URL (Vercel). Must be in Supabase Redirect URLs. */
+export const RECIPE_BOOK_PRODUCTION_URL = 'https://recipe-book-gh-pages.vercel.app/';
+
+/**
+ * Copy-paste into Supabase → Authentication → URL Configuration → Redirect URLs.
+ * If redirectTo is missing from this list, Supabase falls back to Site URL (e.g. Housing_units).
+ */
+export const RECIPE_BOOK_OAUTH_REDIRECT_URLS = [
+    'http://localhost:3000/',
+    'http://localhost:3000/**',
+    'http://localhost:3001/',
+    'http://localhost:3001/**',
+    'https://recipe-book-gh-pages.vercel.app/',
+    'https://recipe-book-gh-pages.vercel.app/**',
+    'https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/',
+    'https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/**',
+    'https://yakov100.github.io/recipe-book/',
+    'https://yakov100.github.io/recipe-book/**',
+];
 
 /** @type {import('@supabase/supabase-js').User | null} */
 let currentUser = null;
@@ -26,13 +43,27 @@ export function isAuthenticated() {
  */
 export function getOAuthRedirectUrl() {
     if (typeof window === 'undefined') return RECIPE_BOOK_PRODUCTION_URL;
-    const { origin, pathname, search } = window.location;
+    const { origin, pathname, search, hostname } = window.location;
     const params = new URLSearchParams(search);
     for (const key of ['code', 'error', 'error_description', 'error_code']) {
         params.delete(key);
     }
-    const path = pathname && pathname.length > 0 ? pathname : '/';
     const qs = params.toString();
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        const path = pathname && pathname.length > 0 ? pathname : '/';
+        return origin + path + (qs ? `?${qs}` : '');
+    }
+
+    if (hostname.endsWith('.vercel.app') && hostname.includes('recipe-book')) {
+        return origin + '/' + (qs ? `?${qs}` : '');
+    }
+
+    if (hostname === 'yakov100.github.io' && pathname.startsWith('/recipe-book')) {
+        return 'https://yakov100.github.io/recipe-book/' + (qs ? `?${qs}` : '');
+    }
+
+    const path = pathname && pathname.length > 0 ? pathname : '/';
     return origin + path + (qs ? `?${qs}` : '');
 }
 
@@ -139,6 +170,7 @@ export async function signInWithGoogle() {
         throw new Error('Supabase לא אותחל');
     }
     const redirectTo = getOAuthRedirectUrl();
+    console.info('[auth] OAuth redirectTo (must be in Supabase Redirect URLs):', redirectTo);
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

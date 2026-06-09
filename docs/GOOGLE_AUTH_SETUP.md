@@ -8,8 +8,11 @@
 **Callback ב-Google (קבוע לכל האפליקציות על אותו Supabase):**  
 `https://nklwzunoipplfkysaztl.supabase.co/auth/v1/callback`
 
-**כתובת production של recipe-book:**  
-`https://yakov100.github.io/recipe-book/`
+**כתובת production עיקרית (Vercel):**  
+`https://recipe-book-gh-pages.vercel.app/`
+
+**GitHub Pages (אופציונלי):**  
+`https://yakov100.github.io/recipe-book/` — כרגע עלול להחזיר 404; אם לא משתמשים בו, אפשר לדלג.
 
 ---
 
@@ -37,23 +40,22 @@
 
 [Authentication → URL Configuration](https://supabase.com/dashboard/project/nklwzunoipplfkysaztl/auth/url-configuration)
 
-הוסף לרשימת **Redirect URLs**:
+הוסף לרשימת **Redirect URLs** (העתק הכל — **חובה כולל Vercel**):
 
 ```
 http://localhost:3000/
 http://localhost:3000/**
 http://localhost:3001/
 http://localhost:3001/**
+https://recipe-book-gh-pages.vercel.app/
+https://recipe-book-gh-pages.vercel.app/**
+https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/
+https://recipe-book-gh-pages-git-main-yaakovs-projects-c8a05261.vercel.app/**
 https://yakov100.github.io/recipe-book/
 https://yakov100.github.io/recipe-book/**
 ```
 
-אם יש דומיין Vercel ל-recipe-book, הוסף גם:
-
-```
-https://<your-vercel-domain>/
-https://<your-vercel-domain>/**
-```
+אם אחרי login אתה מגיע ל-**Housing_units** או אפליקציה אחרת — כמעט תמיד חסרה כאן שורת ה-**Vercel** למעלה. Supabase אז נופל ל-**Site URL** של הפרויקט המשותף.
 
 **Site URL:** אפשר להשאיר את הכתובת של אפליקציה אחרת (למשל Housing_units).  
 recipe-book לא תלוי ב-Site URL כל עוד ה-Redirect URLs למעלה קיימים — הקוד שולח `redirectTo` מדויק.
