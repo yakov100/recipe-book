@@ -1,6 +1,7 @@
-# Updates Vercel env vars after Supabase key rotation, then disables legacy JWT keys.
+# Updates Vercel env vars for Supabase client keys.
 # Requires: VERCEL_TOKEN (https://vercel.com/account/tokens)
-# Reads new key from .env.local (VITE_SUPABASE_ANON_KEY) unless -AnonKey is passed.
+# Reads VITE_SUPABASE_ANON_KEY from .env.local unless -AnonKey is passed.
+# IMPORTANT: Edge Functions (verify_jwt) need the legacy anon JWT (eyJ…), not sb_publishable_ keys.
 
 param(
     [string]$ProjectName = "recipe-book-gh-pages",

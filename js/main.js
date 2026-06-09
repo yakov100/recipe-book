@@ -1,4 +1,4 @@
-import { supabase, supabaseUrl, supabaseAnonKey } from './supabase.js';
+import { supabase, supabaseUrl, edgeFunctionUrl, edgeFunctionHeaders, invokeEdgeFunction } from './supabase.js';
 
 console.log('🚀 [main.js] Script loaded successfully!');
 console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...');
@@ -1164,21 +1164,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       document.body.appendChild(loadingDiv);
 
       try {
-        const url = supabaseUrl + '/functions/v1/regenerate-image';
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + supabaseAnonKey
-          },
-          body: JSON.stringify({
-            recipeId: recipe.id,
-            recipeName: recipe.name,
-            category: recipe.category
-          })
+        const { data, error: fnError } = await invokeEdgeFunction('regenerate-image', {
+          recipeId: recipe.id,
+          recipeName: recipe.name,
+          category: recipe.category
         });
-
-        const data = await response.json();
+        if (fnError) {
+          throw fnError;
+        }
 
         if (data.success && (data.image_path || data.image)) {
           let imagePath = data.image_path || null;
@@ -1265,21 +1258,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       document.body.appendChild(loadingDiv);
 
       try {
-        const url = supabaseUrl + '/functions/v1/regenerate-image';
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + supabaseAnonKey
-          },
-          body: JSON.stringify({
-            recipeId: recipeId,
-            recipeName: name,
-            category: category
-          })
+        const { data, error: fnError } = await invokeEdgeFunction('regenerate-image', {
+          recipeId: recipeId,
+          recipeName: name,
+          category: category
         });
-
-        const data = await response.json();
+        if (fnError) {
+          throw fnError;
+        }
 
         if (data.success && (data.image_path || data.image)) {
           let imagePath = data.image_path || null;
@@ -2378,10 +2364,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       };
 
       try {
-        var url = supabaseUrl + '/functions/v1/recipe-ai';
-        var res = await fetch(url, {
+        var res = await fetch(edgeFunctionUrl('recipe-ai'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + supabaseAnonKey },
+          headers: edgeFunctionHeaders(),
           body: JSON.stringify(payload)
         });
         var data = res.ok ? (await res.json().catch(function() { return {}; })) : {};
@@ -2972,10 +2957,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         msgsEl.scrollTo({ top: msgsEl.scrollHeight, behavior: 'smooth' });
       }
 
-      var url = supabaseUrl + '/functions/v1/recipe-ai';
-      fetch(url, {
+      fetch(edgeFunctionUrl('recipe-ai'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + supabaseAnonKey },
+        headers: edgeFunctionHeaders(),
         body: JSON.stringify({ messages: aiChatMessages, recipes: compactRecipes(recipes) }),
         signal: aiChatAbortController.signal
       })

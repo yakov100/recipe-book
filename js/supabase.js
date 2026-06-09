@@ -33,6 +33,12 @@ if (supabaseUrl && supabaseAnonKey) {
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { detectSessionInUrl: false },
     });
+    if (supabaseAnonKey.startsWith('sb_publishable_')) {
+      console.warn(
+        '[Supabase Init] מפתח publishable (sb_publishable_…) לא מאומת כ-JWT ב-Edge Functions (verify_jwt). ' +
+          'יצירת/החלפת תמונות ו-AI עלולים להיכשל ב-401. השתמש במפתח anon הישן (eyJ…) ב-VITE_SUPABASE_ANON_KEY.'
+      );
+    }
   } catch (e) {
     console.error('[Supabase Init] Failed to create client:', e);
     supabaseUrl = null;
@@ -46,4 +52,34 @@ if (supabaseUrl && supabaseAnonKey) {
   );
 }
 
-export { supabase, supabaseUrl, supabaseAnonKey };
+/** @param {string} functionName */
+function edgeFunctionUrl(functionName) {
+  const base = (supabaseUrl || '').replace(/\/$/, '');
+  return `${base}/functions/v1/${functionName}`;
+}
+
+/**
+ * @param {string} functionName
+ * @param {Record<string, unknown>} body
+ * @returns {Promise<{ data: unknown; error: import('@supabase/supabase-js').FunctionsError | null }>}
+ */
+async function invokeEdgeFunction(functionName, body) {
+  if (!supabase) {
+    return { data: null, error: { message: 'Supabase not configured' } };
+  }
+  return supabase.functions.invoke(functionName, { body });
+}
+
+/**
+ * Headers for raw fetch() to Edge Functions (e.g. when AbortSignal is required).
+ * @returns {Record<string, string>}
+ */
+function edgeFunctionHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${supabaseAnonKey}`,
+    apikey: supabaseAnonKey ?? '',
+  };
+}
+
+export { supabase, supabaseUrl, supabaseAnonKey, edgeFunctionUrl, edgeFunctionHeaders, invokeEdgeFunction };
