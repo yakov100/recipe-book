@@ -43,9 +43,7 @@ async function uploadImageToStorage(
 function normalizeStorageKey(imagePath: string | null | undefined): string | null {
   if (!imagePath || typeof imagePath !== "string") return null;
   if (imagePath.startsWith("http") || imagePath.startsWith("data:")) return null;
-  let key = imagePath;
-  if (key.startsWith("recipe-images/")) key = key.slice(14);
-  return key;
+  return imagePath;
 }
 
 async function deleteStorageImage(

@@ -4071,23 +4071,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         }
     }
 
-    /** Builds public Storage URL. Handle different path formats correctly. */
+    /** Builds public Storage URL from the object key stored in image_path. */
     function getStoragePublicUrl(storagePath) {
         if (!storagePath || typeof storagePath !== 'string') return '';
-        
-        // Handle different path formats:
-        // 1. Full path with bucket: "recipe-images/filename.png" -> extract "filename.png"
-        // 2. Path with recipe ID: "recipe-id/timestamp-recipe-id.png" -> use as-is
-        // 3. Just filename: "filename.png" -> use as-is
-        
-        let key = storagePath;
-        
-        // Remove bucket prefix if present to avoid double prefix
-        if (key.startsWith('recipe-images/')) {
-            key = key.slice(14);
-        }
-        
-        return `${supabaseUrl}/storage/v1/object/public/recipe-images/${key}`;
+        return `${supabaseUrl}/storage/v1/object/public/recipe-images/${storagePath}`;
     }
 
     /** Returns Storage object key, or null if path is not a bucket file. */
@@ -4096,9 +4083,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.includes('/default-images/')) {
             return null;
         }
-        let key = imagePath;
-        if (key.startsWith('recipe-images/')) key = key.slice(14);
-        return key;
+        return imagePath;
     }
 
     async function deleteRecipeImageFromStorage(imagePath) {
