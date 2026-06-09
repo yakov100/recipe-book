@@ -22,10 +22,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
     // Base URL for static assets (works with Vite base path, e.g. GitHub Pages)
     const CHEF_ASSET_MAP = {
-        'chef-typing.png': 'icons/chef-typing.svg',
-        'chef-serving.png': 'icons/chef-serving.svg',
-        'chef-cooking.png': 'icons/chef-cooking.svg',
-        'chef-main.png': 'icons/chef-main.svg'
+        'chef-typing.png': 'chef-serving.png',
+        'chef-serving.png': 'chef-serving.png',
+        'chef-cooking.png': 'chef-serving.png',
+        'chef-main.png': 'chef-serving.png'
     };
 
     function chefImageUrl(filename) {
@@ -504,54 +504,31 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     // אובייקט המכיל את תמונות ברירת המחדל לפי קטגוריות
     // ב-Vercel (עם Vite build), התמונות מועתקות מ-assets ל-dist ישירות, אז הנתיב הוא /default-images/...
     const defaultImagesByCategory = {
-        'לחמים': [
-            '/default-images/breads/1.svg',
-            '/default-images/breads/2.svg',
-            '/default-images/breads/3.svg'
-        ],
-        'מרקים': [
-            '/default-images/soups/1.svg',
-            '/default-images/soups/2.svg',
-            '/default-images/soups/3.svg'
-        ],
-        'מנה עיקרית': [
-            '/default-images/main-dishes/1.svg',
-            '/default-images/main-dishes/2.svg',
-            '/default-images/main-dishes/3.svg'
-        ],
-        'תוספות': [
-            '/default-images/sides/1.svg',
-            '/default-images/sides/2.svg',
-            '/default-images/sides/3.svg'
-        ],
-        'סלטים': [
-            '/default-images/salads/1.svg',
-            '/default-images/salads/2.svg',
-            '/default-images/salads/3.svg'
-        ],
-        'שונות': [
-            '/default-images/other/1.svg',
-            '/default-images/other/2.svg',
-            '/default-images/other/3.svg'
-        ],
-        'עוגות': [
-            '/default-images/cakes/1.svg',
-            '/default-images/cakes/2.svg',
-            '/default-images/cakes/3.svg'
-        ],
-        'קינוחים': [
-            '/default-images/desserts/1.svg',
-            '/default-images/desserts/2.svg',
-            '/default-images/desserts/3.svg'
-        ]
+        'מנות ראשונות': '/default-images/appetizers/1.webp',
+        'מנות עיקריות': '/default-images/main-dishes/1.webp',
+        'מנה עיקרית': '/default-images/main-dishes/1.webp',
+        'תוספות': '/default-images/sides/1.webp',
+        'סלטים': '/default-images/salads/1.webp',
+        'מרקים': '/default-images/soups/1.webp',
+        'מאפים': '/default-images/pastries/1.webp',
+        'פסטות ואורז': '/default-images/pasta/1.webp',
+        'בשרים': '/default-images/meat/1.webp',
+        'דגים': '/default-images/fish/1.webp',
+        'ירקות': '/default-images/vegetables/1.webp',
+        'עוגות': '/default-images/cakes/1.webp',
+        'עוגיות': '/default-images/cookies/1.webp',
+        'ממתקים': '/default-images/sweets/1.webp',
+        'קינוחים': '/default-images/desserts/1.webp',
+        'לחמים': '/default-images/breads/1.webp',
+        'שונות': '/default-images/other/1.webp',
+        'פינוקים': '/default-images/treats/1.webp',
     };
 
-    const DEFAULT_IMAGES_OTHER = ['/default-images/other/1.svg', '/default-images/other/2.svg', '/default-images/other/3.svg'];
+    const DEFAULT_IMAGE_OTHER = '/default-images/other/1.webp';
 
     /** Returns a default image URL for the given category (single entry point for default images). */
     function getDefaultImageUrl(category) {
-        const list = (category && defaultImagesByCategory[category]) ? defaultImagesByCategory[category] : DEFAULT_IMAGES_OTHER;
-        const path = list[Math.floor(Math.random() * list.length)];
+        const path = (category && defaultImagesByCategory[category]) || DEFAULT_IMAGE_OTHER;
         return chefImageUrl(path);
     }
 
@@ -671,6 +648,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         console.log(`🖼️ [${recipe.name}] Image URL:`, imageUrl, 'imagePath:', recipe.imagePath);
         img.src = imageUrl;
         img.alt = recipe.name;
+        if (!recipe.imagePath && !(typeof recipe.image === 'string' && recipe.image.trim())) {
+            card.classList.add('using-default-image');
+        }
         card.classList.add('image-loading');
         img.onload = function() {
             card.classList.remove('image-loading');
@@ -2243,7 +2223,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           d.appendChild(recipeCard);
         }
 
-        // Add inline suggested recipe preview (inside the message bubble)
+        contentContainer.appendChild(d);
+
+        // Suggested recipe preview – standalone card below the message bubble
         if (m.suggestedRecipe && typeof m.suggestedRecipe === 'object') {
           var sr = m.suggestedRecipe;
           var srImg = getDisplayUrl({ imagePath: sr.image_path, image: sr.image });
@@ -2252,49 +2234,52 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           var srCategory = sr.category || 'שונות';
           var isAdded = !!m.recipeAdded;
           const srCard = document.createElement('div');
-          srCard.className = 'ai-chat-suggested-recipe-card';
+          srCard.className = 'ai-chat-recipe-confirm';
           srCard.innerHTML = `
-            ${srImg ? `<div class="sr-card-image"><img src="${srImg}" alt="${sr.name || ''}" onerror="this.parentElement.style.display='none'"><div class="sr-card-badge">${srCategory}</div></div>` : ''}
-            <div class="sr-card-body">
-              <div class="sr-card-title">${sr.name || ''}</div>
-              ${!srImg ? `<span class="sr-card-category">${srCategory}</span>` : ''}
+            ${srImg ? `<div class="recipe-card-image"><img src="${srImg}" alt="${sr.name || ''}" onerror="this.parentElement.style.display='none'"><div class="recipe-card-category-badge">${srCategory}</div></div>` : ''}
+            <div class="recipe-card-body">
+              <div class="recipe-card-title">${sr.name || ''}</div>
+              ${!srImg ? `<span class="recipe-card-category-inline">${srCategory}</span>` : ''}
               ${srIngredients ? `
-                <div class="sr-card-section open">
-                  <div class="sr-card-section-header" onclick="this.parentElement.classList.toggle('open')">
-                    <span><i class="fas fa-list-ul"></i> מצרכים</span>
-                    <i class="fas fa-chevron-down sr-card-chevron"></i>
+                <div class="recipe-card-section open">
+                  <div class="recipe-card-section-header" onclick="this.parentElement.classList.toggle('open')">
+                    <span><span class="material-symbols-outlined">shopping_basket</span> מצרכים</span>
+                    <span class="material-symbols-outlined recipe-card-chevron">expand_more</span>
                   </div>
-                  <div class="sr-card-section-content">${srIngredients}</div>
+                  <div class="recipe-card-section-content">${srIngredients}</div>
                 </div>` : ''}
               ${srInstructions ? `
-                <div class="sr-card-section">
-                  <div class="sr-card-section-header" onclick="this.parentElement.classList.toggle('open')">
-                    <span><i class="fas fa-utensils"></i> הוראות הכנה</span>
-                    <i class="fas fa-chevron-down sr-card-chevron"></i>
+                <div class="recipe-card-section">
+                  <div class="recipe-card-section-header" onclick="this.parentElement.classList.toggle('open')">
+                    <span><span class="material-symbols-outlined">cooking</span> הוראות הכנה</span>
+                    <span class="material-symbols-outlined recipe-card-chevron">expand_more</span>
                   </div>
-                  <div class="sr-card-section-content">${srInstructions}</div>
+                  <div class="recipe-card-section-content">${srInstructions}</div>
                 </div>` : ''}
             </div>
-            <div class="sr-card-actions">
-              ${isAdded ? `
-                <div class="sr-card-added"><i class="fas fa-check-circle"></i> המתכון נוסף לספר!</div>
-              ` : `
-                <button class="sr-card-add-btn" onclick="addSuggestedRecipeDirectly(${msgIndex})">
-                  <i class="fas fa-plus"></i> הוסף לספר
+            ${isAdded ? `
+              <div class="recipe-confirm-added">
+                <span class="material-symbols-outlined">check_circle</span>
+                המתכון נוסף לספר!
+              </div>
+            ` : `
+              <div class="recipe-confirm-buttons">
+                <button type="button" class="confirm-add-btn" onclick="addSuggestedRecipeDirectly(${msgIndex})">
+                  <span class="material-symbols-outlined">add</span>
+                  הוסף לספר
                 </button>
-                <button class="sr-card-edit-btn" onclick="editSuggestedRecipeFromMsg(${msgIndex})">
-                  <i class="fas fa-edit"></i> ערוך
+                <button type="button" class="confirm-edit-btn" onclick="editSuggestedRecipeFromMsg(${msgIndex})">
+                  <span class="material-symbols-outlined">edit</span>
+                  ערוך
                 </button>
-                <button class="sr-card-dismiss-btn" onclick="dismissSuggestedRecipe(${msgIndex})">
-                  <i class="fas fa-times"></i>
+                <button type="button" class="confirm-cancel-btn" onclick="dismissSuggestedRecipe(${msgIndex})" aria-label="סגור">
+                  <span class="material-symbols-outlined">close</span>
                 </button>
-              `}
-            </div>
+              </div>
+            `}
           `;
-          d.appendChild(srCard);
+          contentContainer.appendChild(srCard);
         }
-
-        contentContainer.appendChild(d);
 
         // Add timestamp
         const timeDiv = document.createElement('div');
@@ -2398,6 +2383,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           saveRecipesToCache(recipes);
           m.recipeAdded = true;
           m.addedRecipeId = data.insertedRecipeId;
+          if (m.dbId) {
+            await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
+          }
           pendingSuggestedRecipe = null;
           renderAiChatMessages();
           filterRecipes();
@@ -2427,6 +2415,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         recipes.push(newRecipe);
         m.recipeAdded = true;
         m.addedRecipeId = newRecipe.id;
+        if (m.dbId) {
+          await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
+        }
         pendingSuggestedRecipe = null;
         removeAddingIndicator();
         renderAiChatMessages();
@@ -2442,22 +2433,28 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     window.addSuggestedRecipeDirectly = addSuggestedRecipeDirectly;
 
     // Open form to edit recipe from chat message
-    function editSuggestedRecipeFromMsg(msgIndex) {
+    async function editSuggestedRecipeFromMsg(msgIndex) {
       var m = aiChatMessages[msgIndex];
       if (!m || !m.suggestedRecipe) return;
       applySuggestedRecipe(m.suggestedRecipe);
       m.suggestedRecipe = null;
       pendingSuggestedRecipe = null;
+      if (m.dbId) {
+        await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
+      }
       renderAiChatMessages();
     }
     window.editSuggestedRecipeFromMsg = editSuggestedRecipeFromMsg;
 
     // Dismiss suggested recipe from chat message
-    function dismissSuggestedRecipe(msgIndex) {
+    async function dismissSuggestedRecipe(msgIndex) {
       var m = aiChatMessages[msgIndex];
       if (!m) return;
       m.suggestedRecipe = null;
       pendingSuggestedRecipe = null;
+      if (m.dbId) {
+        await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
+      }
       renderAiChatMessages();
     }
     window.dismissSuggestedRecipe = dismissSuggestedRecipe;
@@ -2548,12 +2545,35 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       }
     }
 
+    function buildMessageMetadata(message) {
+      if (!message || typeof message !== 'object') return {};
+      var meta = {};
+      if (message.suggestedRecipe && typeof message.suggestedRecipe === 'object') {
+        meta.suggestedRecipe = message.suggestedRecipe;
+      }
+      if (message.recipeAdded) meta.recipeAdded = true;
+      if (message.addedRecipeId) meta.addedRecipeId = message.addedRecipeId;
+      if (message.recipeCard) meta.recipeCard = message.recipeCard;
+      return meta;
+    }
+
+    function applyMessageMetadata(message, metadata) {
+      if (!metadata || typeof metadata !== 'object') return message;
+      if (metadata.suggestedRecipe && typeof metadata.suggestedRecipe === 'object') {
+        message.suggestedRecipe = metadata.suggestedRecipe;
+      }
+      if (metadata.recipeAdded) message.recipeAdded = true;
+      if (metadata.addedRecipeId) message.addedRecipeId = metadata.addedRecipeId;
+      if (metadata.recipeCard) message.recipeCard = metadata.recipeCard;
+      return message;
+    }
+
     async function loadConversationMessages(conversationId) {
       if (!supabase) return [];
       try {
         const { data, error } = await supabase
           .from('chat_messages')
-          .select('role, content, attachments')
+          .select('id, role, content, attachments, metadata, created_at')
           .eq('conversation_id', conversationId)
           .order('created_at', { ascending: true });
         if (error) {
@@ -2567,17 +2587,37 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       }
     }
 
-    async function saveMessageToDb(conversationId, role, content, attachments) {
-      if (!supabase || !conversationId) return;
+    async function saveMessageToDb(conversationId, role, content, attachments, metadata) {
+      if (!supabase || !conversationId) return null;
       try {
-        await supabase.from('chat_messages').insert({
+        const { data, error } = await supabase.from('chat_messages').insert({
           conversation_id: conversationId,
           role: role,
           content: content,
-          attachments: attachments || []
-        });
+          attachments: attachments || [],
+          metadata: metadata || {}
+        }).select('id').single();
+        if (error) {
+          console.error('Error saving message:', error);
+          return null;
+        }
+        return data ? data.id : null;
       } catch (e) {
         console.error('Error saving message:', e);
+        return null;
+      }
+    }
+
+    async function updateMessageMetadataInDb(messageId, metadata) {
+      if (!supabase || !messageId) return;
+      try {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ metadata: metadata || {} })
+          .eq('id', messageId);
+        if (error) console.error('Error updating message metadata:', error);
+      } catch (e) {
+        console.error('Error updating message metadata:', e);
       }
     }
 
@@ -2667,11 +2707,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       currentConversationId = conversationId;
       const messages = await loadConversationMessages(conversationId);
       aiChatMessages = messages.map(function(m) {
-        return {
+        var message = {
           role: m.role,
           content: m.content,
-          attachments: m.attachments || []
+          attachments: m.attachments || [],
+          timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+          dbId: m.id || null
         };
+        return applyMessageMetadata(message, m.metadata);
       });
       renderAiChatMessages();
       renderConversationHistory();
@@ -2711,7 +2754,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         // Toggle display for dropdown style
         if (history.style.display === 'none' || !history.style.display) {
           history.style.display = 'block';
-          loadChatHistory();
+          loadConversationHistory().then(function(list) {
+            conversationHistory = list;
+            renderConversationHistory();
+          });
         } else {
           history.style.display = 'none';
         }
@@ -2828,23 +2874,32 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'flex';
 
-      // Always start a new conversation when opening
-      currentConversationId = await createNewConversation();
-      aiChatMessages = [];
-      chatAttachments = [];
-
-      aiChatMessages.push({
-        role: 'assistant',
-        content: 'שלום! אני יכול לחפש מתכונים קיימים, להמציא מתכונים חדשים מהדמיון שלי, או לעזור לך להוסיף מתכון משלך. במה אוכל לעזור?',
-        timestamp: new Date()
-      });
-
-      // Load conversation history for sidebar
       conversationHistory = await loadConversationHistory();
       renderConversationHistory();
 
-      renderAiChatMessages();
-      clearAttachmentPreview();
+      // Resume the current session if the user only closed the overlay
+      if (currentConversationId && aiChatMessages.length > 0) {
+        renderAiChatMessages();
+        clearAttachmentPreview();
+        var resumedInput = document.getElementById('aiChatInput');
+        if (resumedInput) resumedInput.focus();
+        var resumedSendBtn = document.getElementById('aiChatSend');
+        if (resumedSendBtn) resumedSendBtn.disabled = false;
+        return;
+      }
+
+      // Otherwise restore the most recent conversation from history
+      if (conversationHistory.length > 0) {
+        await loadPastConversation(conversationHistory[0].id);
+        clearAttachmentPreview();
+        var restoredInput = document.getElementById('aiChatInput');
+        if (restoredInput) restoredInput.focus();
+        var restoredSendBtn = document.getElementById('aiChatSend');
+        if (restoredSendBtn) restoredSendBtn.disabled = false;
+        return;
+      }
+
+      await startNewConversation();
       var input = document.getElementById('aiChatInput');
       if (input) {
         input.value = '';
@@ -2923,7 +2978,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
       // Save user message to database
       if (currentConversationId) {
-        await saveMessageToDb(currentConversationId, 'user', userMessage.content, userMessage.attachments);
+        var userDbId = await saveMessageToDb(
+          currentConversationId,
+          'user',
+          userMessage.content,
+          userMessage.attachments,
+          buildMessageMetadata(userMessage)
+        );
+        if (userDbId) userMessage.dbId = userDbId;
       }
 
       // Clear inputs
@@ -2984,9 +3046,16 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
           aiChatMessages.push(assistantMessage);
 
-          // Save assistant message to database
+          // Save assistant message to database (including suggested recipe for history restore)
           if (currentConversationId) {
-            await saveMessageToDb(currentConversationId, 'assistant', reply, []);
+            var assistantDbId = await saveMessageToDb(
+              currentConversationId,
+              'assistant',
+              reply,
+              [],
+              buildMessageMetadata(assistantMessage)
+            );
+            if (assistantDbId) assistantMessage.dbId = assistantDbId;
           }
 
           renderAiChatMessages();

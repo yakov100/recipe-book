@@ -444,32 +444,44 @@ body::after {
 .header-logo-icon {
     width: 42px;
     height: 42px;
+    padding: 3px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-color) 0%, #ffffff 50%, var(--secondary) 100%);
+    overflow: hidden;
+    background: linear-gradient(135deg, #93c5fd 0%, #a7f3d0 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.65);
     transition: transform 0.3s ease;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    box-shadow: none;
 }
 
 .header h1:hover .header-logo-icon {
     transform: rotate(12deg);
 }
 
-.header-logo-icon .material-symbols-outlined {
-    font-size: 1.5rem;
-    color: #475569;
-    font-weight: bold;
+.header-logo-icon .header-logo-chef {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center 12%;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-sizing: border-box;
+    transform: scale(1.15);
+    box-shadow: none;
+}
+
+.dark .header-logo-icon {
+    background: linear-gradient(135deg, #67a2e8 0%, #6ee7b7 100%);
+    box-shadow: none;
 }
 
 .dark .header h1 {
     color: #ffffff;
-}
-
-.dark .header-logo-icon .material-symbols-outlined {
-    color: #475569;
 }
 
 .header-logo-gradient {
@@ -3517,308 +3529,6 @@ input[type="text"]::placeholder {
     color: #fb923c;
 }
 
-/* ----- Suggested recipe card (AI) – tight spacing, clean buttons ----- */
-.ai-chat-suggested-recipe-card {
-    margin-top: 6px;
-    border-radius: 10px;
-    overflow: hidden;
-    background: var(--card-light);
-    border: 1px solid rgba(30, 41, 59, 0.07);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    max-width: 320px;
-}
-
-.sr-card-image {
-    position: relative;
-    width: 100%;
-    height: 100px;
-    overflow: hidden;
-    background: var(--pastel-green);
-}
-
-.sr-card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.sr-card-badge {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    background: var(--card-light);
-    color: var(--text-main);
-    font-size: 0.6rem;
-    font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 4px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.sr-card-body {
-    padding: 8px 12px 6px;
-}
-
-.sr-card-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-main);
-    margin: 0 0 1px 0;
-    line-height: 1.25;
-    font-family: var(--font-secondary);
-}
-
-.sr-card-category {
-    display: inline-block;
-    font-size: 0.6rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 4px;
-}
-
-.sr-card-section {
-    margin-top: 0;
-    border: none;
-    border-radius: 0;
-    border-top: 1px solid rgba(30, 41, 59, 0.06);
-}
-
-.sr-card-section:first-of-type {
-    border-top: none;
-}
-
-.sr-card-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-    background: none;
-    cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-main);
-    user-select: none;
-    transition: color 0.12s;
-}
-
-.sr-card-section-header:hover {
-    color: var(--primary-hover);
-}
-
-.sr-card-section-header span i {
-    margin-left: 4px;
-    color: var(--text-muted);
-    font-size: 0.65rem;
-}
-
-.sr-card-chevron {
-    font-size: 0.55rem;
-    color: var(--text-muted);
-    transition: transform 0.2s ease;
-}
-
-.sr-card-section.open .sr-card-chevron {
-    transform: rotate(180deg);
-}
-
-.sr-card-section-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.22s ease;
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: var(--text-muted);
-    padding: 0 0 4px 0;
-}
-
-.sr-card-section.open .sr-card-section-content {
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 2px 0 4px 0;
-}
-
-/* שורת כפתורים צמודה – בלי רווח מיותר */
-.sr-card-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 12px 10px;
-    border-top: 1px solid rgba(30, 41, 59, 0.06);
-    background: rgba(30, 41, 59, 0.02);
-}
-
-.sr-card-add-btn {
-    padding: 7px 12px;
-    height: 30px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    white-space: nowrap;
-    background: var(--primary-color);
-    color: var(--text-main);
-    transition: background 0.15s, filter 0.15s;
-}
-
-.sr-card-add-btn:hover {
-    background: var(--primary-hover);
-    filter: brightness(1.05);
-}
-
-.sr-card-edit-btn {
-    padding: 7px 10px;
-    height: 30px;
-    border: 1px solid rgba(30, 41, 59, 0.12);
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    white-space: nowrap;
-    background: var(--card-light);
-    color: var(--text-main);
-    transition: background 0.15s, border-color 0.15s;
-}
-
-.sr-card-edit-btn:hover {
-    background: var(--pastel-green);
-    border-color: rgba(110, 231, 183, 0.5);
-}
-
-.sr-card-dismiss-btn {
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(30, 41, 59, 0.05);
-    color: var(--text-muted);
-    transition: background 0.15s, color 0.15s;
-}
-
-.sr-card-dismiss-btn:hover {
-    background: rgba(30, 41, 59, 0.1);
-    color: var(--text-main);
-}
-
-.sr-card-added {
-    text-align: center;
-    padding: 6px 0;
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: 0.75rem;
-}
-
-.sr-card-added i {
-    margin-left: 4px;
-    color: #10b981;
-}
-
-/* Dark: suggested recipe card */
-.dark .ai-chat-suggested-recipe-card {
-    background: var(--card-dark);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-
-.dark .sr-card-image {
-    background: rgba(30, 41, 59, 0.8);
-}
-
-.dark .sr-card-badge {
-    background: var(--card-dark);
-    color: #5eead4;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.dark .sr-card-title {
-    color: #f1f5f9;
-}
-
-.dark .sr-card-category {
-    color: #94a3b8;
-}
-
-.dark .sr-card-section {
-    border-top-color: rgba(255, 255, 255, 0.06);
-}
-
-.dark .sr-card-section-header {
-    color: #e2e8f0;
-}
-
-.dark .sr-card-section-header:hover {
-    color: #5eead4;
-}
-
-.dark .sr-card-section-header span i,
-.dark .sr-card-chevron {
-    color: #94a3b8;
-}
-
-.dark .sr-card-section-content {
-    color: #cbd5e1;
-}
-
-.dark .sr-card-actions {
-    border-top-color: rgba(255, 255, 255, 0.06);
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.dark .sr-card-add-btn {
-    background: var(--primary-color);
-    color: var(--background-dark);
-}
-
-.dark .sr-card-add-btn:hover {
-    background: var(--primary-hover);
-}
-
-.dark .sr-card-edit-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.12);
-    color: #e2e8f0;
-}
-
-.dark .sr-card-edit-btn:hover {
-    background: rgba(167, 243, 208, 0.1);
-    border-color: var(--primary-color);
-}
-
-.dark .sr-card-dismiss-btn {
-    background: rgba(255, 255, 255, 0.05);
-    color: #94a3b8;
-}
-
-.dark .sr-card-dismiss-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e2e8f0;
-}
-
-.dark .sr-card-added {
-    color: #94a3b8;
-}
-
-.dark .sr-card-added i {
-    color: #34d399;
-}
-
 /* Input – פיל + כפתור בולט */
 .ai-chat-input-area {
     flex-shrink: 0;
@@ -4360,27 +4070,43 @@ input[type="text"]::placeholder {
     }
 }
 
-/* Recipe Confirm Buttons in Chat */
-/* Suggested recipe card in chat */
+/* Suggested recipe card in chat – aligned with site design system */
+.ai-chat-msg-content > .ai-chat-recipe-confirm {
+    margin-top: 8px;
+}
+
 .ai-chat-recipe-confirm {
-    background: white;
-    border-radius: 16px;
-    margin-top: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    background: var(--card-light);
+    border-radius: 1rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     overflow: hidden;
+    border: 1px solid rgba(167, 243, 208, 0.28);
+    max-width: min(100%, 360px);
+    width: 100%;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.ai-chat-recipe-confirm:hover {
+    box-shadow: var(--glow);
 }
 
 .ai-chat-recipe-confirm .recipe-card-image {
     position: relative;
     width: 100%;
-    height: 180px;
+    height: 160px;
     overflow: hidden;
+    background: var(--pastel-green);
 }
 
 .ai-chat-recipe-confirm .recipe-card-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-chat-recipe-confirm:hover .recipe-card-image img {
+    transform: scale(1.04);
 }
 
 .ai-chat-recipe-confirm .recipe-card-category-badge {
@@ -4389,72 +4115,80 @@ input[type="text"]::placeholder {
     right: 10px;
     background: rgba(255, 255, 255, 0.92);
     color: #0f766e;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 20px;
-    backdrop-filter: blur(4px);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(167, 243, 208, 0.35);
 }
 
 .ai-chat-recipe-confirm .recipe-card-body {
-    padding: 14px 16px 8px;
+    padding: 14px 16px 10px;
 }
 
 .ai-chat-recipe-confirm .recipe-card-title {
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--text-main);
     margin-bottom: 6px;
+    font-family: var(--font-secondary);
+    line-height: 1.35;
 }
 
 .ai-chat-recipe-confirm .recipe-card-category-inline {
     display: inline-block;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: #0f766e;
-    background: rgba(167, 243, 208, 0.3);
-    padding: 2px 10px;
-    border-radius: 20px;
-    margin-bottom: 8px;
+    background: rgba(167, 243, 208, 0.35);
+    padding: 3px 12px;
+    border-radius: 9999px;
+    margin-bottom: 10px;
 }
 
-/* Collapsible sections */
 .ai-chat-recipe-confirm .recipe-card-section {
-    margin-top: 6px;
-    border-radius: 10px;
+    margin-top: 8px;
+    border-radius: 0.75rem;
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(30, 41, 59, 0.08);
+    background: rgba(232, 245, 241, 0.35);
 }
 
 .ai-chat-recipe-confirm .recipe-card-section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 9px 12px;
-    background: rgba(0, 0, 0, 0.025);
+    padding: 10px 12px;
+    background: transparent;
     cursor: pointer;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-main);
     user-select: none;
-    transition: background 0.2s;
+    transition: background 0.2s, color 0.2s;
 }
 
 .ai-chat-recipe-confirm .recipe-card-section-header:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(167, 243, 208, 0.22);
+    color: #0f766e;
 }
 
-.ai-chat-recipe-confirm .recipe-card-section-header i:first-child,
-.ai-chat-recipe-confirm .recipe-card-section-header span i {
-    margin-left: 6px;
+.ai-chat-recipe-confirm .recipe-card-section-header span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ai-chat-recipe-confirm .recipe-card-section-header .material-symbols-outlined {
+    font-size: 1.05rem;
     color: #0d9488;
-    font-size: 0.78rem;
 }
 
 .ai-chat-recipe-confirm .recipe-card-chevron {
-    font-size: 0.65rem;
-    color: #9ca3af;
-    transition: transform 0.25s;
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    transition: transform 0.25s ease;
 }
 
 .ai-chat-recipe-confirm .recipe-card-section.open .recipe-card-chevron {
@@ -4465,83 +4199,124 @@ input[type="text"]::placeholder {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease, padding 0.3s ease;
-    font-size: 0.8rem;
-    line-height: 1.7;
-    color: #4b5563;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: var(--text-muted);
     padding: 0 12px;
+    font-family: var(--font-secondary);
 }
 
 .ai-chat-recipe-confirm .recipe-card-section.open .recipe-card-section-content {
-    max-height: 300px;
+    max-height: 280px;
     overflow-y: auto;
-    padding: 10px 12px;
+    padding: 0 12px 12px;
 }
 
-/* Action buttons */
 .ai-chat-recipe-confirm .recipe-confirm-buttons {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     padding: 12px 16px 14px;
+    border-top: 1px solid rgba(30, 41, 59, 0.06);
+    background: rgba(253, 251, 247, 0.85);
 }
 
-.recipe-confirm-buttons button {
+.ai-chat-recipe-confirm .recipe-confirm-buttons button {
     flex: 1;
-    min-width: 90px;
-    padding: 10px 14px;
+    min-width: 88px;
+    padding: 10px 12px;
     border: none;
-    border-radius: 12px;
-    font-size: 0.82rem;
+    border-radius: 9999px;
+    font-size: 0.8125rem;
     font-weight: 600;
+    font-family: var(--font-secondary);
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    transition: all 0.2s;
+    gap: 4px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.confirm-add-btn {
+.ai-chat-recipe-confirm .recipe-confirm-buttons button .material-symbols-outlined {
+    font-size: 1.05rem;
+}
+
+.ai-chat-recipe-confirm .confirm-add-btn {
     background: linear-gradient(135deg, #93c5fd 0%, #a7f3d0 100%);
     color: #0f766e;
 }
 
-.confirm-add-btn:hover {
-    transform: translateY(-2px);
+.ai-chat-recipe-confirm .confirm-add-btn:hover {
+    transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(147, 197, 253, 0.4);
 }
 
-.confirm-edit-btn {
-    background: #f0fdfa;
+.ai-chat-recipe-confirm .confirm-edit-btn {
+    background: var(--pastel-green);
     color: #0d9488;
+    border: 1px solid rgba(110, 231, 183, 0.45);
 }
 
-.confirm-edit-btn:hover {
-    background: #ede9fe;
+.ai-chat-recipe-confirm .confirm-edit-btn:hover {
+    background: rgba(167, 243, 208, 0.55);
 }
 
-.confirm-cancel-btn {
-    background: #f3f4f6;
-    color: #666;
+.ai-chat-recipe-confirm .confirm-cancel-btn {
+    flex: 0 0 auto;
+    min-width: 44px;
+    width: 44px;
+    padding: 0;
+    background: rgba(30, 41, 59, 0.06);
+    color: var(--text-muted);
 }
 
-.confirm-cancel-btn:hover {
-    background: #e5e7eb;
+.ai-chat-recipe-confirm .confirm-cancel-btn:hover {
+    background: rgba(30, 41, 59, 0.1);
+    color: var(--text-main);
 }
 
-/* Dark mode */
+.ai-chat-recipe-confirm .recipe-confirm-added {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: var(--font-secondary);
+    color: #0f766e;
+    background: rgba(167, 243, 208, 0.28);
+    border-top: 1px solid rgba(110, 231, 183, 0.35);
+}
+
+.ai-chat-recipe-confirm .recipe-confirm-added .material-symbols-outlined {
+    font-size: 1.15rem;
+    color: #10b981;
+}
+
 .dark .ai-chat-recipe-confirm {
-    background: #1e1e26;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    background: var(--card-dark);
+    border-color: rgba(167, 243, 208, 0.12);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
+}
+
+.dark .ai-chat-recipe-confirm:hover {
+    box-shadow: 0 0 30px -5px rgba(167, 243, 208, 0.35);
+}
+
+.dark .ai-chat-recipe-confirm .recipe-card-image {
+    background: rgba(30, 41, 59, 0.85);
 }
 
 .dark .ai-chat-recipe-confirm .recipe-card-category-badge {
-    background: rgba(30, 30, 38, 0.85);
+    background: rgba(30, 41, 59, 0.88);
     color: #5eead4;
+    border-color: rgba(94, 234, 212, 0.25);
 }
 
 .dark .ai-chat-recipe-confirm .recipe-card-title {
-    color: #f3f4f6;
+    color: #f1f5f9;
 }
 
 .dark .ai-chat-recipe-confirm .recipe-card-category-inline {
@@ -4551,33 +4326,46 @@ input[type="text"]::placeholder {
 
 .dark .ai-chat-recipe-confirm .recipe-card-section {
     border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .dark .ai-chat-recipe-confirm .recipe-card-section-header {
-    background: rgba(255, 255, 255, 0.04);
-    color: #e5e7eb;
+    color: #e2e8f0;
 }
 
 .dark .ai-chat-recipe-confirm .recipe-card-section-header:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(167, 243, 208, 0.08);
+    color: #5eead4;
 }
 
-.dark .ai-chat-recipe-confirm .recipe-card-section-header span i {
+.dark .ai-chat-recipe-confirm .recipe-card-section-header .material-symbols-outlined {
     color: #5eead4;
 }
 
 .dark .ai-chat-recipe-confirm .recipe-card-section-content {
-    color: #d1d5db;
+    color: #cbd5e1;
 }
 
-.dark .confirm-edit-btn {
-    background: rgba(167, 243, 208, 0.15);
+.dark .ai-chat-recipe-confirm .recipe-confirm-buttons {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.dark .ai-chat-recipe-confirm .confirm-edit-btn {
+    background: rgba(167, 243, 208, 0.12);
     color: #5eead4;
+    border-color: rgba(94, 234, 212, 0.2);
 }
 
-.dark .confirm-cancel-btn {
-    background: rgba(255, 255, 255, 0.1);
+.dark .ai-chat-recipe-confirm .confirm-cancel-btn {
+    background: rgba(255, 255, 255, 0.08);
     color: #94a3b8;
+}
+
+.dark .ai-chat-recipe-confirm .recipe-confirm-added {
+    color: #5eead4;
+    background: rgba(94, 234, 212, 0.1);
+    border-top-color: rgba(94, 234, 212, 0.18);
 }
 
 /* Backup Reminder */
@@ -4675,13 +4463,16 @@ input[type="text"]::placeholder {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    align-items: flex-start;
+    align-items: center;
     pointer-events: none;
 }
 
 .floating-action-btn {
-    width: 64px;
-    height: 64px;
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    padding: 0;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--primary-color), var(--secondary));
     border: none;
@@ -4694,6 +4485,7 @@ input[type="text"]::placeholder {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: auto;
+    flex-shrink: 0;
 }
 
 .floating-action-btn:hover {
@@ -4702,10 +4494,10 @@ input[type="text"]::placeholder {
 }
 
 .floating-action-btn.ai-chat {
-    width: 56px;
-    height: 56px;
+    padding: 3px;
+    box-sizing: border-box;
     background: linear-gradient(135deg, #93c5fd 0%, #a7f3d0 100%);
-    border: none;
+    border: 2px solid rgba(255, 255, 255, 0.65);
     color: #0f766e;
     box-shadow: 0 8px 24px rgba(147, 197, 253, 0.4), 0 4px 12px rgba(167, 243, 208, 0.3);
     position: relative;
@@ -4731,13 +4523,15 @@ input[type="text"]::placeholder {
 }
 
 .chat-btn-chef-icon {
-    width: 40px;
-    height: 40px;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    object-position: center top;
     border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-sizing: border-box;
     filter: none;
     opacity: 1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     display: block;
 }
 
@@ -4749,7 +4543,6 @@ input[type="text"]::placeholder {
 
 .dark .chat-btn-chef-icon {
     filter: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Responsive Design */
@@ -4872,6 +4665,8 @@ input[type="text"]::placeholder {
     .floating-action-btn {
         width: 56px;
         height: 56px;
+        min-width: 56px;
+        min-height: 56px;
         font-size: 1.25rem;
     }
     
@@ -5131,14 +4926,20 @@ input[type="text"]::placeholder {
     background: #10b981;
     color: white;
     border-radius: 50%;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
-.form-add-recipe-header-icon .material-symbols-outlined {
-    font-size: 0.95rem;
+.form-add-recipe-header-icon .form-add-recipe-header-chef {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center top;
+    border-radius: 50%;
 }
 
 .form-add-recipe-title {
@@ -7541,6 +7342,15 @@ img[loading="lazy"]:not([src=""]) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.recipe-card.using-default-image .recipe-card-image {
+  object-position: center 15%;
+}
+
+.recipe-popup-image.using-default-image,
+.recipe-card.using-default-image .recipe-card-image {
+  filter: saturate(1.05);
 }
 
 .recipe-popup-image {

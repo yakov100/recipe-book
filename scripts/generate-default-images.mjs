@@ -1,37 +1,80 @@
+/**
+ * Builds sharp 800×600 WebP default recipe images from high-res chef masters
+ * in scripts/chef-defaults/*.png (high-res sources, not deployed).
+ *
+ * To regenerate masters: use the same 3D chef as chef-serving.png with category
+ * food on the tray, bright pastel background, landscape 3:2.
+ */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..', 'assets', 'default-images');
+const mastersDir = path.join(__dirname, 'chef-defaults');
 
-const categories = {
-  breads: { label: 'לחם', colors: ['#D4A574', '#C4956A', '#B88560'] },
-  soups: { label: 'מרק', colors: ['#E8A87C', '#D9986A', '#CA8858'] },
-  'main-dishes': { label: 'מנה עיקרית', colors: ['#C97C5D', '#B86E50', '#A76043'] },
-  sides: { label: 'תוספת', colors: ['#8FB996', '#7FA986', '#6F9976'] },
-  salads: { label: 'סלט', colors: ['#7CB87A', '#6CA86A', '#5C985A'] },
-  other: { label: 'מתכון', colors: ['#A7C7E7', '#97B7D7', '#87A7C7'] },
-  cakes: { label: 'עוגה', colors: ['#E8B4BC', '#D8A4AC', '#C8949C'] },
-  desserts: { label: 'קינוח', colors: ['#D4A5D9', '#C495C9', '#B485B9'] },
+const CANVAS = { width: 800, height: 600 };
+
+/** @type {Record<string, string>} */
+const CATEGORY_SOURCES = {
+  appetizers: 'chef-default-appetizers.png',
+  'main-dishes': 'chef-default-main-dishes.png',
+  sides: 'chef-default-sides.png',
+  salads: 'chef-default-salads.png',
+  soups: 'chef-default-soups.png',
+  pastries: 'chef-default-pastries.png',
+  pasta: 'chef-default-pasta.png',
+  meat: 'chef-default-meat.png',
+  fish: 'chef-default-fish.png',
+  vegetables: 'chef-default-vegetables.png',
+  cakes: 'chef-default-cakes.png',
+  cookies: 'chef-default-cookies.png',
+  sweets: 'chef-default-sweets.png',
+  desserts: 'chef-default-desserts.png',
+  breads: 'chef-default-breads.png',
+  other: 'chef-default-other.png',
+  treats: 'chef-default-treats.png',
 };
 
-function svg(label, bg, variant) {
-  const yOffset = variant * 12;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="${label}">
-  <rect width="800" height="600" fill="${bg}"/>
-  <circle cx="400" cy="${260 + yOffset}" r="72" fill="rgba(255,255,255,0.25)"/>
-  <ellipse cx="400" cy="${380 + yOffset}" rx="120" ry="28" fill="rgba(255,255,255,0.18)"/>
-  <text x="400" y="${430 + yOffset}" text-anchor="middle" font-family="Heebo,Segoe UI,sans-serif" font-size="36" font-weight="600" fill="rgba(255,255,255,0.92)">${label}</text>
-</svg>`;
-}
+async function buildFromMaster(categoryDir, sourceFile) {
+  const sourcePath = path.join(mastersDir, sourceFile);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Missing master: ${sourcePath}`);
+  }
 
-for (const [dir, { label, colors }] of Object.entries(categories)) {
-  const dirPath = path.join(root, dir);
+  const dirPath = path.join(root, categoryDir);
   fs.mkdirSync(dirPath, { recursive: true });
-  colors.forEach((color, i) => {
-    fs.writeFileSync(path.join(dirPath, `${i + 1}.svg`), svg(label, color, i));
-  });
+
+  const outWebp = path.join(dirPath, '1.webp');
+  const outPng = path.join(dirPath, '1.png');
+
+  await sharp(sourcePath)
+    .resize(CANVAS.width, CANVAS.height, {
+      fit: 'cover',
+      position: 'centre',
+      kernel: sharp.kernel.lanczos3,
+    })
+    .webp({ quality: 92, effort: 6 })
+    .toFile(outWebp);
+
+  await sharp(outWebp).png({ compressionLevel: 9 }).toFile(outPng);
+
+  for (const stale of fs.readdirSync(dirPath)) {
+    if (stale !== '1.webp' && stale !== '1.png') {
+      fs.unlinkSync(path.join(dirPath, stale));
+    }
+  }
 }
 
-console.log('Generated default-images SVG placeholders in assets/default-images/');
+if (!fs.existsSync(mastersDir)) {
+  console.error(`Missing ${mastersDir} — copy chef-default-*.png masters there first.`);
+  process.exit(1);
+}
+
+for (const [dir, file] of Object.entries(CATEGORY_SOURCES)) {
+  await buildFromMaster(dir, file);
+  console.log(`  ✓ default-images/${dir}/1.webp`);
+}
+
+console.log('Generated sharp default images from scripts/chef-defaults/');
