@@ -703,6 +703,44 @@ body::after {
     }
 }
 
+/* Initial load skeleton (empty cache) */
+.recipe-card-skeleton {
+    pointer-events: none;
+    cursor: default;
+    background: linear-gradient(
+        110deg,
+        rgba(167, 243, 208, 0.15) 8%,
+        rgba(253, 164, 175, 0.2) 18%,
+        rgba(167, 243, 208, 0.15) 33%
+    );
+    background-size: 200% 100%;
+    animation: recipe-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.dark .recipe-card-skeleton {
+    background: linear-gradient(
+        110deg,
+        rgba(30, 41, 59, 0.9) 8%,
+        rgba(51, 65, 85, 0.95) 18%,
+        rgba(30, 41, 59, 0.9) 33%
+    );
+    background-size: 200% 100%;
+}
+
+@keyframes recipe-skeleton-shimmer {
+    to {
+        background-position: -200% 0;
+    }
+}
+
+.recipes-loading-label {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    padding: 0.25rem 0 0.5rem;
+}
+
 /* Recipe Cards - New Design */
 .recipe-card {
     position: relative;

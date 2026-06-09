@@ -1,5 +1,7 @@
--- Migration B: Normalize image_path – strip leading recipe-images/ for backward compatibility
+-- Migration B: DEPRECATED (no-op)
+-- Do NOT strip leading recipe-images/ from image_path.
+-- Some Storage objects use recipe-images/ as part of the object key inside the bucket;
+-- removing the prefix breaks public URLs (HTTP 400).
 
-UPDATE recipes
-SET image_path = regexp_replace(image_path, '^recipe-images/', '')
-WHERE image_path LIKE 'recipe-images/%';
+-- Intentionally left as no-op for environments that have not yet applied this migration.
+SELECT 1;

@@ -415,6 +415,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             // מצב רגיל - טען את כל המתכונים
             // שלב 1: טעינה מיידית מ-cache (להצגה מהירה)
             const cachedRecipes = loadRecipesFromCache();
+            if (!cachedRecipes || cachedRecipes.length === 0) {
+                showRecipesLoadingSkeleton();
+            }
             const settings = await loadSettings();
             
             if (cachedRecipes && cachedRecipes.length > 0) {
@@ -453,6 +456,12 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                     updateCategoryButtons();
                 } catch (err) {
                     console.error('Failed to load from server:', err);
+                    const container = document.getElementById('recipesContainer');
+                    if (container?.querySelector('.recipe-card-skeleton')) {
+                        container.innerHTML =
+                            '<div style="text-align:center;padding:2rem;color:#666;">שגיאה בטעינת המתכונים. נא לרענן את הדף.</div>';
+                        clearRecipesLoadingState();
+                    }
                 }
             };
 
@@ -610,8 +619,28 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       reader.readAsText(file);
     }
 
+    const RECIPES_LOADING_SKELETON_COUNT = 8;
+
+    function showRecipesLoadingSkeleton() {
+      const container = document.getElementById('recipesContainer');
+      if (!container) return;
+      const skeletonCards = Array.from({ length: RECIPES_LOADING_SKELETON_COUNT }, () =>
+        '<div class="recipe-card recipe-card-skeleton" aria-hidden="true"></div>'
+      ).join('');
+      container.innerHTML =
+        '<p class="recipes-loading-label" role="status" aria-live="polite">טוען מתכונים...</p>' +
+        skeletonCards;
+      container.setAttribute('aria-busy', 'true');
+    }
+
+    function clearRecipesLoadingState() {
+      const container = document.getElementById('recipesContainer');
+      if (container) container.removeAttribute('aria-busy');
+    }
+
     function displayRecipes(recipesToShow) {
       const container = document.getElementById('recipesContainer');
+      clearRecipesLoadingState();
       container.innerHTML = '';
 
       updateFilterHeaderUI(getActiveFiltersFromUI(), Array.isArray(recipesToShow) ? recipesToShow.length : 0);
