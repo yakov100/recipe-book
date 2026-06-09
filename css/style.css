@@ -1039,30 +1039,78 @@ body::after {
     transform: translateX(-50%) translateY(0);
 }
 
-/* Filter Panel in Main Content Area – נפתח מעל המתכונים (לא דוחף תוכן) */
-/* עיצוב אנכי, צעיר ומודרני */
+/* Filter Panel – fixed מתחת ל-header (נראה בכל גלילה) */
 .main-filter-panel {
     display: none; /* מוצג רק כש־JS משנה ל־block בעת פתיחת סינון */
-    position: absolute;
-    top: 0;
+    position: fixed;
+    top: 6.5rem; /* fallback – JS מעדכן לפי גובה header */
     left: 50%;
     transform: translate(-50%, -10px);
-    width: 100%;
+    width: calc(100% - 2rem);
     max-width: 360px;
+    max-height: calc(100vh - 7.5rem);
     margin: 0;
-    padding: 1.5rem 1.5rem 1.75rem;
+    padding: 1.35rem 1.35rem 1.5rem;
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.72);
+    background: linear-gradient(
+        165deg,
+        rgba(253, 251, 247, 0.92) 0%,
+        rgba(232, 245, 241, 0.88) 55%,
+        rgba(253, 248, 230, 0.85) 100%
+    );
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(167, 243, 208, 0.45);
     border-radius: 1.25rem;
-    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.08), 0 0 0 1px rgba(167, 243, 208, 0.08);
-    overflow: visible;
-    z-index: 25;
+    box-shadow:
+        0 12px 40px rgba(31, 38, 135, 0.07),
+        0 0 0 1px rgba(196, 181, 253, 0.12),
+        var(--glow);
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: 110;
     opacity: 0;
     pointer-events: none;
     transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 280ms ease;
+}
+
+.main-filter-panel .filter-select-dropdown {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.main-filter-panel .filter-select-dropdown::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-panel-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 105;
+    background: linear-gradient(
+        180deg,
+        rgba(253, 251, 247, 0.25) 0%,
+        rgba(15, 23, 42, 0.22) 100%
+    );
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+}
+
+.dark .filter-panel-backdrop {
+    background: linear-gradient(
+        180deg,
+        rgba(15, 23, 42, 0.35) 0%,
+        rgba(15, 23, 42, 0.55) 100%
+    );
+}
+
+.filter-panel-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
 }
 
  .main-filter-panel::before {
@@ -1088,18 +1136,18 @@ body::after {
      align-items: center;
      justify-content: space-between;
      gap: 0.75rem;
-     margin-bottom: 1.25rem;
+     margin-bottom: 1.1rem;
      padding-bottom: 0.75rem;
-     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+     border-bottom: 1px solid rgba(167, 243, 208, 0.35);
  }
  .dark .filter-panel-header {
-     border-bottom-color: rgba(255, 255, 255, 0.08);
+     border-bottom-color: rgba(167, 243, 208, 0.15);
  }
 
  .filter-results {
      font-size: 0.9rem;
      font-weight: 600;
-     color: #475569;
+     color: var(--text-muted);
      white-space: nowrap;
      overflow: hidden;
      text-overflow: ellipsis;
@@ -1107,7 +1155,7 @@ body::after {
  }
 
  .dark .filter-results {
-     color: #e2e8f0;
+     color: #cbd5e1;
  }
 
  .clear-filters-btn {
@@ -1168,9 +1216,17 @@ body::after {
 }
 
 .dark .main-filter-panel {
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+    background: linear-gradient(
+        165deg,
+        rgba(15, 23, 42, 0.88) 0%,
+        rgba(30, 41, 59, 0.82) 55%,
+        rgba(15, 23, 42, 0.9) 100%
+    );
+    border: 1px solid rgba(167, 243, 208, 0.18);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(196, 181, 253, 0.1),
+        var(--glow-ai);
 }
 
  .dark .main-filter-panel::before {
@@ -1193,46 +1249,48 @@ body::after {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: 0.875rem 1.25rem;
     border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(167, 243, 208, 0.28);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     width: 100%;
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
     overflow: visible;
-    border-inline-start: 3px solid transparent;
+    border-inline-start: 3px solid rgba(167, 243, 208, 0.35);
 }
 
  .search-filter-item:hover {
      transform: translateX(2px); /* RTL: זז ימינה (כיוון התחלה) */
-     background: rgba(255, 255, 255, 0.92);
-     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-     border-inline-start-color: rgba(167, 243, 208, 0.5);
+     background: rgba(232, 245, 241, 0.85);
+     box-shadow: 0 6px 20px rgba(167, 243, 208, 0.18);
+     border-color: rgba(167, 243, 208, 0.45);
+     border-inline-start-color: var(--primary-hover);
  }
  [dir="ltr"] .search-filter-item:hover {
      transform: translateX(-2px);
  }
 
 .dark .search-filter-item {
-    background: rgba(30, 41, 59, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(30, 41, 59, 0.62);
+    border: 1px solid rgba(167, 243, 208, 0.12);
+    border-inline-start-color: rgba(167, 243, 208, 0.22);
 }
 
  .dark .search-filter-item:hover {
-     background: rgba(30, 41, 59, 0.7);
-     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-     border-inline-start-color: rgba(167, 243, 208, 0.35);
+     background: rgba(30, 41, 59, 0.78);
+     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+     border-inline-start-color: var(--primary-color);
  }
 
 .search-filter-item:focus-within {
-    border-color: rgba(167, 243, 208, 0.5);
-    box-shadow: 0 0 0 3px rgba(167, 243, 208, 0.12);
-    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(167, 243, 208, 0.55);
+    box-shadow: 0 0 0 4px rgba(167, 243, 208, 0.14);
+    background: rgba(232, 245, 241, 0.9);
     border-inline-start-color: var(--primary-color);
 }
 
@@ -1249,18 +1307,19 @@ body::after {
 }
 
 .search-filter-icon {
-    color: #64748b;
+    color: #2dd4bf;
     font-size: 1.25rem;
     flex-shrink: 0;
     min-width: 1.25rem;
-    opacity: 0.9;
+    opacity: 0.95;
 }
 
 .dark .search-filter-icon {
-    color: #94a3b8;
+    color: var(--primary-color);
 }
 
-.search-filter-item:focus-within .search-filter-icon {
+.search-filter-item:focus-within .search-filter-icon,
+.search-filter-item:hover .search-filter-icon {
     color: var(--secondary);
 }
 
@@ -1270,7 +1329,7 @@ body::after {
     outline: none;
     font-size: 0.95rem;
     font-weight: 500;
-    color: #1e293b;
+    color: var(--text-main);
     direction: rtl;
     flex: 1;
     min-width: 0;
@@ -1336,7 +1395,7 @@ body::after {
 }
 
 .filter-select-trigger:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(167, 243, 208, 0.18);
 }
 
 .filter-select-trigger-text {
@@ -1350,7 +1409,7 @@ body::after {
 .filter-select-arrow {
     flex-shrink: 0;
     font-size: 1.25rem !important;
-    color: #64748b;
+    color: #2dd4bf;
     transition: transform 0.25s ease, color 0.2s ease;
 }
 
@@ -1385,12 +1444,12 @@ body::after {
     overflow-y: auto;
     padding: 0.35rem;
     margin: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(253, 251, 247, 0.96);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(167, 243, 208, 0.35);
     border-radius: 0.875rem;
-    box-shadow: 0 12px 32px rgba(31, 38, 135, 0.12), 0 0 0 1px rgba(167, 243, 208, 0.1);
+    box-shadow: 0 12px 32px rgba(31, 38, 135, 0.1), var(--glow-teal);
     z-index: 50; /* מעל שורת הכוכבים ושאר האלמנטים בפאנל */
     list-style: none;
     visibility: hidden;
@@ -1469,8 +1528,8 @@ body::after {
      justify-content: center;
      border-radius: 10px;
      color: #94a3b8;
-     background: rgba(255, 255, 255, 0.55);
-     border: 1px solid rgba(255, 255, 255, 0.75);
+     background: rgba(232, 245, 241, 0.65);
+     border: 1px solid rgba(167, 243, 208, 0.3);
      transition: transform 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
      user-select: none;
  }

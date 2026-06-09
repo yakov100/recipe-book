@@ -131,14 +131,18 @@
         location.reload();
       });
       window.addEventListener('load', function () {
+        var isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (isLocalDev) return;
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function (reg) {
           reg.update();
+        }).catch(function (err) {
+          console.warn('Service worker registration skipped:', err);
         });
       });
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-DBFerORw.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DjWshw3Q.css">
+  <script type="module" crossorigin src="/assets/index-B9n8yKho.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-sWXhkZoK.css">
 <link rel="manifest" href="/manifest.webmanifest"></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
   <!-- Animated Blobs -->
@@ -236,52 +240,53 @@
     </div>
   </header>
 
+  <!-- Filter Panel – ישירות תחת body כדי ש-fixed יישאר ב-viewport בגלילה -->
+  <div class="main-filter-panel no-scrollbar" id="searchContainer" style="display: none;" aria-hidden="true">
+    <div class="filter-panel-header">
+      <span class="filter-results" id="filterResultsCount"></span>
+      <button type="button" class="clear-filters-btn is-hidden" id="clearFiltersBtn" onclick="resetSearch()">נקה הכל</button>
+    </div>
+    <div class="search-filters-row">
+      <div class="search-filter-item">
+        <span class="material-symbols-outlined search-filter-icon">shopping_basket</span>
+        <input type="text" id="searchIngredients" class="search-filter-input" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
+      </div>
+      <div class="search-filter-item">
+        <span class="material-symbols-outlined search-filter-icon">schedule</span>
+        <input type="number" id="searchPrepTime" class="search-filter-input" placeholder="זמן הכנה (דקות)" min="0" oninput="filterRecipes()">
+      </div>
+      <div class="search-filter-item">
+        <span class="material-symbols-outlined search-filter-icon">restaurant</span>
+        <div class="filter-select-wrap" id="dietarySelectWrap">
+          <select id="searchDietaryType" class="filter-select-native" onchange="filterRecipes()" aria-hidden="true" tabindex="-1">
+            <option value="">הכל (חלבי/בשרי/פרווה)</option>
+            <option value="חלבי">חלבי</option>
+            <option value="בשרי">בשרי</option>
+            <option value="פרווה">פרווה</option>
+          </select>
+          <button type="button" class="filter-select-trigger" id="dietarySelectTrigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="filter-select-trigger-text">הכל (חלבי/בשרי/פרווה)</span>
+            <span class="material-symbols-outlined filter-select-arrow">expand_more</span>
+          </button>
+          <div class="filter-select-dropdown" id="dietarySelectDropdown" role="listbox" aria-hidden="true">
+            <div class="filter-select-option" data-value="">הכל (חלבי/בשרי/פרווה)</div>
+            <div class="filter-select-option" data-value="חלבי">חלבי</div>
+            <div class="filter-select-option" data-value="בשרי">בשרי</div>
+            <div class="filter-select-option" data-value="פרווה">פרווה</div>
+          </div>
+        </div>
+      </div>
+      <div class="search-filter-item">
+        <span class="material-symbols-outlined search-filter-icon">star</span>
+        <div class="filter-rating" id="filterRating"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Hidden file input for JSON import -->
   <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
 
   <main class="main">
-    <!-- Filter Panel (מוסתר בהתחלה – לא תופס מקום עד שפותחים סינון) -->
-    <div class="main-filter-panel" id="searchContainer" style="display: none;">
-      <div class="filter-panel-header">
-        <span class="filter-results" id="filterResultsCount"></span>
-        <button type="button" class="clear-filters-btn is-hidden" id="clearFiltersBtn" onclick="resetSearch()">נקה הכל</button>
-      </div>
-      <div class="search-filters-row">
-        <div class="search-filter-item">
-          <span class="material-symbols-outlined search-filter-icon">shopping_basket</span>
-          <input type="text" id="searchIngredients" class="search-filter-input" placeholder="חפש לפי מצרכים" oninput="filterRecipes()">
-        </div>
-        <div class="search-filter-item">
-          <span class="material-symbols-outlined search-filter-icon">schedule</span>
-          <input type="number" id="searchPrepTime" class="search-filter-input" placeholder="זמן הכנה (דקות)" min="0" oninput="filterRecipes()">
-        </div>
-        <div class="search-filter-item">
-          <span class="material-symbols-outlined search-filter-icon">restaurant</span>
-          <div class="filter-select-wrap" id="dietarySelectWrap">
-            <select id="searchDietaryType" class="filter-select-native" onchange="filterRecipes()" aria-hidden="true" tabindex="-1">
-              <option value="">הכל (חלבי/בשרי/פרווה)</option>
-              <option value="חלבי">חלבי</option>
-              <option value="בשרי">בשרי</option>
-              <option value="פרווה">פרווה</option>
-            </select>
-            <button type="button" class="filter-select-trigger" id="dietarySelectTrigger" aria-haspopup="listbox" aria-expanded="false">
-              <span class="filter-select-trigger-text">הכל (חלבי/בשרי/פרווה)</span>
-              <span class="material-symbols-outlined filter-select-arrow">expand_more</span>
-            </button>
-            <div class="filter-select-dropdown" id="dietarySelectDropdown" role="listbox" aria-hidden="true">
-              <div class="filter-select-option" data-value="">הכל (חלבי/בשרי/פרווה)</div>
-              <div class="filter-select-option" data-value="חלבי">חלבי</div>
-              <div class="filter-select-option" data-value="בשרי">בשרי</div>
-              <div class="filter-select-option" data-value="פרווה">פרווה</div>
-            </div>
-          </div>
-        </div>
-        <div class="search-filter-item">
-          <span class="material-symbols-outlined search-filter-icon">star</span>
-          <div class="filter-rating" id="filterRating"></div>
-        </div>
-      </div>
-    </div>
     <!-- Category Filter Buttons Row -->
     <div class="category-filter-row">
       <div class="category-filter" id="categoryFilter">
@@ -543,7 +548,7 @@
               <span class="material-symbols-outlined">attach_file</span>
             </button>
             <input type="text" id="aiChatInput" placeholder="הקלד כאן..." onkeydown="if(event.key==='Enter')sendAiMessage()">
-            <button type="button" id="aiChatVoice" onclick="toggleVoiceRecording()" title="הקלט קול">
+            <button type="button" id="aiChatVoice" title="הקלט קול">
               <span class="material-symbols-outlined">mic</span>
             </button>
             <button type="button" id="aiChatSend" onclick="sendAiMessage()" title="שלח">
@@ -551,7 +556,7 @@
             </button>
             <input type="file" id="aiChatFileInput" accept="image/*" multiple style="display: none;" onchange="handleChatFileSelect(event)">
           </div>
-          <p class="ai-chat-input-helper">ה-AI עשוי להציע שילובים יצירתיים, בדקו תמיד את זמני הבישול.</p>
+          <p class="ai-chat-input-helper" id="aiChatInputHelper">ה-AI עשוי להציע שילובים יצירתיים, בדקו תמיד את זמני הבישול.</p>
         </div>
       </div>
     </div>

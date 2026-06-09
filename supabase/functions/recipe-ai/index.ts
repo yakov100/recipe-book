@@ -266,6 +266,41 @@ function geminiErrorToReply(status: number, bodyText: string): string {
   return "לא ניתן לתקשר עם ה-AI. נא לבדוק הגדרות (GEMINI_API_KEY ב-Supabase Secrets). אם ההגדרות נראות תקינות, בדוק את לוגי ה-Edge Function.";
 }
 
+/** Transcribe audio via Gemini (fallback when Web Speech API network is blocked). */
+async function transcribeAudioWithGemini(
+  apiKey: string,
+  base64: string,
+  mimeType: string
+): Promise<{ transcript: string } | { error: string }> {
+  const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{
+        role: "user",
+        parts: [
+          { inline_data: { mime_type: mimeType, data: base64 } },
+          {
+            text: "Transcribe the spoken Hebrew in this audio. Return ONLY the transcript text, no quotes or explanation.",
+          },
+        ],
+      }],
+      generationConfig: { temperature: 0.1 },
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("Gemini transcribe error", res.status, t);
+    return { error: geminiErrorToReply(res.status, t) };
+  }
+
+  const data = await res.json();
+  const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+  if (!text) return { error: "לא זוהה דיבור בהקלטה." };
+  return { transcript: text };
+}
+
 interface MessagePart {
   text?: string;
   inline_data?: {
@@ -354,11 +389,34 @@ Deno.serve(async (req: Request) => {
     parseFullRecipe?: boolean;
     insertSuggestedRecipe?: boolean;
     suggestedRecipe?: { name?: string; ingredients?: string; instructions?: string; category?: string; source?: string };
+    transcribeAudio?: boolean;
+    audioBase64?: string;
+    audioMimeType?: string;
   };
   try {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON" }), { status: 400, headers: { "Content-Type": "application/json" } });
+  }
+
+  const jsonHeaders = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
+
+  // Mode: transcribe voice recording (MediaRecorder + Gemini fallback)
+  if (body?.transcribeAudio === true && typeof body.audioBase64 === "string" && body.audioBase64.length > 0) {
+    const mime = typeof body.audioMimeType === "string" && body.audioMimeType.length > 0
+      ? body.audioMimeType
+      : "audio/webm";
+    if (body.audioBase64.length > 6_000_000) {
+      return new Response(
+        JSON.stringify({ transcript: null, error: "ההקלטה ארוכה מדי. נסה הקלטה קצרה יותר." }),
+        { status: 200, headers: jsonHeaders }
+      );
+    }
+    const result = await transcribeAudioWithGemini(key, body.audioBase64, mime);
+    if ("error" in result) {
+      return new Response(JSON.stringify({ transcript: null, error: result.error }), { status: 200, headers: jsonHeaders });
+    }
+    return new Response(JSON.stringify({ transcript: result.transcript }), { status: 200, headers: jsonHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";

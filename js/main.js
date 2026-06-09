@@ -360,6 +360,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     document.addEventListener('DOMContentLoaded', async () => {
         try {
             await loadRecipesAndDisplay();
+            initVoiceButton();
         } catch (error) {
             console.error('שגיאה באתחול:', error);
             alert('שגיאה בטעינת המתכונים. נא לרענן את הדף.');
@@ -432,6 +433,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             applyTimerVisibility(settings.timerVisible);
             initializeTimer(settings);
             setupPopupCloseOnOverlayClick();
+            mountFilterPanel();
             initDietaryDropdown();
 
             // שלב 2: טעינה מהשרת רק אם ה-cache לא תקף
@@ -486,6 +488,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             setRecipesPerRow(4);
             setupGridSelector();
             applyTimerVisibility(false);
+            mountFilterPanel();
             initDietaryDropdown();
             initializeTimer({ timerVisible: false, timerVolume: 80 });
             setupPopupCloseOnOverlayClick();
@@ -2873,6 +2876,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     async function openAiChat() {
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'flex';
+      initVoiceButton();
 
       conversationHistory = await loadConversationHistory();
       renderConversationHistory();
@@ -3147,11 +3151,31 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         });
     }
 
-    // --- הקלטה קולית ---
-    var voiceRecognition = null;
+    // --- הקלטה קולית: MediaRecorder → Gemini (יציב; לא תלוי ב-Google Speech) ---
+    var voiceMediaRecorder = null;
+    var voiceMediaStream = null;
+    var voiceAudioChunks = [];
+    var voiceRecorderMimeType = 'audio/webm';
     var isRecording = false;
+    var voiceHelperDefaultText = '';
+    var voiceStarting = false;
+
+    function setVoiceHelperText(text) {
+      var helper = document.getElementById('aiChatInputHelper');
+      if (!helper) return;
+      if (!voiceHelperDefaultText) voiceHelperDefaultText = helper.textContent || '';
+      helper.textContent = text || voiceHelperDefaultText;
+    }
+
+    function releaseVoiceMediaStream() {
+      if (voiceMediaStream) {
+        voiceMediaStream.getTracks().forEach(function(track) { track.stop(); });
+        voiceMediaStream = null;
+      }
+    }
 
     function toggleVoiceRecording() {
+      if (voiceStarting) return;
       if (isRecording) {
         stopVoiceRecording();
       } else {
@@ -3159,50 +3183,172 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       }
     }
 
-    function startVoiceRecording() {
-      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert('הדפדפן שלך לא תומך בהקלטה קולית. נסה Chrome או Edge.');
+    function blobToBase64(blob) {
+      return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onloadend = function() {
+          var dataUrl = typeof reader.result === 'string' ? reader.result : '';
+          var comma = dataUrl.indexOf(',');
+          resolve(comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function transcribeVoiceRecording(mimeType) {
+      setVoiceHelperText('מתמלל...');
+      updateVoiceButton(false);
+
+      var blob = new Blob(voiceAudioChunks, { type: mimeType });
+      voiceAudioChunks = [];
+
+      if (blob.size < 200) {
+        setVoiceHelperText('ההקלטה קצרה מדי. נסה שוב.');
         return;
       }
 
-      voiceRecognition = new SpeechRecognition();
-      voiceRecognition.lang = 'he-IL'; // עברית
-      voiceRecognition.continuous = true;
-      voiceRecognition.interimResults = true;
-
-      voiceRecognition.onresult = function(event) {
-        var transcript = '';
-        for (var i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+      try {
+        var base64 = await blobToBase64(blob);
+        var result = await invokeEdgeFunction('recipe-ai', {
+          transcribeAudio: true,
+          audioBase64: base64,
+          audioMimeType: (mimeType || 'audio/webm').split(';')[0],
+        });
+        if (result.error) {
+          var errMsg = typeof result.error === 'object' && result.error.message
+            ? result.error.message
+            : String(result.error);
+          throw new Error(errMsg);
         }
-        document.getElementById('aiChatInput').value = transcript;
-      };
-
-      voiceRecognition.onerror = function(event) {
-        console.error('Voice recognition error:', event.error);
-        if (event.error === 'not-allowed') {
-          alert('אנא אשר גישה למיקרופון בדפדפן.');
+        var data = result.data;
+        if (typeof data === 'string') {
+          try { data = JSON.parse(data); } catch (parseErr) { /* keep string */ }
         }
-        stopVoiceRecording();
-      };
+        if (data && typeof data === 'object' && data.transcript) {
+          var input = document.getElementById('aiChatInput');
+          if (input) {
+            var prev = input.value.trim();
+            input.value = prev ? prev + ' ' + data.transcript : data.transcript;
+          }
+          setVoiceHelperText('');
+        } else {
+          alert((data && data.error) || 'לא הצלחתי לתמלל את ההקלטה.');
+          setVoiceHelperText('');
+        }
+      } catch (err) {
+        console.error('Transcription failed:', err);
+        alert('שגיאה בתמלול: ' + (err && err.message ? err.message : 'נסה שוב'));
+        setVoiceHelperText('');
+      }
+    }
 
-      voiceRecognition.onend = function() {
-        stopVoiceRecording();
-      };
+    function startVoiceRecording() {
+      if (!window.isSecureContext) {
+        alert('הקלטה קולית דורשת חיבור מאובטח (HTTPS או localhost).');
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('לא ניתן להקליט – הדפדפן לא תומך במיקרופון.');
+        return;
+      }
+      if (typeof MediaRecorder === 'undefined') {
+        alert('הדפדפן לא תומך בהקלטת אודיו. נסה Chrome או Edge.');
+        return;
+      }
 
-      voiceRecognition.start();
-      isRecording = true;
+      voiceStarting = true;
+      voiceAudioChunks = [];
+      setVoiceHelperText('מבקש גישה למיקרופון...');
       updateVoiceButton(true);
+
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+        voiceStarting = false;
+        releaseVoiceMediaStream();
+        voiceMediaStream = stream;
+        voiceRecorderMimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
+
+        try {
+          voiceMediaRecorder = new MediaRecorder(stream, { mimeType: voiceRecorderMimeType });
+        } catch (recErr) {
+          voiceRecorderMimeType = 'audio/webm';
+          voiceMediaRecorder = new MediaRecorder(stream);
+        }
+
+        voiceMediaRecorder.ondataavailable = function(e) {
+          if (e.data && e.data.size > 0) voiceAudioChunks.push(e.data);
+        };
+        voiceMediaRecorder.onerror = function(e) {
+          console.error('MediaRecorder error:', e);
+          alert('שגיאה בהקלטה. נסה שוב.');
+          stopVoiceRecording();
+        };
+        voiceMediaRecorder.onstop = function() {
+          releaseVoiceMediaStream();
+          voiceMediaRecorder = null;
+          transcribeVoiceRecording(voiceRecorderMimeType);
+        };
+
+        voiceMediaRecorder.start(250);
+        isRecording = true;
+        updateVoiceButton(true);
+        setVoiceHelperText('מקליט... לחץ stop לסיום ותמלול');
+      }).catch(function(err) {
+        voiceStarting = false;
+        isRecording = false;
+        console.error('getUserMedia failed:', err);
+        var name = err && err.name ? err.name : '';
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          alert('אנא אשר גישה למיקרופון (לחץ על המנעול ליד ה-URL בדפדפן).');
+        } else if (name === 'NotFoundError') {
+          alert('לא נמצא מיקרופון. חבר מיקרופון ונסה שוב.');
+        } else {
+          alert('לא ניתן להפעיל מיקרופון: ' + (err.message || name || 'שגיאה לא ידועה'));
+        }
+        setVoiceHelperText('');
+        updateVoiceButton(false);
+      });
     }
 
     function stopVoiceRecording() {
-      if (voiceRecognition) {
-        voiceRecognition.stop();
-        voiceRecognition = null;
-      }
+      voiceStarting = false;
       isRecording = false;
       updateVoiceButton(false);
+
+      if (voiceMediaRecorder && voiceMediaRecorder.state === 'recording') {
+        setVoiceHelperText('מסיים הקלטה...');
+        try {
+          if (typeof voiceMediaRecorder.requestData === 'function') {
+            voiceMediaRecorder.requestData();
+          }
+          voiceMediaRecorder.stop();
+        } catch (err) {
+          console.error('MediaRecorder stop failed:', err);
+          releaseVoiceMediaStream();
+          voiceMediaRecorder = null;
+          voiceAudioChunks = [];
+          setVoiceHelperText('');
+          alert('שגיאה בעצירת ההקלטה.');
+        }
+        return;
+      }
+
+      releaseVoiceMediaStream();
+      voiceMediaRecorder = null;
+      voiceAudioChunks = [];
+      setVoiceHelperText('');
+    }
+
+    function initVoiceButton() {
+      var btn = document.getElementById('aiChatVoice');
+      if (!btn || btn.dataset.voiceBound === '1') return;
+      btn.dataset.voiceBound = '1';
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleVoiceRecording();
+      });
     }
 
     function updateVoiceButton(recording) {
@@ -3210,10 +3356,12 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       if (!btn) return;
       if (recording) {
         btn.classList.add('recording');
-        btn.innerHTML = '<i class="fas fa-stop"></i>';
+        btn.innerHTML = '<span class="material-symbols-outlined">stop</span>';
+        btn.title = 'עצור הקלטה';
       } else {
         btn.classList.remove('recording');
-        btn.innerHTML = '<i class="fas fa-microphone"></i>';
+        btn.innerHTML = '<span class="material-symbols-outlined">mic</span>';
+        btn.title = 'הקלט קול';
       }
     }
 
@@ -3272,45 +3420,154 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       });
     }
 
-    // פונקציה לפתיחה/סגירה של פאנל הסינון
-    function toggleFilterPanel() {
+    // פאנל סינון – fixed מתחת ל-header + סגירה חכמה
+    let filterPanelCloseOnClick = null;
+    let filterPanelCloseOnKey = null;
+    let filterPanelCloseOnResize = null;
+    let filterPanelCloseOnScroll = null;
+    let filterPanelBackdrop = null;
+
+    function ensureFilterPanelBackdrop() {
+      if (filterPanelBackdrop) return filterPanelBackdrop;
+      filterPanelBackdrop = document.getElementById('filterPanelBackdrop');
+      if (!filterPanelBackdrop) {
+        filterPanelBackdrop = document.createElement('div');
+        filterPanelBackdrop.id = 'filterPanelBackdrop';
+        filterPanelBackdrop.className = 'filter-panel-backdrop';
+        filterPanelBackdrop.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(filterPanelBackdrop);
+      }
+      return filterPanelBackdrop;
+    }
+
+    function mountFilterPanel() {
       const searchContainer = document.getElementById('searchContainer');
-      const filterIcon = document.querySelector('.header-filter-icon');
-      
-      if (!searchContainer) return;
-      
+      if (searchContainer && searchContainer.parentElement !== document.body) {
+        document.body.appendChild(searchContainer);
+      }
+      ensureFilterPanelBackdrop();
+    }
+
+    function isFilterPanelOpen() {
+      const searchContainer = document.getElementById('searchContainer');
+      if (!searchContainer) return false;
       const computedStyle = window.getComputedStyle(searchContainer);
-      const isVisible = searchContainer.style.display !== 'none' && 
-                       computedStyle.display !== 'none';
-      
-      if (isVisible) {
-        searchContainer.classList.remove('is-open');
-        window.setTimeout(function() {
-          if (!searchContainer.classList.contains('is-open')) {
-            searchContainer.style.display = 'none';
-          }
-        }, 220);
+      return searchContainer.style.display !== 'none' &&
+        computedStyle.display !== 'none';
+    }
 
-        const anyActive = hasAnyActiveFilters(getActiveFiltersFromUI());
-        if (filterIcon) {
-          if (anyActive) {
-            filterIcon.style.color = 'var(--secondary)';
-            filterIcon.classList.add('active');
-          } else {
-            filterIcon.style.color = '#64748b';
-            filterIcon.classList.remove('active');
-          }
-        }
+    function updateFilterIconState() {
+      const filterIcon = document.querySelector('.header-filter-icon');
+      if (!filterIcon) return;
+      const panelOpen = isFilterPanelOpen();
+      const anyActive = hasAnyActiveFilters(getActiveFiltersFromUI());
+      if (panelOpen || anyActive) {
+        filterIcon.style.color = 'var(--secondary)';
+        filterIcon.classList.add('active');
       } else {
-        searchContainer.style.display = 'block';
-        window.requestAnimationFrame(function() {
-          searchContainer.classList.add('is-open');
-        });
+        filterIcon.style.color = '#64748b';
+        filterIcon.classList.remove('active');
+      }
+    }
 
-        if (filterIcon) {
-          filterIcon.style.color = 'var(--secondary)';
-          filterIcon.classList.add('active');
+    function positionFilterPanel() {
+      const header = document.querySelector('.header');
+      const searchContainer = document.getElementById('searchContainer');
+      if (!header || !searchContainer) return;
+      const rect = header.getBoundingClientRect();
+      searchContainer.style.top = `${Math.round(rect.bottom + 8)}px`;
+      const maxHeight = Math.max(160, window.innerHeight - rect.bottom - 16);
+      searchContainer.style.maxHeight = `${maxHeight}px`;
+    }
+
+    function teardownFilterPanelListeners() {
+      if (filterPanelCloseOnClick) {
+        document.removeEventListener('click', filterPanelCloseOnClick);
+        filterPanelCloseOnClick = null;
+      }
+      if (filterPanelCloseOnKey) {
+        document.removeEventListener('keydown', filterPanelCloseOnKey);
+        filterPanelCloseOnKey = null;
+      }
+      if (filterPanelCloseOnResize) {
+        window.removeEventListener('resize', filterPanelCloseOnResize);
+        filterPanelCloseOnResize = null;
+      }
+      if (filterPanelCloseOnScroll) {
+        window.removeEventListener('scroll', filterPanelCloseOnScroll);
+        filterPanelCloseOnScroll = null;
+      }
+    }
+
+    function closeFilterPanel() {
+      const searchContainer = document.getElementById('searchContainer');
+      if (!searchContainer || !isFilterPanelOpen()) return;
+
+      searchContainer.classList.remove('is-open');
+      searchContainer.setAttribute('aria-hidden', 'true');
+      const backdrop = ensureFilterPanelBackdrop();
+      backdrop.classList.remove('is-open');
+      backdrop.style.display = 'none';
+      backdrop.setAttribute('aria-hidden', 'true');
+      teardownFilterPanelListeners();
+
+      window.setTimeout(function() {
+        if (!searchContainer.classList.contains('is-open')) {
+          searchContainer.style.display = 'none';
         }
+      }, 220);
+
+      updateFilterIconState();
+    }
+
+    function openFilterPanel() {
+      const searchContainer = document.getElementById('searchContainer');
+      if (!searchContainer) return;
+
+      mountFilterPanel();
+      positionFilterPanel();
+      const backdrop = ensureFilterPanelBackdrop();
+      backdrop.style.display = 'block';
+      backdrop.setAttribute('aria-hidden', 'false');
+      searchContainer.style.display = 'block';
+      searchContainer.setAttribute('aria-hidden', 'false');
+      window.requestAnimationFrame(function() {
+        backdrop.classList.add('is-open');
+        searchContainer.classList.add('is-open');
+      });
+
+      updateFilterIconState();
+      teardownFilterPanelListeners();
+
+      filterPanelCloseOnClick = function(e) {
+        if (e.target.closest('#searchContainer') || e.target.closest('.header-filter-icon')) {
+          return;
+        }
+        closeFilterPanel();
+      };
+      filterPanelCloseOnKey = function(e) {
+        if (e.key === 'Escape') closeFilterPanel();
+      };
+      filterPanelCloseOnResize = function() {
+        positionFilterPanel();
+      };
+      filterPanelCloseOnScroll = function() {
+        positionFilterPanel();
+      };
+
+      window.setTimeout(function() {
+        document.addEventListener('click', filterPanelCloseOnClick);
+        document.addEventListener('keydown', filterPanelCloseOnKey);
+        window.addEventListener('resize', filterPanelCloseOnResize);
+        window.addEventListener('scroll', filterPanelCloseOnScroll, { passive: true });
+      }, 0);
+    }
+
+    function toggleFilterPanel() {
+      if (isFilterPanelOpen()) {
+        closeFilterPanel();
+      } else {
+        openFilterPanel();
       }
     }
 
