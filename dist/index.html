@@ -83,9 +83,7 @@
     };
   </script>
   
-  <!-- Custom Styles (?v= forces browser to load latest in dev) -->
-
-
+  <!-- Custom Styles (?v= forces browser to load latest in dev) -->
   
   <script>
     // Dark mode toggle
@@ -99,8 +97,8 @@
       document.documentElement.classList.add('dark');
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-D8OSu-a0.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-QABIWTf4.css">
+  <script type="module" crossorigin src="/assets/index-Bmx3kbr7.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DzWfbokm.css">
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
   <!-- Animated Blobs -->
@@ -202,7 +200,7 @@
   <input type="file" id="importJson" accept=".json" style="display: none;" onchange="importRecipes(event)">
 
   <main class="main">
-    <!-- Filter Panel -->
+    <!-- Filter Panel (מוסתר בהתחלה – לא תופס מקום עד שפותחים סינון) -->
     <div class="main-filter-panel" id="searchContainer" style="display: none;">
       <div class="filter-panel-header">
         <span class="filter-results" id="filterResultsCount"></span>
@@ -219,12 +217,24 @@
         </div>
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">restaurant</span>
-          <select id="searchDietaryType" class="search-filter-input" onchange="filterRecipes()">
-            <option value="">הכל (חלבי/בשרי/פרווה)</option>
-            <option value="חלבי">חלבי</option>
-            <option value="בשרי">בשרי</option>
-            <option value="פרווה">פרווה</option>
-          </select>
+          <div class="filter-select-wrap" id="dietarySelectWrap">
+            <select id="searchDietaryType" class="filter-select-native" onchange="filterRecipes()" aria-hidden="true" tabindex="-1">
+              <option value="">הכל (חלבי/בשרי/פרווה)</option>
+              <option value="חלבי">חלבי</option>
+              <option value="בשרי">בשרי</option>
+              <option value="פרווה">פרווה</option>
+            </select>
+            <button type="button" class="filter-select-trigger" id="dietarySelectTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="filter-select-trigger-text">הכל (חלבי/בשרי/פרווה)</span>
+              <span class="material-symbols-outlined filter-select-arrow">expand_more</span>
+            </button>
+            <div class="filter-select-dropdown" id="dietarySelectDropdown" role="listbox" aria-hidden="true">
+              <div class="filter-select-option" data-value="">הכל (חלבי/בשרי/פרווה)</div>
+              <div class="filter-select-option" data-value="חלבי">חלבי</div>
+              <div class="filter-select-option" data-value="בשרי">בשרי</div>
+              <div class="filter-select-option" data-value="פרווה">פרווה</div>
+            </div>
+          </div>
         </div>
         <div class="search-filter-item">
           <span class="material-symbols-outlined search-filter-icon">star</span>
@@ -355,7 +365,15 @@
                   קטגוריה
                 </span>
                 <div class="form-category-inline">
-                  <select id="category" class="form-add-recipe-select-inline">
+                  <div id="categoryDropdownWrap" class="form-category-dropdown-wrap">
+                    <button type="button" class="form-category-trigger" id="categoryTrigger" onclick="event.stopPropagation(); toggleCategoryDropdown();" aria-haspopup="listbox" aria-expanded="false" aria-label="בחירת קטגוריה">
+                      <span class="material-symbols-outlined form-category-trigger-icon" id="categoryTriggerIcon">category</span>
+                      <span class="form-category-trigger-text" id="categoryTriggerText">בחירת קטגוריה</span>
+                      <span class="material-symbols-outlined form-category-trigger-arrow">expand_more</span>
+                    </button>
+                    <div id="categoryDropdownList" class="form-category-dropdown" role="listbox" aria-hidden="true"></div>
+                  </div>
+                  <select id="category" class="form-add-recipe-select-inline form-category-select-hidden" aria-hidden="true" tabindex="-1">
                     <option value="" disabled selected>בחירת קטגוריה</option>
                   </select>
                   <button type="button" class="form-category-add-btn" onclick="toggleCategoryInput()" id="toggleNewCategory" title="קטגוריה חדשה">
@@ -519,7 +537,6 @@
   </div>
 
   <!-- ספריה חיצונית ל-OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.1/dist/tesseract.min.js"></script>
 </body>
 </html>

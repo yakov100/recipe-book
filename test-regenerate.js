@@ -1,26 +1,42 @@
 /**
  * One-off test: call regenerate-image Edge Function and write response to debug.log.
  * Run: node test-regenerate.js
- * Uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from env or .env (parsed manually).
+ * Requires VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (or SUPABASE_URL + SUPABASE_ANON_KEY)
+ * in process.env, .env.local, or .env — see .env.example.
  */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
-  const content = fs.readFileSync(envPath, 'utf8');
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, 'utf8');
   content.split('\n').forEach((line) => {
     const m = line.match(/^\s*([^#=]+)=(.*)$/);
-    if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
+    if (!m) return;
+    const key = m[1].trim();
+    if (process.env[key] !== undefined) return;
+    process.env[key] = m[2].trim().replace(/^["']|["']$/g, '');
   });
 }
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://nklwzunoipplfkysaztl.supabase.co';
-const anonKey = process.env.VITE_SUPABASE_ANON_KEY || 'REDACTED_SUPABASE_ANON_KEY';
+loadEnvFile(path.join(__dirname, '.env'));
+loadEnvFile(path.join(__dirname, '.env.local'));
 
-const url = supabaseUrl + '/functions/v1/regenerate-image';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const anonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !anonKey) {
+  console.error(
+    'Missing Supabase credentials. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY ' +
+      '(or SUPABASE_URL and SUPABASE_ANON_KEY) in .env.local or the environment. See .env.example.'
+  );
+  process.exit(1);
+}
+
+const url = supabaseUrl.replace(/\/$/, '') + '/functions/v1/regenerate-image';
 const body = JSON.stringify({ recipeName: 'בדיקה', category: 'שונות' });
 
 async function run() {
@@ -29,8 +45,8 @@ async function run() {
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + anonKey },
-      body
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + anonKey },
+      body,
     });
     const text = await res.text();
     let data;

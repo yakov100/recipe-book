@@ -1,15 +1,43 @@
 /**
  * Node.js Migration Script - Run images migration via Supabase
- * 
- * This script fetches all recipes with base64 images and migrates them to Storage.
+ *
  * Run with: node migrate-via-node.js
+ * Requires VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (or SUPABASE_*)
+ * in .env.local, .env, or the environment — see .env.example.
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const supabaseUrl = 'https://nklwzunoipplfkysaztl.supabase.co';
-const supabaseKey = 'REDACTED_SUPABASE_ANON_KEY';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, 'utf8');
+  content.split('\n').forEach((line) => {
+    const m = line.match(/^\s*([^#=]+)=(.*)$/);
+    if (!m) return;
+    const key = m[1].trim();
+    if (process.env[key] !== undefined) return;
+    process.env[key] = m[2].trim().replace(/^["']|["']$/g, '');
+  });
+}
+
+loadEnvFile(path.join(__dirname, '.env'));
+loadEnvFile(path.join(__dirname, '.env.local'));
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error(
+    'Missing Supabase credentials. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY ' +
+      '(or SUPABASE_URL and SUPABASE_ANON_KEY) in .env.local or the environment. See .env.example.'
+  );
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
