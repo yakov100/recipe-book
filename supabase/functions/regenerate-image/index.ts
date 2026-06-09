@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 
@@ -63,6 +63,24 @@ async function generateRecipeImage(recipeName: string, category: string): Promis
     console.error("Error generating image:", error);
     return null;
   }
+}
+
+function normalizeStorageKey(imagePath: string | null | undefined): string | null {
+  if (!imagePath || typeof imagePath !== "string") return null;
+  if (imagePath.startsWith("http") || imagePath.startsWith("data:")) return null;
+  let key = imagePath;
+  if (key.startsWith("recipe-images/")) key = key.slice(14);
+  return key;
+}
+
+async function deleteStorageImage(
+  supabase: ReturnType<typeof createClient>,
+  imagePath: string | null | undefined
+): Promise<void> {
+  const key = normalizeStorageKey(imagePath);
+  if (!key) return;
+  const { error } = await supabase.storage.from("recipe-images").remove([key]);
+  if (error) console.warn("Failed to delete old image from storage:", key, error.message);
 }
 
 Deno.serve(async (req: Request) => {
@@ -145,6 +163,15 @@ Deno.serve(async (req: Request) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SERVICE_ROLE_KEY") || "";
   if (supabaseUrl && serviceKey) {
     const supabase = createClient(supabaseUrl, serviceKey);
+    let previousImagePath: string | null = null;
+    if (recipeId) {
+      const { data: existingRow } = await supabase
+        .from("recipes")
+        .select("image_path")
+        .eq("id", recipeId)
+        .single();
+      previousImagePath = existingRow?.image_path ?? null;
+    }
     const fileName = `${crypto.randomUUID()}.png`;
     try {
       const res = await fetch(newImageDataUrl);
@@ -157,6 +184,7 @@ Deno.serve(async (req: Request) => {
       } else {
         imagePath = fileName;
         if (recipeId) {
+          await deleteStorageImage(supabase, previousImagePath);
           const { error } = await supabase
             .from("recipes")
             .update({ image_path: fileName })

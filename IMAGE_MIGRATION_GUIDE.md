@@ -1,289 +1,149 @@
-# 🚀 Image Migration Guide - Supabase Storage
+# Image Storage Guide — Supabase Storage
 
-## מה השתנה?
+## סקירה
 
-הספר מתכונים שלך שודרג! במקום לשמור תמונות כ-base64 בדאטהבייס (איטי ומכביד), עכשיו התמונות נשמרות ב-**Supabase Storage** עם:
+תמונות מתכונים **לא** נשמרות יותר כ-base64 בדאטהבייס. המקור האמת הוא:
 
-✅ **80-90% שיפור במהירות טעינה**  
-✅ **Lazy Loading** - תמונות נטענות רק כשאתה רואה אותן  
-✅ **תמונות responsive** - גדלים שונים למסכים שונים  
-✅ **CDN אוטומטי** - טעינה מהירה מכל מקום בעולם  
-✅ **Image Transformations** - אופטימיזציה אוטומטית  
-
----
-
-## 📋 הוראות מהירות
-
-### שלב 1: הרץ SQL Migration
-
-1. פתח [Supabase Dashboard](https://supabase.com/dashboard)
-2. בחר את הפרויקט שלך
-3. לחץ על **SQL Editor** בתפריט הצד
-4. פתח את הקובץ `supabase/migrations/20250128000000_add_image_storage.sql`
-5. העתק והדבק את כל התוכן ל-SQL Editor
-6. לחץ **Run**
-7. וודא שקיבלת "Success" ללא שגיאות
-
-### שלב 2: הרץ Migration של התמונות
-
-**אפשרות א': דרך HTML (מומלץ)**
-
-1. הרץ `npm run dev` (או פתח את האתר שלך)
-2. פתח בדפדפן: `http://localhost:3000/migrate.html`
-3. עקוב אחר ההוראות על המסך
-4. לחץ "התחל Migration"
-5. המתן עד להשלמה (יכול לקחת מספר דקות)
-
-**אפשרות ב': דרך Console**
-
-1. פתח את האתר שלך בדפדפן
-2. פתח Developer Console (F12 → Console)
-3. הרץ:
-```javascript
-// Load migration script
-const script = document.createElement('script');
-script.type = 'module';
-script.src = '/js/migrate-images.js';
-document.head.appendChild(script);
-
-// Wait a moment, then run:
-migrateAllImages()
-```
-
-### שלב 3: בדוק שהכל עובד
-
-1. רענן את האתר
-2. בדוק שכל התמונות נטענות כראוי
-3. נסה להוסיף מתכון חדש עם תמונה
-4. נסה לערוך מתכון קיים
+| שכבה | מה נשמר |
+|------|---------|
+| **Postgres** | `recipes.image_path` — מפתח ב-Storage, URL מלא, או `NULL` |
+| **Supabase Storage** | bucket ציבורי `recipe-images` |
+| **אתר (סטטי)** | `assets/default-images/**/*.svg` — fallback לפי קטגוריה |
 
 ---
 
-## 🔍 בדיקות ואימות
+## מקורות תמונה
 
-### איך לדעת שה-migration עבד?
-
-1. **Developer Console**:
-   - פתח Console (F12)
-   - צריך לראות: "✓ Recipe X - [שם]: Migrated successfully"
-   - ללא שגיאות אדומות
-
-2. **Supabase Storage**:
-   - פתח Supabase Dashboard
-   - לחץ **Storage** → **recipe-images**
-   - צריך לראות תיקיות עם מספרי ID
-   - בתוך כל תיקייה - קובץ תמונה
-
-3. **Database**:
-   - פתח **Table Editor** → **recipes**
-   - בדוק עמודה `image_path`
-   - צריך להכיל ערכים כמו: "123/1738000000-abc.jpg"
-
-### בעיות נפוצות
-
-#### בעיה: "Failed to upload to Storage"
-**פתרון**:
-1. וודא שה-SQL migration רץ בהצלחה
-2. בדוק ש-bucket `recipe-images` קיים ב-Storage
-3. בדוק את ה-RLS policies (צריכות להיות 6 policies)
-
-#### בעיה: תמונות לא נטענות
-**פתרון**:
-1. פתח Console (F12) וחפש שגיאות
-2. בדוק ש-`image_path` מכיל ערכים בדאטהבייס
-3. נסה לרענן את המטמון (Ctrl+Shift+R)
-
-#### בעיה: Migration תקוע
-**פתרון**:
-1. רענן את הדף
-2. הרץ שוב - המיגרציה תדלג על תמונות שכבר הועברו
-3. אם זה לא עוזר, בדוק Console לשגיאות specific
+1. **העלאה ידנית** — מהטופס, resize ל-1200px, העלאה ל-Storage
+2. **AI (OpenAI `gpt-image-1-mini`)** — ב-`recipe-ai` / `regenerate-image` בעת הוספה לספר או החלפת תמונה
+3. **ברירת מחדל** — SVG לפי קטגoria (`getDefaultImageUrl`) כש-`image_path` ריק
+4. **Legacy** — base64 ישן מועבר אוטומטית ב-`migrateLegacyBase64ToStorage()` בטעינה
 
 ---
 
-## 🎯 שימוש בתכונות החדשות
+## פורמats של `image_path`
 
-### Lazy Loading
+- `uuid.jpg` / `uuid.png` — העלאה חדשה או AI
+- `{recipeId}/{timestamp}-{recipeId}.jpg` — מיגרציה ישנה
+- `https://...` או `data:...` — legacy (נדיר)
+- `NULL` — אין תמונה; UI מציג default
 
-כל התמונות נטענות אוטומטית רק כשהן נכנסות לאזור הנראה. אין צורך לעשות כלום!
+URL ציבורי:
 
-### Image Transformations
-
-**בקוד (JavaScript)**:
-```javascript
-// Small thumbnail (400x400)
-const thumbUrl = getImageUrl(recipe.imagePath, { 
-  width: 400, 
-  height: 400, 
-  quality: 75 
-});
-
-// Large display (1200x1200)
-const fullUrl = getImageUrl(recipe.imagePath, { 
-  width: 1200, 
-  height: 1200, 
-  quality: 85 
-});
-
-// Responsive srcset
-const srcset = getImageSrcSet(recipe.imagePath);
-```
-
-**בHTML**:
-```html
-<img 
-  loading="lazy"
-  src="..." 
-  srcset="..."
-  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
-  alt="...">
+```text
+{SUPABASE_URL}/storage/v1/object/public/recipe-images/{image_path}
 ```
 
 ---
 
-## 🧹 ניקוי (אופציונלי)
+## ניקוי Storage (2026-06)
 
-לאחר שאימתת שהכל עובד (מומלץ להמתין מספר ימים), אתה יכול למחוק את נתוני ה-base64 הישנים כדי לפנות מקום בדאטהבייס:
+במחיקת מתכון, החלפת תמונה, או רegenracja — **הקובץ הישן נמחק** מ-Storage:
 
-1. פתח Console (F12)
-2. טען את סקריפט ה-migration
-3. הרץ: `clearBase64Images()`
-4. הקלד "CONFIRM" כשתתבקש
+- **Client** (`js/main.js`): `deleteRecipeImageFromStorage()`
+- **Edge Functions**: `deleteStorageImage()` ב-`recipe-ai` ו-`regenerate-image`
 
-**⚠️ אזהרה**: זה ימחוק לצמיתות את נתוני ה-base64. עשה זאת רק אחרי שוידאת שהתמונות החדשות עובדות!
+כך לא נשארים קבצים יתומים ב-bucket.
 
 ---
 
-## 📊 מה קורה מאחורי הקלעים?
+## תמונות ברירת מחדל
 
-### לפני:
-```
-┌─────────────┐
-│  Database   │
-├─────────────┤
-│ Recipe 1    │
-│  - name     │
-│  - image    │ ← 500KB base64 string!
-├─────────────┤
-│ Recipe 2    │
-│  - name     │
-│  - image    │ ← Another 500KB!
-└─────────────┘
-                ↓
-          Load ALL recipes
-          with ALL images
-          (10+ MB payload!)
+קבצים ב-`assets/default-images/` (SVG). ליצירה מחדש:
+
+```bash
+npm run generate-default-images
 ```
 
-### אחרי:
-```
-┌─────────────┐         ┌───────────────┐
-│  Database   │         │    Storage    │
-├─────────────┤         ├───────────────┤
-│ Recipe 1    │         │ recipe-images/│
-│  - name     │         │  ├─ 1/       │
-│  - path ───────┐      │  │  └─ a.jpg │
-├─────────────┤  │      │  ├─ 2/       │
-│ Recipe 2    │  │      │  │  └─ b.jpg │
-│  - name     │  │      │  └─ ...      │
-│  - path ───────┘      └───────────────┘
-└─────────────┘              ↓
-      ↓                  Load images
-  Load metadata         ONLY when visible
-  (Few KB only!)        (Lazy loading!)
-```
+דמויות השף: `assets/icons/chef-*.svg` (ממופות מ-`chefImageUrl()`).
 
 ---
 
-## 🚀 ביצועים - לפני ואחרי
+## SQL Migration (פעם ראשונה)
 
-| מדד | לפני | אחרי | שיפור |
-|-----|------|------|-------|
-| טעינת מתכונים | 5-10 שניות | 0.5-1 שנייה | **90%** |
-| גודל Payload | 10+ MB | 100 KB | **99%** |
-| טעינת תמונה | מיידי (כבר טעון) | 100-300ms | חוסך בטעינה ראשונית |
-| זמן תגובה | איטי | מהיר | משופר מאוד |
-| שימוש ב-CDN | לא | כן ✓ | גלובלי |
+אם ה-bucket עדיין לא קיים:
 
----
-
-## 🔧 שאלות ותשובות
-
-**ש: מה קורה למתכונים שאוסיף מעכשיו?**  
-ת: הם יישמרו אוטומטית ב-Storage. הקוד מטפל בזה בעצמו.
-
-**ש: האם אני יכול לחזור אחורה?**  
-ת: כן! התמונות המקוריות נשמרו בדאטהבייס עד שתריץ `clearBase64Images()`.
-
-**ש: כמה זמן לוקח ה-migration?**  
-ת: תלוי במספר התמונות. בדרך כלל 1-5 דקות ל-50 מתכונים.
-
-**ש: מה עם תמונות ברירת מחדל?**  
-ת: הן נשארות כמו שהן (בתיקיית `/default-images/`).
-
-**ש: האם זה עולה כסף?**  
-ת: Supabase Free tier כולל 1GB Storage - די למאות מתכונים!
-
-**ש: האם יש גיבוי אוטומטי?**  
-ת: Supabase עושה גיבויים. אבל מומלץ גם לייצא את המתכונים מדי פעם.
+1. [Supabase Dashboard](https://supabase.com/dashboard) → SQL Editor
+2. הרץ `supabase/migrations/20250128000000_add_image_storage.sql`
+3. מיגרציות נוספות (אם טרם הורצו):
+   - `20250601120000_backfill_image_path_from_image.sql`
+   - `20250601120001_normalize_image_path_prefix.sql`
+   - `20250601120002_drop_recipes_image_column.sql`
 
 ---
 
-## 📝 קבצים שהשתנו
+## מיגרציית base64 ישנה
 
-```
-recipe-book-gh-pages/
-├── supabase/migrations/
-│   └── 20250128000000_add_image_storage.sql    ← SQL migration
-├── js/
-│   ├── main.js                                  ← עודכן
-│   └── migrate-images.js                        ← חדש!
-├── css/
-│   └── style.css                                ← עודכן (lazy loading CSS)
-├── vite.config.js                              ← עודכן (caching)
-├── migrate.html                                ← חדש!
-└── IMAGE_MIGRATION_GUIDE.md                   ← המדריך הזה
+**אוטומטי:** האפליקציה מריצה `migrateLegacyBase64ToStorage()` בטעינה.
+
+**ידני (אופציונלי):**
+
+- `http://localhost:3000/migrate.html`, או
+- Console: טען `js/migrate-images.js` והרץ `migrateAllImages()`
+
+---
+
+## פריסת Edge Functions
+
+לאחר שינוי ב-`supabase/functions/`:
+
+```bash
+npm run deploy:functions
 ```
 
----
+או ידנית:
 
-## 💡 טיפים
+```bash
+npx supabase functions deploy recipe-ai regenerate-image --project-ref nklwzunoipplfkysaztl --use-api --import-map supabase/functions/deno.json
+```
 
-1. **תזמון**: הרץ את ה-migration כשאין הרבה משתמשים באתר
-2. **חיבור**: וודא חיבור אינטרנט יציב
-3. **בדיקה**: אחרי ה-migration, בדוק כמה מתכונים שונים
-4. **ניקוי**: המתן לפחות שבוע לפני ניקוי ה-base64
+אם ה-CLI נכשל על `.env.local` (BOM / תווים מיוחדים בהערות) — הסר BOM או השתמש בקובץ `.env` ASCII-only.
 
----
+Secrets נדרשים ב-Supabase (Edge Functions → Secrets):
 
-## 📞 תמיכה
-
-אם נתקלת בבעיה:
-1. בדוק את ה"בעיות נפוצות" למעלה
-2. פתח Console (F12) וחפש שגיאות
-3. בדוק את Supabase logs
-4. צור issue ב-GitHub עם:
-   - צילום מסך של השגיאה
-   - Console logs
-   - מספר המתכונים שיש לך
+- `GEMINI_API_KEY` — צ'אט AI
+- `OPENAI_API_KEY` — יצירת תמונות
+- `SUPABASE_SERVICE_ROLE_KEY` — הוספת מתכונים / מחיקת תמונות ישנות מהשרver
 
 ---
 
-## ✅ Checklist סופי
+## בדיקות
 
-לפני שאתה סוגר את המדריך, וודא:
-
-- [ ] הרצת את ה-SQL migration בהצלחה
-- [ ] הרצת את image migration בהצלחה
-- [ ] כל התמונות נטענות באתר
-- [ ] הוספת מתכון חדש עם תמונה עובד
-- [ ] עריכת מתכון קיים עובד
-- [ ] בדקת ב-Supabase Storage שהתמונות שם
-- [ ] אין שגיאות ב-Console
-
-אם כל התיבות מסומנות - מזל טוב! ה-migration הצליח! 🎉
+1. **Storage** — Dashboard → Storage → `recipe-images`
+2. **DB** — `recipes.image_path` מכיל מפתחות, לא base64
+3. **מחיקה** — מחק מתכון; הקובץ לא אמור להישאר ב-Storage
+4. **ברירת מחדל** — מתכון בלי תמונה מציג SVG מ-`/default-images/...`
+5. **Console** — ללא שגיאות 404 על תמונות
 
 ---
 
-**עודכן**: 28 ינואר 2025  
-**גרסה**: 1.0
+## בעיות נפוצות
+
+| בעיה | פתרון |
+|------|--------|
+| העלאה נכשלת | וודא bucket + RLS policies קיימים |
+| תמונת default לא נטענת | `npm run generate-default-images` ואז `npm run build` |
+| AI לא יוצר תמונה | בדוק `OPENAI_API_KEY` ב-Secrets |
+| תמונה ישנה נשארת ב-Storage | פרוס Edge Functions מעודכנים; client חדש מוחק ב-replace/delete |
+
+---
+
+## קבצים רלוונטיים
+
+```
+recipe-book/
+├── assets/default-images/          ← SVG placeholders
+├── assets/icons/chef-*.svg
+├── js/main.js                      ← upload, display, delete from Storage
+├── supabase/functions/
+│   ├── recipe-ai/index.ts
+│   └── regenerate-image/index.ts
+├── supabase/migrations/            ← bucket + image_path
+├── scripts/generate-default-images.mjs
+└── vite.config.js                  ← PWA cache ל-Storage + defaults
+```
+
+---
+
+**עודכן**: 9 יוני 2026  
+**גרסה**: 2.0

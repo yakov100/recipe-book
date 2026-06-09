@@ -18,7 +18,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
-      includeAssets: ['icons/*.png', 'icons/*.svg', 'images/*', 'chef-*.png'],
+      includeAssets: ['icons/*.png', 'icons/*.svg', 'images/*', 'default-images/**/*.svg'],
       manifest: {
         name: 'ספר המתכונים שלי',
         short_name: 'מתכונים',

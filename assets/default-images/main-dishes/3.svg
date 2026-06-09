@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="מנה עיקרית">
+  <rect width="800" height="600" fill="#A76043"/>
+  <circle cx="400" cy="284" r="72" fill="rgba(255,255,255,0.25)"/>
+  <ellipse cx="400" cy="404" rx="120" ry="28" fill="rgba(255,255,255,0.18)"/>
+  <text x="400" y="454" text-anchor="middle" font-family="Heebo,Segoe UI,sans-serif" font-size="36" font-weight="600" fill="rgba(255,255,255,0.92)">מנה עיקרית</text>
+</svg>

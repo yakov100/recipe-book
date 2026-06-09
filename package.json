@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "generate-default-images": "node scripts/generate-default-images.mjs",
+    "deploy:functions": "npx supabase functions deploy recipe-ai regenerate-image --project-ref nklwzunoipplfkysaztl --use-api --import-map supabase/functions/deno.json",
     "preview": "vite preview",
     "deploy": "npm run build && git add dist && git commit -m \"chore: rebuild dist\" && git push origin main"
   },

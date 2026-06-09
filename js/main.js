@@ -21,11 +21,19 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     let isSharedRecipeMode = false; // Track if loaded via shared link
 
     // Base URL for static assets (works with Vite base path, e.g. GitHub Pages)
+    const CHEF_ASSET_MAP = {
+        'chef-typing.png': 'icons/chef-typing.svg',
+        'chef-serving.png': 'icons/chef-serving.svg',
+        'chef-cooking.png': 'icons/chef-cooking.svg',
+        'chef-main.png': 'icons/chef-main.svg'
+    };
+
     function chefImageUrl(filename) {
         const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL)
             ? import.meta.env.BASE_URL.replace(/\/$/, '')
             : '';
-        return base + '/' + (filename.startsWith('/') ? filename.slice(1) : filename);
+        const mapped = CHEF_ASSET_MAP[filename] || filename;
+        return base + '/' + (mapped.startsWith('/') ? mapped.slice(1) : mapped);
     }
 
     function recipeToRow(r) {
@@ -218,11 +226,15 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         const idsToKeep = recipesToSave.map(r => r.id).filter(Boolean);
 
         // מחיקת רשומות שנמחקו מהמערך
-        const { data: existing } = await supabase.from('recipes').select('id');
-        const toDelete = (existing || []).filter(e => !idsToKeep.includes(e.id)).map(e => e.id);
-        
+        const { data: existing } = await supabase.from('recipes').select('id, image_path');
+        const toDeleteRows = (existing || []).filter(e => !idsToKeep.includes(e.id));
+        const toDelete = toDeleteRows.map(e => e.id);
+
         // מחיקה במקבץ
         if (toDelete.length > 0) {
+            for (const row of toDeleteRows) {
+                await deleteRecipeImageFromStorage(row.image_path);
+            }
             const { error: deleteError } = await supabase.from('recipes').delete().in('id', toDelete);
             if (deleteError) throw deleteError;
         }
@@ -493,48 +505,48 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     // ב-Vercel (עם Vite build), התמונות מועתקות מ-assets ל-dist ישירות, אז הנתיב הוא /default-images/...
     const defaultImagesByCategory = {
         'לחמים': [
-            '/default-images/breads/1.jpg',
-            '/default-images/breads/2.jpg',
-            '/default-images/breads/3.jpg'
+            '/default-images/breads/1.svg',
+            '/default-images/breads/2.svg',
+            '/default-images/breads/3.svg'
         ],
         'מרקים': [
-            '/default-images/soups/1.jpg',
-            '/default-images/soups/2.jpg',
-            '/default-images/soups/3.jpg'
+            '/default-images/soups/1.svg',
+            '/default-images/soups/2.svg',
+            '/default-images/soups/3.svg'
         ],
         'מנה עיקרית': [
-            '/default-images/main-dishes/1.jpg',
-            '/default-images/main-dishes/2.jpg',
-            '/default-images/main-dishes/3.jpg'
+            '/default-images/main-dishes/1.svg',
+            '/default-images/main-dishes/2.svg',
+            '/default-images/main-dishes/3.svg'
         ],
         'תוספות': [
-            '/default-images/sides/1.jpg',
-            '/default-images/sides/2.jpg',
-            '/default-images/sides/3.jpg'
+            '/default-images/sides/1.svg',
+            '/default-images/sides/2.svg',
+            '/default-images/sides/3.svg'
         ],
         'סלטים': [
-            '/default-images/salads/1.jpg',
-            '/default-images/salads/2.jpg',
-            '/default-images/salads/3.jpg'
+            '/default-images/salads/1.svg',
+            '/default-images/salads/2.svg',
+            '/default-images/salads/3.svg'
         ],
         'שונות': [
-            '/default-images/other/1.jpg',
-            '/default-images/other/2.jpg',
-            '/default-images/other/3.jpg'
+            '/default-images/other/1.svg',
+            '/default-images/other/2.svg',
+            '/default-images/other/3.svg'
         ],
         'עוגות': [
-            '/default-images/cakes/1.jpg',
-            '/default-images/cakes/2.jpg',
-            '/default-images/cakes/3.jpg'
+            '/default-images/cakes/1.svg',
+            '/default-images/cakes/2.svg',
+            '/default-images/cakes/3.svg'
         ],
         'קינוחים': [
-            '/default-images/desserts/1.jpg',
-            '/default-images/desserts/2.jpg',
-            '/default-images/desserts/3.jpg'
+            '/default-images/desserts/1.svg',
+            '/default-images/desserts/2.svg',
+            '/default-images/desserts/3.svg'
         ]
     };
 
-    const DEFAULT_IMAGES_OTHER = ['/default-images/other/1.jpg', '/default-images/other/2.jpg', '/default-images/other/3.jpg'];
+    const DEFAULT_IMAGES_OTHER = ['/default-images/other/1.svg', '/default-images/other/2.svg', '/default-images/other/3.svg'];
 
     /** Returns a default image URL for the given category (single entry point for default images). */
     function getDefaultImageUrl(category) {
@@ -1181,12 +1193,17 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
               console.warn('Failed to upload regenerated image to Storage:', uploadErr);
             }
           }
+          const previousImagePath = recipes[index].imagePath;
           if (imagePath) {
             recipes[index].imagePath = imagePath;
             recipes[index].image = null;
           } else if (data.image) {
             recipes[index].imagePath = null;
             recipes[index].image = data.image;
+          }
+
+          if (imagePath && previousImagePath && previousImagePath !== imagePath) {
+            await deleteRecipeImageFromStorage(previousImagePath);
           }
 
           // Persist to database
@@ -1550,6 +1567,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       recipes.splice(index, 1);
       try {
         if (recipeId) {
+          await deleteRecipeImageFromStorage(recipeToDelete?.imagePath);
           await deleteRecipeFromDB(recipeId);
         }
         updateCategoryList();
@@ -2230,7 +2248,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           const recipeCard = document.createElement('div');
           recipeCard.className = 'ai-chat-recipe-card';
           recipeCard.innerHTML = `
-            <img src="${getDisplayUrl(m.recipeCard) || chefImageUrl('/default-images/other/1.jpg')}" alt="${m.recipeCard.name}" onerror="this.src=getDefaultImageUrl('שונות')">
+            <img src="${getDisplayUrl(m.recipeCard) || getDefaultImageUrl(m.recipeCard.category || 'שונות')}" alt="${m.recipeCard.name}" onerror="this.src=getDefaultImageUrl('שונות')">
             <div class="ai-chat-recipe-card-footer" onclick="viewRecipeFromChat('${m.recipeCard.id || ''}')">
               <span>צפה במתכון המלא</span>
               <span class="material-symbols-outlined">arrow_back</span>
@@ -3039,12 +3057,17 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                 }
               }
               const path = data.regeneratedImagePath || aiImagePath;
+              const previousImagePath = recipes[idx].imagePath || null;
               if (path) {
                 recipes[idx].imagePath = path;
                 recipes[idx].image = null;
               } else if (data.regeneratedImage) {
                 recipes[idx].imagePath = null;
                 recipes[idx].image = data.regeneratedImage;
+              }
+
+              if (path && previousImagePath && previousImagePath !== path) {
+                await deleteRecipeImageFromStorage(previousImagePath);
               }
 
               await saveRecipeToDB(recipes[idx]);
@@ -3754,9 +3777,25 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             key = key.slice(14);
         }
         
-        const finalUrl = `${supabaseUrl}/storage/v1/object/public/recipe-images/${key}`;
-        console.log(`🔗 [getStoragePublicUrl] Input: "${storagePath}" -> Key: "${key}" -> URL: "${finalUrl}"`);
-        return finalUrl;
+        return `${supabaseUrl}/storage/v1/object/public/recipe-images/${key}`;
+    }
+
+    /** Returns Storage object key, or null if path is not a bucket file. */
+    function normalizeStorageKey(imagePath) {
+        if (!imagePath || typeof imagePath !== 'string') return null;
+        if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.includes('/default-images/')) {
+            return null;
+        }
+        let key = imagePath;
+        if (key.startsWith('recipe-images/')) key = key.slice(14);
+        return key;
+    }
+
+    async function deleteRecipeImageFromStorage(imagePath) {
+        const key = normalizeStorageKey(imagePath);
+        if (!key || !supabase) return;
+        const { error } = await supabase.storage.from('recipe-images').remove([key]);
+        if (error) console.warn('⚠️ [deleteRecipeImageFromStorage] Failed:', key, error.message);
     }
 
     /** Single entry point for recipe image display: image_path (Storage key or full URL) or legacy image; else default. */
@@ -3914,6 +3953,11 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                 
                 if (!imagePath || imagePath.startsWith('data:')) {
                     throw new Error('Upload failed');
+                }
+
+                const previousImagePath = recipe.imagePath || null;
+                if (previousImagePath && previousImagePath !== imagePath) {
+                    await deleteRecipeImageFromStorage(previousImagePath);
                 }
                 
                 // Update recipe
@@ -4426,6 +4470,11 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         } catch (_) {}
       }
       aiGeneratedImage = null;
+
+      const previousImagePath = editingIndex >= 0 ? (recipes[editingIndex].imagePath || null) : null;
+      if (imagePath && previousImagePath && previousImagePath !== imagePath) {
+        await deleteRecipeImageFromStorage(previousImagePath);
+      }
 
       const recipe = {
         name,

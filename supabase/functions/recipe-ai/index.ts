@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
@@ -38,6 +38,24 @@ async function uploadImageToStorage(
   } catch {
     return null;
   }
+}
+
+function normalizeStorageKey(imagePath: string | null | undefined): string | null {
+  if (!imagePath || typeof imagePath !== "string") return null;
+  if (imagePath.startsWith("http") || imagePath.startsWith("data:")) return null;
+  let key = imagePath;
+  if (key.startsWith("recipe-images/")) key = key.slice(14);
+  return key;
+}
+
+async function deleteStorageImage(
+  supabase: ReturnType<typeof createClient>,
+  imagePath: string | null | undefined
+): Promise<void> {
+  const key = normalizeStorageKey(imagePath);
+  if (!key) return;
+  const { error } = await supabase.storage.from("recipe-images").remove([key]);
+  if (error) console.warn("Failed to delete old image from storage:", key, error.message);
 }
 
 /** Generate a recipe image using OpenAI GPT Image (DALL-E 3 retired May 2026) */
@@ -489,7 +507,16 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  let parsed: { reply?: string; recipeIds?: string[]; suggestedRecipe?: { name: string; ingredients: string; instructions: string; category: string; source?: string }; confirmAddRecipe?: boolean; regenerateImageForRecipeId?: string };
+  let parsed: {
+    reply?: string;
+    recipeIds?: string[];
+    suggestedRecipe?: { name: string; ingredients: string; instructions: string; category: string; source?: string };
+    confirmAddRecipe?: boolean;
+    regenerateImageForRecipeId?: string;
+    ingredients?: string;
+    instructions?: string;
+    notes?: string;
+  };
   try {
     parsed = JSON.parse(text);
   } catch {
@@ -575,10 +602,16 @@ Deno.serve(async (req: Request) => {
     const targetRecipe = recipes.find(r => r.id === regenerateImageForRecipeId);
     if (targetRecipe) {
       console.log("Regenerating image for recipe:", targetRecipe.name);
+      const { data: existingRow } = await supabaseAdmin
+        .from("recipes")
+        .select("image_path")
+        .eq("id", regenerateImageForRecipeId)
+        .single();
       const dataUrl = await generateRecipeImage(targetRecipe.name, targetRecipe.category || "שונות");
       if (dataUrl) {
         regeneratedImagePath = await uploadImageToStorage(supabaseAdmin, dataUrl);
         if (regeneratedImagePath) {
+          await deleteStorageImage(supabaseAdmin, existingRow?.image_path);
           const { error } = await supabaseAdmin
             .from("recipes")
             .update({ image_path: regeneratedImagePath })
