@@ -15,7 +15,7 @@ const CATEGORY_EN: Record<string, string> = {
   "קינוחים": "dessert"
 };
 
-/** Generate a recipe image using DALL-E 3 */
+/** Generate a recipe image using OpenAI GPT Image (DALL-E 3 retired May 2026) */
 async function generateRecipeImage(recipeName: string, category: string): Promise<string | null> {
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   if (!openaiKey) {
@@ -38,17 +38,17 @@ async function generateRecipeImage(recipeName: string, category: string): Promis
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "dall-e-3",
+        model: "gpt-image-1-mini",
         prompt,
         n: 1,
         size: "1024x1024",
-        response_format: "b64_json"
+        quality: "medium"
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("DALL-E API error:", response.status, errorText);
+      console.error("OpenAI Images API error:", response.status, errorText);
       return null;
     }
 
@@ -175,9 +175,10 @@ Deno.serve(async (req: Request) => {
 
   const ok = imagePath != null;
   return new Response(JSON.stringify({
-    success: ok,
+    success: ok || newImageDataUrl != null,
     image_path: imagePath,
-    error: ok ? undefined : "העלאת התמונה ל-Storage נכשלה",
+    image: ok ? undefined : newImageDataUrl,
+    error: ok ? undefined : (newImageDataUrl ? "העלאת התמונה ל-Storage נכשלה — התמונה זמינה זמנית" : "Failed to generate image"),
     message: ok ? (recipeId ? "התמונה עודכנה בהצלחה!" : "התמונה נוצרה. שמור את המתכון כדי לשמור את התמונה.") : undefined
   }), {
     status: 200,
