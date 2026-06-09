@@ -97,9 +97,49 @@
       document.documentElement.classList.add('dark');
     }
   </script>
+  <script>
+    // One-time escape from stale PWA cache (old JS bundles after deploy)
+    (function () {
+      var SW_MIGRATION = '2026-06-09-supabase-fix';
+      if (localStorage.getItem('sw-migration') === SW_MIGRATION) return;
+      if (!('serviceWorker' in navigator)) {
+        localStorage.setItem('sw-migration', SW_MIGRATION);
+        return;
+      }
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        var clearCaches = window.caches
+          ? caches.keys().then(function (names) {
+              return Promise.all(names.map(function (n) { return caches.delete(n); }));
+            })
+          : Promise.resolve();
+        return Promise.all(regs.map(function (r) { return r.unregister(); })).then(function () {
+          return clearCaches;
+        });
+      }).then(function () {
+        localStorage.setItem('sw-migration', SW_MIGRATION);
+        location.reload();
+      });
+    })();
+  </script>
+  <script>
+    // Reload when a new service worker takes control (autoUpdate)
+    if ('serviceWorker' in navigator) {
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (refreshing) return;
+        refreshing = true;
+        location.reload();
+      });
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function (reg) {
+          reg.update();
+        });
+      });
+    }
+  </script>
   <script type="module" crossorigin src="/assets/index-BpkU1qFI.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CikOpiJq.css">
-<link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+<link rel="manifest" href="/manifest.webmanifest"></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900">
   <!-- Animated Blobs -->
   <div class="blob-1"></div>
