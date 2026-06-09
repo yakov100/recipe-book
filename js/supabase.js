@@ -13,7 +13,10 @@ const urlOk = (v) => {
 const keyOk = (v) => {
   if (v === undefined || v === null) return false;
   if (typeof v !== 'string') return false;
-  return v.trim().length > 50;
+  const trimmed = v.trim();
+  if (trimmed.length === 0 || trimmed === 'undefined') return false;
+  // Legacy anon JWT (eyJ…) or Supabase publishable keys (sb_publishable_…, ~46 chars)
+  return trimmed.startsWith('sb_publishable_') || trimmed.startsWith('eyJ');
 };
 
 /** @type {string | null} */
