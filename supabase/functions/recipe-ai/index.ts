@@ -308,11 +308,11 @@ async function transcribeAudioWithGemini(
         parts: [
           { inline_data: { mime_type: mimeType, data: base64 } },
           {
-            text: "Transcribe the spoken Hebrew in this audio. Return ONLY the transcript text, no quotes or explanation.",
+            text: "העתק מילה במילה את הדיבור בעברית מהקלטה זו. אל תוסיף, אל תפרש, אל תתקן ואל תמציא מילים שלא נאמרו. אם לא שומעים בבירור, החזר את מה ששמעת. החזר רק את הטקסט שנאמר, ללא מרכאות והסבר.",
           },
         ],
       }],
-      generationConfig: { temperature: 0.1 },
+      generationConfig: { temperature: 0 },
     }),
   });
 

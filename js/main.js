@@ -3335,11 +3335,16 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         });
     }
 
-    // --- הקלטה קולית: MediaRecorder → Gemini (יציב; לא תלוי ב-Google Speech) ---
+    // --- הקלטה קולית: Web Speech (עברית, מדויק) → Gemini fallback ---
+    var voiceRecognition = null;
     var voiceMediaRecorder = null;
     var voiceMediaStream = null;
     var voiceAudioChunks = [];
     var voiceRecorderMimeType = 'audio/webm';
+    var voiceMode = null; // 'speech' | 'recorder'
+    var voiceInputPrefix = '';
+    var voiceFinalTranscript = '';
+    var voiceSpeechStopping = false;
     var isRecording = false;
     var voiceHelperDefaultText = '';
     var voiceStarting = false;
@@ -3393,21 +3398,30 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       }
 
       try {
-        var base64 = await blobToBase64(blob);
-        var result = await invokeEdgeFunction('recipe-ai', {
-          transcribeAudio: true,
-          audioBase64: base64,
-          audioMimeType: (mimeType || 'audio/webm').split(';')[0],
-        });
-        if (result.error) {
-          var errMsg = typeof result.error === 'object' && result.error.message
-            ? result.error.message
-            : String(result.error);
-          throw new Error(errMsg);
+        var authHeaders = await edgeFunctionHeaders();
+        if (!authHeaders) {
+          setAuthGateVisible(true);
+          alert('נא להתחבר עם Google כדי להשתמש בהקלטה קולית');
+          setVoiceHelperText('');
+          return;
         }
-        var data = result.data;
-        if (typeof data === 'string') {
-          try { data = JSON.parse(data); } catch (parseErr) { /* keep string */ }
+        var base64 = await blobToBase64(blob);
+        var res = await fetch(edgeFunctionUrl('recipe-ai'), {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            transcribeAudio: true,
+            audioBase64: base64,
+            audioMimeType: (mimeType || 'audio/webm').split(';')[0],
+          }),
+        });
+        var data = await res.json().catch(function() { return {}; });
+        if (res.status === 401) {
+          setAuthGateVisible(true);
+          throw new Error('נא להתחבר עם Google כדי להשתמש בהקלטה קולית');
+        }
+        if (!res.ok) {
+          throw new Error((data && data.error) || 'שגיאה מהשרת (' + res.status + ')');
         }
         if (data && typeof data === 'object' && data.transcript) {
           var input = document.getElementById('aiChatInput');
@@ -3427,11 +3441,102 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       }
     }
 
+    function startWebSpeechRecording(SpeechRecognition) {
+      voiceMode = 'speech';
+      voiceSpeechStopping = false;
+      voiceFinalTranscript = '';
+      var input = document.getElementById('aiChatInput');
+      voiceInputPrefix = input ? input.value.trim() : '';
+
+      voiceRecognition = new SpeechRecognition();
+      voiceRecognition.lang = 'he-IL';
+      voiceRecognition.continuous = true;
+      voiceRecognition.interimResults = true;
+
+      voiceRecognition.onresult = function(event) {
+        var interim = '';
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+          var piece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            voiceFinalTranscript += piece;
+          } else {
+            interim += piece;
+          }
+        }
+        if (input) {
+          var spoken = (voiceFinalTranscript + interim).trim();
+          input.value = voiceInputPrefix && spoken
+            ? voiceInputPrefix + ' ' + spoken
+            : (voiceInputPrefix || spoken);
+        }
+      };
+
+      voiceRecognition.onerror = function(event) {
+        console.error('Voice recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          alert('אנא אשר גישה למיקרופון בדפדפן.');
+          stopVoiceRecording();
+          return;
+        }
+        if (event.error === 'network' || event.error === 'service-not-available') {
+          alert('תמלול הדפדפן לא זמין (בעיית רשת). נסה Chrome/Edge עם חיבור אינטרנט יציב.');
+          stopVoiceRecording();
+          return;
+        }
+        if (event.error === 'audio-capture') {
+          alert('לא ניתן לגשת למיקרופון. בדוק הרשאות בדפדפן.');
+          stopVoiceRecording();
+          return;
+        }
+        stopVoiceRecording();
+      };
+
+      voiceRecognition.onend = function() {
+        if (voiceSpeechStopping) {
+          voiceSpeechStopping = false;
+          return;
+        }
+        // Chrome stops after silence; keep listening until the user clicks stop
+        if (voiceMode === 'speech' && isRecording && voiceRecognition) {
+          try {
+            voiceRecognition.start();
+          } catch (err) {
+            stopVoiceRecording();
+          }
+          return;
+        }
+        if (voiceMode === 'speech') {
+          stopVoiceRecording();
+        }
+      };
+
+      try {
+        voiceRecognition.start();
+        isRecording = true;
+        updateVoiceButton(true);
+        setVoiceHelperText('מקשיב... לחץ stop לסיום');
+      } catch (err) {
+        console.error('SpeechRecognition start failed:', err);
+        voiceRecognition = null;
+        voiceMode = null;
+        alert('לא ניתן להפעיל תמלול דפדפן. נסה Chrome או Edge.');
+      }
+    }
+
     function startVoiceRecording() {
       if (!window.isSecureContext) {
         alert('הקלטה קולית דורשת חיבור מאובטח (HTTPS או localhost).');
         return;
       }
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        startWebSpeechRecording(SpeechRecognition);
+        return;
+      }
+      startMediaRecorderRecording();
+    }
+
+    function startMediaRecorderRecording() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert('לא ניתן להקליט – הדפדפן לא תומך במיקרופון.');
         return;
@@ -3441,6 +3546,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         return;
       }
 
+      voiceMode = 'recorder';
       voiceStarting = true;
       voiceAudioChunks = [];
       setVoiceHelperText('מבקש גישה למיקרופון...');
@@ -3498,6 +3604,19 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
     function stopVoiceRecording() {
       voiceStarting = false;
+
+      if (voiceMode === 'speech' && voiceRecognition) {
+        voiceSpeechStopping = true;
+        try { voiceRecognition.stop(); } catch (err) { /* already stopped */ }
+        voiceRecognition = null;
+        voiceMode = null;
+        voiceFinalTranscript = '';
+        isRecording = false;
+        updateVoiceButton(false);
+        setVoiceHelperText('');
+        return;
+      }
+
       isRecording = false;
       updateVoiceButton(false);
 
@@ -3522,6 +3641,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       releaseVoiceMediaStream();
       voiceMediaRecorder = null;
       voiceAudioChunks = [];
+      voiceMode = null;
       setVoiceHelperText('');
     }
 
