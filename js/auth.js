@@ -243,6 +243,69 @@ export async function signInWithGoogle() {
 }
 
 /** @returns {Promise<void>} */
+export async function signInWithEmailPassword(email, password) {
+    if (!supabase) {
+        throw new Error('Supabase לא אותחל');
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+        throw error;
+    }
+}
+
+/**
+ * @param {string} email
+ * @param {string} password
+ * @param {string} [displayName]
+ * @returns {Promise<void>}
+ */
+export async function signUpWithEmailPassword(email, password, displayName) {
+    if (!supabase) {
+        throw new Error('Supabase לא אותחל');
+    }
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: { full_name: displayName?.trim() || email.split('@')[0] },
+        },
+    });
+    if (error) {
+        throw error;
+    }
+    if (data.session) {
+        notifyAuthChange(data.session.user, data.session.access_token);
+        return;
+    }
+    // Supabase returns empty identities when email already exists (anti-enumeration).
+    if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+        const dup = new Error('User already registered');
+        dup.name = 'AuthApiError';
+        throw dup;
+    }
+    const unconfirmed = new Error('Email not confirmed');
+    unconfirmed.name = 'AuthApiError';
+    throw unconfirmed;
+}
+
+/**
+ * @param {string} email
+ * @returns {Promise<void>}
+ */
+export async function sendPasswordResetEmail(email) {
+    if (!supabase) {
+        throw new Error('Supabase לא אותחל');
+    }
+    const redirectTo = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : RECIPE_BOOK_PRODUCTION_URL;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) {
+        throw error;
+    }
+}
+
+/** @returns {Promise<void>} */
 export async function signOut() {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
