@@ -1702,6 +1702,19 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         const inlineContent = document.getElementById('inlineImageUploadContent');
         if (inlinePreview) inlinePreview.style.display = 'none';
         if (inlineContent) inlineContent.style.display = '';
+        resetImportUrlUI();
+
+        // קישור Enter בשדה ייבוא URL
+        const importUrlInput = document.getElementById('importRecipeUrl');
+        if (importUrlInput && !importUrlInput.dataset.boundEnter) {
+          importUrlInput.dataset.boundEnter = '1';
+          importUrlInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              importRecipeFromUrl();
+            }
+          });
+        }
     }
 
     function closeFormPopup() {
@@ -2464,6 +2477,186 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
       document.getElementById('ingredients').value = ingredients.trim();
       populateIngredientRows(ingredients.trim());
+    }
+
+    function setImportUrlStatus(type, message) {
+      const el = document.getElementById('importRecipeUrlStatus');
+      if (!el) return;
+      el.hidden = !message;
+      el.className = 'form-add-recipe-import-url-status' + (type ? ' is-' + type : '');
+      el.textContent = message || '';
+    }
+
+    function resetImportUrlUI() {
+      const urlInput = document.getElementById('importRecipeUrl');
+      const btn = document.getElementById('importRecipeUrlBtn');
+      if (urlInput) urlInput.value = '';
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('is-loading');
+        const icon = btn.querySelector('.import-url-btn-icon');
+        if (icon) icon.textContent = 'download';
+      }
+      setImportUrlStatus('', '');
+    }
+
+    function setFormCategoryValue(category) {
+      if (!category) return;
+      populateCategorySelectAndDropdown();
+      const select = document.getElementById('category');
+      if (!select) return;
+      let value = String(category).trim();
+      if (!value) return;
+      const exists = Array.from(select.options).some(function(opt) { return opt.value === value; });
+      if (!exists) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+        const dropdown = document.getElementById('categoryDropdownList');
+        if (dropdown) {
+          const colorClass = getCategoryColorClass(value);
+          const iconHtml = getCategoryIconHtml(value, 'form-category-option-icon ' + colorClass);
+          const item = document.createElement('div');
+          item.className = 'form-category-option';
+          item.setAttribute('data-value', value);
+          item.setAttribute('role', 'option');
+          item.innerHTML = '<span class="form-category-option-icon-wrap">' + iconHtml + '</span><span class="form-category-option-text">' + value + '</span>';
+          item.onclick = function() {
+            select.value = value;
+            updateCategoryTriggerDisplay();
+            closeCategoryDropdown();
+          };
+          dropdown.appendChild(item);
+        }
+      }
+      select.value = value;
+      updateCategoryTriggerDisplay();
+    }
+
+    function applyImportedRecipeToForm(recipe) {
+      if (!recipe) return;
+      document.getElementById('recipeName').value = recipe.name || '';
+      document.getElementById('recipeSource').value = recipe.source || '';
+      document.getElementById('ingredients').value = recipe.ingredients || '';
+      populateIngredientRows(recipe.ingredients || '');
+      document.getElementById('instructions').value = recipe.instructions || '';
+      document.getElementById('notes').value = recipe.notes || '';
+      if (recipe.preparationTime != null && recipe.preparationTime > 0) {
+        document.getElementById('preparationTime').value = String(recipe.preparationTime);
+      }
+      if (recipe.recipeLink) {
+        document.getElementById('recipeLink').value = recipe.recipeLink;
+      }
+      if (recipe.videoUrl) {
+        document.getElementById('recipeVideo').value = recipe.videoUrl;
+      }
+      setFormCategoryValue(recipe.category || 'שונות');
+
+      if (recipe.imageUrl) {
+        const inlinePreview = document.getElementById('inlineImagePreview');
+        const inlineContent = document.getElementById('inlineImageUploadContent');
+        const inlineImg = document.getElementById('inlinePreviewImg');
+        const uploadArea = document.querySelector('.form-add-recipe-upload-zone.image-upload-area');
+        if (inlineImg && inlinePreview && inlineContent) {
+          inlineImg.src = recipe.imageUrl;
+          inlinePreview.style.display = 'block';
+          inlineContent.style.display = 'none';
+          if (uploadArea) uploadArea.classList.add('has-image');
+        }
+      }
+
+      const basics = document.querySelector('.form-add-recipe-section-basics');
+      if (basics && typeof basics.scrollIntoView === 'function') {
+        basics.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function normalizeImportUrl(raw) {
+      let value = (raw || '').trim();
+      if (!value) return null;
+      if (!/^https?:\/\//i.test(value)) {
+        value = 'https://' + value.replace(/^\/+/, '');
+      }
+      try {
+        const parsed = new URL(value);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+        return parsed;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function importRecipeFromUrl() {
+      const urlInput = document.getElementById('importRecipeUrl');
+      const btn = document.getElementById('importRecipeUrlBtn');
+      const rawUrl = (urlInput && urlInput.value ? urlInput.value : '').trim();
+
+      if (!rawUrl) {
+        setImportUrlStatus('error', 'הזינו קישור למתכון.');
+        if (urlInput) urlInput.focus();
+        return;
+      }
+
+      const parsed = normalizeImportUrl(rawUrl);
+      if (!parsed) {
+        setImportUrlStatus('error', 'כתובת לא תקינה. הדביקו קישור מלא, למשל https://example.com/recipe');
+        return;
+      }
+      if (urlInput && urlInput.value.trim() !== parsed.toString()) {
+        urlInput.value = parsed.toString();
+      }
+
+      const authHeaders = await edgeFunctionHeaders();
+      if (!authHeaders) {
+        setAuthGateVisible(true);
+        setImportUrlStatus('error', 'נא להתחבר כדי לייבא מתכון מאתר.');
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('is-loading');
+        const icon = btn.querySelector('.import-url-btn-icon');
+        if (icon) icon.textContent = 'progress_activity';
+      }
+      setImportUrlStatus('loading', 'טוען את האתר ומחלץ את המתכון — זה עלול לקחת עד דקה...');
+
+      try {
+        const { data, error: fnError } = await invokeEdgeFunction('recipe-ai', {
+          importRecipeFromUrl: true,
+          url: parsed.toString(),
+        });
+
+        if (fnError) {
+          console.error('Import recipe from URL – edge function error:', fnError);
+          const status = fnError.context?.status ?? fnError.status;
+          if (status === 401 || /jwt|unauthorized|401/i.test(fnError.message || '')) {
+            setAuthGateVisible(true);
+            setImportUrlStatus('error', 'ההתחברות פגה או שאין הרשאה. התחברו מחדש עם Google ונסו שוב.');
+          } else {
+            setImportUrlStatus('error', fnError.message || 'שגיאה בשרת. נסו שוב בעוד רגע.');
+          }
+          return;
+        }
+
+        if (data && data.success && data.recipe) {
+          applyImportedRecipeToForm(data.recipe);
+          setImportUrlStatus('success', 'המתכון יובא בהצלחה! בדקו את הפרטים ולחצו "שמירת מתכון".');
+        } else {
+          setImportUrlStatus('error', (data && data.error) || 'לא הצלחנו לייבא את המתכון. נסו קישור אחר או העתיקו את הטקסט ידנית.');
+        }
+      } catch (err) {
+        console.error('Import recipe from URL failed:', err);
+        setImportUrlStatus('error', 'שגיאה בייבוא. בדקו את החיבור ונסו שוב.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('is-loading');
+          const icon = btn.querySelector('.import-url-btn-icon');
+          if (icon) icon.textContent = 'download';
+        }
+      }
     }
 
     function shareRecipe(index) {
@@ -4259,6 +4452,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     window.rateRecipe = rateRecipe;
     window.setFilterRating = setFilterRating;
     window.processOCR = processOCR;
+    window.importRecipeFromUrl = importRecipeFromUrl;
     window.exportRecipes = exportRecipes;
     window.importRecipes = importRecipes;
     window.downloadAllRecipes = downloadAllRecipes;

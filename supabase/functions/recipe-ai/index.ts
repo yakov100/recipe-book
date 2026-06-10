@@ -393,6 +393,353 @@ function buildContents(
   return contents;
 }
 
+type ImportedRecipePayload = {
+  name: string;
+  ingredients: string;
+  instructions: string;
+  notes: string;
+  category: string;
+  source: string;
+  recipeLink: string;
+  preparationTime: number | null;
+  videoUrl: string | null;
+  imageUrl: string | null;
+};
+
+const IMPORT_RECIPE_SCHEMA = {
+  type: "object" as const,
+  properties: {
+    name: { type: "string" },
+    ingredients: { type: "string" },
+    instructions: { type: "string" },
+    notes: { type: "string" },
+    category: { type: "string", enum: CATEGORIES },
+    source: { type: "string" },
+    preparationTime: { type: "string" },
+    videoUrl: { type: "string" },
+  },
+  required: ["name", "ingredients", "instructions", "category"],
+};
+
+const SYSTEM_IMPORT_FROM_URL = `אתה מחלץ מתכון מדף אינטרנט לעברית.
+קיבלת תוכן מדף (JSON-LD מובנה ו/או טקסט מהדף) וכתובת המקור.
+החזר JSON בלבד עם:
+- name: שם המתכון
+- ingredients: כל מצרך בשורה נפרדת, עם כמויות
+- instructions: שלבי הכנה, כל שלב בשורה
+- notes: טיפים/הערות ("" אם אין)
+- category: אחת מ: ${CATEGORIES.join(", ")}
+- source: שם האתר או המקור (לא URL מלא)
+- preparationTime: מספר דקות כמחרוזת ("" אם לא ידוע)
+- videoUrl: קישור לסרטון אם קיים ("" אם אין)
+
+אל תמציא מצרכים שלא מופיעים בדף. אם חסר מידע – השאר ריק או נחש בזהירות רק לקטגוריה.`;
+
+function parseAllowedImportUrl(raw: string): URL | null {
+  try {
+    const u = new URL(raw.trim());
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    const host = u.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return null;
+    if (host === "127.0.0.1" || host === "0.0.0.0" || host === "::1" || host === "[::1]") return null;
+    if (/^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return null;
+    if (host.startsWith("169.254.")) return null;
+    return u;
+  } catch {
+    return null;
+  }
+}
+
+function isRecipeSchemaType(type: unknown): boolean {
+  if (typeof type === "string") return type === "Recipe" || type.endsWith("/Recipe");
+  if (Array.isArray(type)) return type.some(isRecipeSchemaType);
+  return false;
+}
+
+function collectRecipeJsonLd(node: unknown, out: Record<string, unknown>[]): void {
+  if (!node || typeof node !== "object") return;
+  const obj = node as Record<string, unknown>;
+  if (isRecipeSchemaType(obj["@type"])) out.push(obj);
+  if (Array.isArray(node)) {
+    node.forEach((item) => collectRecipeJsonLd(item, out));
+    return;
+  }
+  if (Array.isArray(obj["@graph"])) obj["@graph"].forEach((item) => collectRecipeJsonLd(item, out));
+}
+
+function extractJsonLdRecipes(html: string): Record<string, unknown>[] {
+  const recipes: Record<string, unknown>[] = [];
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html)) !== null) {
+    try {
+      collectRecipeJsonLd(JSON.parse(match[1]), recipes);
+    } catch {
+      /* skip invalid JSON-LD */
+    }
+  }
+  return recipes;
+}
+
+function stringifyInstructionSteps(instructions: unknown): string {
+  if (typeof instructions === "string") return instructions.trim();
+  if (!Array.isArray(instructions)) return "";
+  return instructions
+    .map((step) => {
+      if (typeof step === "string") return step.trim();
+      if (step && typeof step === "object") {
+        const s = step as Record<string, unknown>;
+        return String(s.text || s.name || s.description || "").trim();
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function stringifyIngredients(ingredients: unknown): string {
+  if (typeof ingredients === "string") return ingredients.trim();
+  if (!Array.isArray(ingredients)) return "";
+  return ingredients.map((item) => String(item).trim()).filter(Boolean).join("\n");
+}
+
+function pickFirstUrl(value: unknown): string | null {
+  if (typeof value === "string" && value.startsWith("http")) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const url = pickFirstUrl(item);
+      if (url) return url;
+    }
+  }
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.url === "string" && obj.url.startsWith("http")) return obj.url;
+  }
+  return null;
+}
+
+function parseIsoDurationMinutes(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const m = value.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/i);
+  if (!m) return null;
+  const hours = parseInt(m[1] || "0", 10);
+  const mins = parseInt(m[2] || "0", 10);
+  const secs = parseInt(m[3] || "0", 10);
+  const total = hours * 60 + mins + Math.round(secs / 60);
+  return total > 0 ? total : null;
+}
+
+function hostnameToSource(url: URL): string {
+  return url.hostname.replace(/^www\./, "");
+}
+
+function buildImportContext(html: string, pageUrl: string): string {
+  const jsonLdRecipes = extractJsonLdRecipes(html);
+  const parts: string[] = [`URL: ${pageUrl}`, `Host: ${hostnameToSource(new URL(pageUrl))}`];
+
+  if (jsonLdRecipes.length > 0) {
+    const best = jsonLdRecipes[0];
+    parts.push("JSON-LD Recipe:");
+    parts.push(JSON.stringify({
+      name: best.name,
+      description: best.description,
+      recipeIngredient: best.recipeIngredient,
+      recipeInstructions: best.recipeInstructions,
+      prepTime: best.prepTime,
+      cookTime: best.cookTime,
+      totalTime: best.totalTime,
+      video: best.video,
+      image: best.image,
+    }).slice(0, 12000));
+  }
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (titleMatch) parts.push(`Title: ${titleMatch[1].replace(/\s+/g, " ").trim()}`);
+
+  const ogTitle = html.match(/property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
+  if (ogTitle) parts.push(`OG Title: ${ogTitle[1]}`);
+
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim()
+    .slice(0, 28000);
+
+  parts.push("Page text excerpt:");
+  parts.push(text);
+  return parts.join("\n\n");
+}
+
+async function fetchPageHtml(url: URL): Promise<{ html: string } | { error: string }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18000);
+  try {
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "he,en-US;q=0.9,en;q=0.8",
+        "Cache-Control": "no-cache",
+      },
+    });
+    if (!res.ok) return { error: `לא ניתן לטעון את הדף (שגיאה ${res.status}).` };
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
+      return { error: "הקישור לא מוביל לדף מתכון (HTML)." };
+    }
+    const html = await res.text();
+    if (html.length > 2_500_000) return { error: "הדף גדול מדי לייבוא." };
+    return { html };
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { error: "פג הזמן בטעינת האתר. נסו שוב." };
+    }
+    return { error: "לא ניתן לטעון את האתר. ייתכן שהוא חוסם גישה אוטומטית." };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function mapJsonLdRecipeDirect(recipe: Record<string, unknown>, pageUrl: string): ImportedRecipePayload | null {
+  const name = String(recipe.name || "").trim();
+  const ingredients = stringifyIngredients(recipe.recipeIngredient);
+  const instructions = stringifyInstructionSteps(recipe.recipeInstructions);
+  if (!name || (!ingredients && !instructions)) return null;
+
+  const prep = parseIsoDurationMinutes(recipe.prepTime);
+  const cook = parseIsoDurationMinutes(recipe.cookTime);
+  const total = parseIsoDurationMinutes(recipe.totalTime);
+  const preparationTime = total ?? (prep != null && cook != null ? prep + cook : prep ?? cook);
+
+  return {
+    name,
+    ingredients,
+    instructions,
+    notes: typeof recipe.description === "string" ? recipe.description.trim().slice(0, 800) : "",
+    category: "שונות",
+    source: hostnameToSource(new URL(pageUrl)),
+    recipeLink: pageUrl,
+    preparationTime,
+    videoUrl: pickFirstUrl(recipe.video),
+    imageUrl: pickFirstUrl(recipe.image),
+  };
+}
+
+async function parseRecipeWithGemini(
+  apiKey: string,
+  context: string,
+  pageUrl: string,
+  jsonLdHint: ImportedRecipePayload | null
+): Promise<{ recipe: ImportedRecipePayload } | { error: string }> {
+  const hint = jsonLdHint
+    ? `\n\nנתונים מובנים שחולצו מהדף (עדיף לסמוך עליהם):\n${JSON.stringify(jsonLdHint).slice(0, 8000)}`
+    : "";
+
+  const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_IMPORT_FROM_URL }] },
+      contents: [{
+        role: "user",
+        parts: [{ text: `${context}${hint}\n\nחלץ את המתכון המלא.` }],
+      }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: IMPORT_RECIPE_SCHEMA,
+        temperature: 0.1,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("Gemini import error", res.status, t);
+    return { error: geminiErrorToReply(res.status, t) };
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) return { error: "לא התקבלה תשובה מ-AI." };
+
+  let parsed: {
+    name?: string;
+    ingredients?: string;
+    instructions?: string;
+    notes?: string;
+    category?: string;
+    source?: string;
+    preparationTime?: string;
+    videoUrl?: string;
+  };
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { error: "לא הצלחנו לפענח את המתכון מהדף." };
+  }
+
+  const name = (parsed.name || jsonLdHint?.name || "").trim();
+  const ingredients = (parsed.ingredients || jsonLdHint?.ingredients || "").trim();
+  const instructions = (parsed.instructions || jsonLdHint?.instructions || "").trim();
+  if (!name || (!ingredients && !instructions)) {
+    return { error: "לא נמצא מתכון מספיק בדף. נסו להעתיק את הטקסט ידנית או לבחור קישור אחר." };
+  }
+
+  let category = parsed.category || "שונות";
+  if (!CATEGORIES.includes(category)) category = "שונות";
+
+  let preparationTime: number | null = null;
+  const pt = (parsed.preparationTime || "").trim();
+  if (pt) {
+    const n = parseInt(pt.replace(/\D/g, ""), 10);
+    if (!Number.isNaN(n) && n > 0) preparationTime = n;
+  }
+  if (preparationTime == null && jsonLdHint?.preparationTime) preparationTime = jsonLdHint.preparationTime;
+
+  const videoUrl = (parsed.videoUrl || "").trim() || jsonLdHint?.videoUrl || null;
+
+  return {
+    recipe: {
+      name,
+      ingredients,
+      instructions,
+      notes: (parsed.notes || jsonLdHint?.notes || "").trim(),
+      category,
+      source: (parsed.source || jsonLdHint?.source || hostnameToSource(new URL(pageUrl))).trim(),
+      recipeLink: pageUrl,
+      preparationTime,
+      videoUrl: videoUrl && videoUrl.startsWith("http") ? videoUrl : null,
+      imageUrl: jsonLdHint?.imageUrl || null,
+    },
+  };
+}
+
+async function importRecipeFromUrl(apiKey: string, pageUrl: URL): Promise<{ success: true; recipe: ImportedRecipePayload } | { success: false; error: string }> {
+  const fetched = await fetchPageHtml(pageUrl);
+  if ("error" in fetched) return { success: false, error: fetched.error };
+
+  const jsonLdRecipes = extractJsonLdRecipes(fetched.html);
+  const jsonLdHint = jsonLdRecipes.length > 0 ? mapJsonLdRecipeDirect(jsonLdRecipes[0], pageUrl.toString()) : null;
+
+  if (jsonLdHint && jsonLdHint.ingredients && jsonLdHint.instructions) {
+    const categorized = await parseRecipeWithGemini(apiKey, buildImportContext(fetched.html, pageUrl.toString()), pageUrl.toString(), jsonLdHint);
+    if ("recipe" in categorized) {
+      return { success: true, recipe: { ...categorized.recipe, imageUrl: categorized.recipe.imageUrl || jsonLdHint.imageUrl } };
+    }
+  }
+
+  const context = buildImportContext(fetched.html, pageUrl.toString());
+  const parsed = await parseRecipeWithGemini(apiKey, context, pageUrl.toString(), jsonLdHint);
+  if ("error" in parsed) return { success: false, error: parsed.error };
+  return { success: true, recipe: parsed.recipe };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" } });
@@ -419,6 +766,8 @@ Deno.serve(async (req: Request) => {
     transcribeAudio?: boolean;
     audioBase64?: string;
     audioMimeType?: string;
+    importRecipeFromUrl?: boolean;
+    url?: string;
   };
   try {
     body = await req.json();
@@ -447,6 +796,21 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ transcript: null, error: result.error }), { status: 200, headers: jsonHeaders });
     }
     return new Response(JSON.stringify({ transcript: result.transcript }), { status: 200, headers: jsonHeaders });
+  }
+
+  // Mode: import recipe from external URL (fetch page + extract with AI)
+  if (body?.importRecipeFromUrl === true) {
+    if (!authUserId) return unauthorizedJson();
+    const urlRaw = typeof body.url === "string" ? body.url.trim() : "";
+    const pageUrl = parseAllowedImportUrl(urlRaw);
+    if (!pageUrl) {
+      return new Response(
+        JSON.stringify({ success: false, error: "כתובת לא תקינה. הזינו קישור שמתחיל ב-https://" }),
+        { status: 200, headers: jsonHeaders }
+      );
+    }
+    const result = await importRecipeFromUrl(key, pageUrl);
+    return new Response(JSON.stringify(result), { status: 200, headers: jsonHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";

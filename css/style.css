@@ -6686,6 +6686,212 @@ input[type="text"]::placeholder {
     outline: none;
 }
 
+/* ייבוא מתכון מ-URL */
+.form-add-recipe-import-url {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(147, 197, 253, 0.45);
+    background: linear-gradient(135deg, rgba(147, 197, 253, 0.12) 0%, rgba(167, 243, 208, 0.14) 100%);
+    box-shadow: var(--glow-ai, 0 0 24px rgba(196, 181, 253, 0.15));
+}
+
+.dark .form-add-recipe-import-url {
+    border-color: rgba(167, 243, 208, 0.2);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.form-add-recipe-import-url-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.form-add-recipe-import-url-icon-wrap {
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #93c5fd 0%, #a7f3d0 100%);
+    box-shadow: 0 4px 14px rgba(147, 197, 253, 0.35);
+}
+
+.form-add-recipe-import-url-icon {
+    font-size: 1.35rem;
+    color: #0f172a;
+}
+
+.form-add-recipe-import-url-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main, #1e293b);
+    letter-spacing: -0.01em;
+}
+
+.dark .form-add-recipe-import-url-title {
+    color: #f1f5f9;
+}
+
+.form-add-recipe-import-url-hint {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--text-muted, #64748b);
+}
+
+.form-add-recipe-import-url-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.875rem;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 1rem;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .form-add-recipe-import-url-row {
+    background: rgba(15, 23, 42, 0.65);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.form-add-recipe-import-url-row:focus-within {
+    border-color: rgba(167, 243, 208, 0.65);
+    box-shadow: 0 0 0 4px rgba(167, 243, 208, 0.15);
+}
+
+.form-add-recipe-import-url-link-icon {
+    flex-shrink: 0;
+    font-size: 1.25rem;
+    color: #6366f1;
+}
+
+.dark .form-add-recipe-import-url-link-icon {
+    color: #a7f3d0;
+}
+
+.form-add-recipe-import-url-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font-size: 0.875rem;
+    color: var(--text-main, #1e293b);
+    padding: 0.35rem 0;
+}
+
+.dark .form-add-recipe-import-url-input {
+    color: #f1f5f9;
+}
+
+.form-add-recipe-import-url-input::placeholder {
+    color: #94a3b8;
+}
+
+.form-add-recipe-import-url-input:focus {
+    outline: none;
+}
+
+.form-add-recipe-import-url-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.55rem 1rem;
+    border: none;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #0f172a;
+    background: linear-gradient(135deg, var(--primary-color, #a7f3d0) 0%, #93c5fd 100%);
+    box-shadow: 0 4px 12px rgba(167, 243, 208, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.form-add-recipe-import-url-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(167, 243, 208, 0.45);
+}
+
+.form-add-recipe-import-url-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.form-add-recipe-import-url-btn .import-url-btn-icon {
+    font-size: 1.125rem;
+}
+
+.form-add-recipe-import-url-btn.is-loading .import-url-btn-icon {
+    animation: import-url-spin 0.9s linear infinite;
+}
+
+@keyframes import-url-spin {
+    to { transform: rotate(360deg); }
+}
+
+.form-add-recipe-import-url-status {
+    margin-top: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.form-add-recipe-import-url-status[hidden] {
+    display: none !important;
+}
+
+.form-add-recipe-import-url-status.is-success {
+    background: rgba(167, 243, 208, 0.25);
+    color: #065f46;
+    border: 1px solid rgba(167, 243, 208, 0.5);
+}
+
+.dark .form-add-recipe-import-url-status.is-success {
+    color: #a7f3d0;
+    background: rgba(167, 243, 208, 0.08);
+}
+
+.form-add-recipe-import-url-status.is-error {
+    background: rgba(254, 226, 226, 0.6);
+    color: #991b1b;
+    border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.dark .form-add-recipe-import-url-status.is-error {
+    color: #fca5a5;
+    background: rgba(127, 29, 29, 0.25);
+}
+
+.form-add-recipe-import-url-status.is-loading {
+    background: rgba(147, 197, 253, 0.15);
+    color: #1e40af;
+    border: 1px solid rgba(147, 197, 253, 0.35);
+}
+
+.dark .form-add-recipe-import-url-status.is-loading {
+    color: #93c5fd;
+}
+
+@media (max-width: 640px) {
+    .form-add-recipe-import-url-row {
+        flex-wrap: wrap;
+        padding: 0.75rem;
+    }
+
+    .form-add-recipe-import-url-btn {
+        width: 100%;
+        margin-top: 0.25rem;
+    }
+}
+
 .form-add-recipe-notes-input {
     width: 100%;
     padding: 0.5rem 1rem;
