@@ -38,3 +38,4 @@ backups/
 # High-res chef masters — sources live in scripts/chef-defaults/ (not public assets)
 assets/chef-defaults/
 dist/chef-defaults/
+.gstack/

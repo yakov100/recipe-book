@@ -143,6 +143,26 @@
       });
     }
   </script>
+  <script>
+    (function () {
+      var path = location.pathname || '';
+      if (path.indexOf('/recipe/') !== 0 || path.length <= '/recipe/'.length) return;
+      function stripSharedRecipeChrome() {
+        document.querySelector('header.header')?.remove();
+        document.getElementById('headerUser')?.remove();
+        document.getElementById('searchContainer')?.remove();
+        document.querySelector('.category-filter-row')?.remove();
+        document.querySelector('.floating-actions')?.remove();
+        document.querySelector('.grid-selector-wrapper')?.remove();
+        document.body.style.paddingTop = '0';
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', stripSharedRecipeChrome);
+      } else {
+        stripSharedRecipeChrome();
+      }
+    })();
+  </script>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900 auth-locked">
   <!-- Auth gate (email + Google sign-in) -->
