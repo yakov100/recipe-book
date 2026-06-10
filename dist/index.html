@@ -141,18 +141,54 @@
       });
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-DdePIBvG.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CLLEGXDl.css">
+  <script type="module" crossorigin src="/assets/index-o7rQ2a63.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-C_-yOsPP.css">
 <link rel="manifest" href="/manifest.webmanifest"></head>
 <body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 font-display transition-colors duration-500 min-h-screen relative selection:bg-primary selection:text-slate-900 auth-locked">
-  <!-- Auth gate (Google sign-in) -->
+  <!-- Auth gate (email + Google sign-in) -->
   <div id="authGate" class="auth-gate" aria-hidden="false">
-    <div class="auth-gate-panel glass-panel">
+    <div class="auth-gate-panel glass-panel" id="authGatePanel" data-mode="login">
       <div class="auth-gate-logo">
         <img src="chef-serving.png" alt="" class="auth-gate-chef" aria-hidden="true">
       </div>
       <h2 class="auth-gate-title">ספר <span class="header-logo-gradient">המתכונים</span> שלי</h2>
-      <p class="auth-gate-subtitle">התחבר עם Google כדי לשמור ולנהל את המתכונים שלך באופן פרטי</p>
+      <p class="auth-gate-subtitle">התחבר כדי לשמור ולנהל את המתכונים שלך באופן פרטי</p>
+      <form id="authEmailForm" class="auth-form" novalidate>
+        <div class="auth-fields-group">
+          <div class="auth-field auth-display-name-field" id="authDisplayNameField" hidden>
+            <label class="auth-sr-only" for="authDisplayName">שם תצוגה</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">person</span>
+              <input type="text" id="authDisplayName" class="auth-input" name="displayName" autocomplete="name" placeholder="שם תצוגה (אופציונלי)">
+            </div>
+          </div>
+          <div class="auth-field">
+            <label class="auth-sr-only" for="authEmail">אימייל</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">mail</span>
+              <input type="email" id="authEmail" class="auth-input auth-input-email" name="email" required autocomplete="email" inputmode="email" placeholder="אימייל">
+            </div>
+          </div>
+          <div class="auth-field">
+            <label class="auth-sr-only" for="authPassword">סיסמה</label>
+            <div class="auth-input-wrap">
+              <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">lock</span>
+              <input type="password" id="authPassword" class="auth-input" name="password" required minlength="6" autocomplete="current-password" placeholder="סיסמה (לפחות 6 תווים)">
+            </div>
+          </div>
+        </div>
+        <div id="authFormError" class="auth-form-banner" data-variant="error" role="alert" aria-live="polite" hidden>
+          <span class="material-symbols-outlined auth-form-banner-icon" aria-hidden="true">error</span>
+          <p class="auth-form-banner-text"></p>
+        </div>
+        <button type="submit" id="authSubmitBtn" class="auth-submit-btn">התחבר</button>
+        <button type="button" id="authForgotPassword" class="auth-forgot-link">שכחתי סיסמה</button>
+        <p class="auth-toggle-row">
+          <span class="auth-toggle-prompt" id="authTogglePrompt">אין לך חשבון?</span>
+          <button type="button" id="authToggleMode" class="auth-toggle-link">הירשם</button>
+        </p>
+      </form>
+      <div class="auth-divider" aria-hidden="true"><span>או</span></div>
       <button type="button" id="googleSignInBtn" class="auth-google-btn">
         <svg class="auth-google-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
