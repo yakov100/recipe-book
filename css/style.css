@@ -7780,19 +7780,33 @@ body.auth-locked .floating-action-btn.ai-chat {
 .auth-gate-logo {
   width: 4.5rem;
   height: 4.5rem;
+  padding: 3px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #93c5fd, var(--primary-color));
+  overflow: hidden;
+  background: linear-gradient(135deg, #93c5fd 0%, #a7f3d0 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.65);
   box-shadow: var(--shadow-glow, 0 0 25px -5px rgba(167, 243, 208, 0.6));
   margin-bottom: 0.25rem;
+  box-sizing: border-box;
+}
+
+.dark .auth-gate-logo {
+  background: linear-gradient(135deg, #67a2e8 0%, #6ee7b7 100%);
 }
 
 .auth-gate-chef {
-  width: 3rem;
-  height: 3rem;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 12%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-sizing: border-box;
+  transform: scale(1.15);
 }
 
 .auth-gate-title {
