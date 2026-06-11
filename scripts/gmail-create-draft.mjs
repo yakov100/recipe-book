@@ -22,10 +22,7 @@ const DEFAULT_TO_FILE = resolve(
   WORKSPACE,
   ".cursor/skills/recipe-book-design-consultant/draft-to.txt"
 );
-const DEFAULT_PRESENTATION_URL_FILE = resolve(
-  WORKSPACE,
-  ".cursor/skills/recipe-book-design-consultant/presentation-url.txt"
-);
+const DEFAULT_PRESENTATION_REL = "docs/ux-audit/presentation.html";
 const ATTACH_MAX_BYTES = Number(process.env.GMAIL_ATTACH_MAX_MB ?? 5) * 1024 * 1024;
 const CALLBACK_PORT = 8787;
 const CALLBACK_PATH = "/oauth/callback";
@@ -44,11 +41,10 @@ const authOnly = process.argv.includes("--auth-only");
 const subject = arg("--subject");
 const bodyFile = arg("--body-file");
 const attachDir = arg("--attach-dir");
-const presentationUrl =
-  arg("--presentation-url") ??
-  (existsSync(DEFAULT_PRESENTATION_URL_FILE)
-    ? readFileSync(DEFAULT_PRESENTATION_URL_FILE, "utf8").trim()
-    : null);
+const presentationPath = resolve(
+  WORKSPACE,
+  arg("--presentation-path") ?? DEFAULT_PRESENTATION_REL
+);
 const toEmail =
   arg("--to") ??
   process.env.GMAIL_DRAFT_TO ??
@@ -338,14 +334,12 @@ if (authOnly) {
       attachNote = `\n\n📎 המצגת מצורפת (${candidates.length} קבצים, ${(totalBytes / 1024).toFixed(0)} KB).`;
       console.log(`Attaching presentation (${(totalBytes / 1024).toFixed(0)} KB).`);
     } else {
-      attachNote = `\n\n📎 המצגת כבדה מדי לצירוף (${(totalBytes / 1024 / 1024).toFixed(1)} MB) — קישור:`;
+      attachNote = `\n\n📎 המצגת כבדה מדי לצירוף (${(totalBytes / 1024 / 1024).toFixed(1)} MB).`;
       console.log(`Skip attach: ${(totalBytes / 1024 / 1024).toFixed(1)} MB > limit.`);
     }
   }
 
-  if (presentationUrl) {
-    bodyText += attachNote ? `${attachNote}\n${presentationUrl}` : `\n\n🎞️ מצגת אינטראקטיבית:\n${presentationUrl}`;
-  }
+  bodyText += `${attachNote}\n\n🎞️ מצגת אינטראקטיבית (קובץ מקומי):\n${presentationPath}`;
 
   await createDraft(accessToken, {
     to: toEmail,

@@ -82,8 +82,10 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        // UX audit presentation is static HTML — must not be handled as SPA navigation
+        navigateFallbackDenylist: [/^\/ux-audit\//],
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,webp}'],
-        globIgnores: ['**/chef-defaults/**'],
+        globIgnores: ['**/chef-defaults/**', '**/ux-audit/**'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
         runtimeCaching: [
           {
