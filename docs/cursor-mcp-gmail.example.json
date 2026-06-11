@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "gmail": {
+      "url": "https://gmailmcp.googleapis.com/mcp/v1",
+      "auth": {
+        "CLIENT_ID": "YOUR_GCP_CLIENT_ID",
+        "CLIENT_SECRET": "YOUR_GCP_CLIENT_SECRET",
+        "scopes": [
+          "https://www.googleapis.com/auth/gmail.readonly",
+          "https://www.googleapis.com/auth/gmail.compose"
+        ]
+      }
+    }
+  }
+}

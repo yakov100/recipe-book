@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ביקורת UX — ספר המתכונים</title>
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --text: #2c2418;
+      --muted: #6b5f52;
+      --accent: #c97b5a;
+      --high: #c0392b;
+      --medium: #d68910;
+      --low: #5d6d7e;
+      --good: #27ae60;
+      --border: rgba(44, 36, 24, 0.1);
+      --radius: 16px;
+      --shadow: 0 8px 32px rgba(44, 36, 24, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .deck {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 100px;
+    }
+
+    .slide {
+      display: none;
+      animation: fade 0.35s ease;
+    }
+
+    .slide.active { display: block; }
+
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .slide-header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .slide-header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .slide-header h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .slide-header p {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .slide-body {
+      padding: 24px 32px 32px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    .badge-high { background: #fdecea; color: var(--high); }
+    .badge-medium { background: #fef5e7; color: var(--medium); }
+    .badge-low { background: #eef2f5; color: var(--low); }
+    .badge-good { background: #eafaf1; color: var(--good); }
+
+    .screenshot {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    .screenshot-caption {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    ul.findings {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    ul.findings li {
+      padding: 12px 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      border-right: 4px solid var(--accent);
+    }
+
+    ul.findings li strong { display: block; margin-bottom: 2px; }
+
+    .fix-box {
+      background: #f0f7ff;
+      border: 1px solid #bdd7f1;
+      border-radius: 12px;
+      padding: 16px 18px;
+      font-size: 0.95rem;
+    }
+
+    .fix-box h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #2980b9;
+      margin-bottom: 8px;
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+
+    .score-item {
+      text-align: center;
+      padding: 18px 12px;
+      background: var(--bg);
+      border-radius: 12px;
+    }
+
+    .score-item .num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .score-item .label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .overall {
+      text-align: center;
+      padding: 28px;
+      background: linear-gradient(135deg, #fff9f6 0%, #fff 100%);
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .overall .big {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    table.summary {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    table.summary th,
+    table.summary td {
+      padding: 10px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.summary th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+
+    .severity-high { color: var(--high); font-weight: 700; }
+    .severity-medium { color: var(--medium); font-weight: 700; }
+    .severity-low { color: var(--low); font-weight: 700; }
+
+    code {
+      font-family: Consolas, monospace;
+      font-size: 0.85em;
+      background: #f4f0eb;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 100;
+    }
+
+    .nav-bar button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .nav-bar button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .nav-bar .counter {
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .dots {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 400px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .dot.active { background: var(--accent); }
+
+    .cover {
+      text-align: center;
+      padding: 48px 32px 40px;
+    }
+
+    .cover .emoji-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    .cover h1 {
+      font-size: 2.2rem;
+      margin-bottom: 12px;
+    }
+
+    .cover .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 20px;
+    }
+
+    .highlight-box {
+      background: #fff8e6;
+      border: 1px solid #f0d78c;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.92rem;
+    }
+
+    .aria-examples {
+      display: grid;
+      gap: 8px;
+      font-size: 0.88rem;
+    }
+
+    .aria-examples .bad {
+      color: var(--high);
+      font-family: Consolas, monospace;
+      background: #fdecea;
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .aria-examples .good {
+      color: var(--good);
+      font-family: Consolas, monospace;
+      background: #eafaf1;
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+
+    <!-- Slide 0: Cover -->
+    <section class="slide active" data-slide="0">
+      <div class="slide-card cover">
+        <div class="emoji-icon">📋</div>
+        <h1>ביקורת UX — ספר המתכונים</h1>
+        <p>מצגת ממצאים עם צילומי מסך · דסקטופ 1440×900 · מצב בהיר</p>
+        <div class="overall" style="margin-top: 28px;">
+          <div class="big">7.6</div>
+          <div style="color: var(--muted); margin-top: 6px;">ציון כללי (מתוך 10)</div>
+        </div>
+        <p class="meta">תאריך: 10 ביוני 2026 · localhost:3000 · משתמש מחובר</p>
+      </div>
+    </section>
+
+    <!-- Slide 1: Summary -->
+    <section class="slide" data-slide="1">
+      <div class="slide-card">
+        <div class="slide-header">
+          <h2>סיכום ממצאים</h2>
+          <p>6 בעיות עיקריות — 2 חומרה גבוהה, 2 בינונית, 2 נמוכה</p>
+        </div>
+        <div class="slide-body">
+          <table class="summary">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>בעיה</th>
+                <th>חומרה</th>
+                <th>מסך</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>שמות אייקונים Material נחשפים לקורא מסך</td>
+                <td class="severity-high">גבוהה</td>
+                <td>כל האתר</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>כרטיס מתכון שבור עם שם <code>vchgfxd</code></td>
+                <td class="severity-high">גבוהה</td>
+                <td>דף הבית</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>רשת צפופה מדי בדסקטופ (~7 עמודות)</td>
+                <td class="severity-medium">בינונית</td>
+                <td>דף הבית</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>צ'אט AI ברוחב טלפון על מסך רחב</td>
+                <td class="severity-medium">בינונית</td>
+                <td>צ'אט</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>קטגוריות — ניגודיות חלשה / אייקונים לא מתאימים</td>
+                <td class="severity-medium">בינונית</td>
+                <td>מובייל + דסקטופ</td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>שדות ריקים מציגים <code>-- דקות</code> ו־<code>--</code></td>
+                <td class="severity-low">נמוכה</td>
+                <td>כרטיסי מתכון</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="score-grid">
+            <div class="score-item"><div class="num">8</div><div class="label">מודל מתכון</div></div>
+            <div class="score-item"><div class="num">8</div><div class="label">טופס הוספה</div></div>
+            <div class="score-item"><div class="num">6</div><div class="label">רשת כרטיסים</div></div>
+            <div class="score-item"><div class="num">5</div><div class="label">נגישות</div></div>
+            <div class="score-item"><div class="num">6</div><div class="label">צ'אט AI</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: Issue 1 - Aria -->
+    <section class="slide" data-slide="2">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-high">חומרה גבוהה</span>
+          <h2>בעיה 1: דליפת שמות אייקונים לנגישות</h2>
+          <p>קוראי מסך מקריאים שמות אנגליים של Material Symbols במקום תוויות עבריות</p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <ul class="findings">
+              <li><strong>כפתור פרופיל</strong> נקרא: <code>account_circle</code></li>
+              <li><strong>קטגוריות</strong>: <code>restaurant כל הקטגוריות</code></li>
+              <li><strong>מודל מתכון</strong>: <code>shopping_basket מצרכים</code>, <code>cooking שלבי הכנה</code></li>
+              <li><strong>שמירה</strong>: <code>שמירת מתכון save</code></li>
+              <li><strong>תכונות</strong>: <code>2 tune תכונות המתכון</code></li>
+            </ul>
+            <div class="fix-box" style="margin-top: 16px;">
+              <h4>תיקון מוצע</h4>
+              <div class="aria-examples">
+                <div class="bad">❌ &lt;span class="material-symbols-outlined"&gt;save&lt;/span&gt;</div>
+                <div class="good">✓ aria-hidden="true" על האייקון + aria-label="שמירת מתכון" על הכפתור</div>
+              </div>
+              <p style="margin-top: 10px;">קבצים: <code>js/main.js</code>, <code>index.html</code></p>
+            </div>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/02-recipe-modal.png" alt="מודל מתכון — דוגמה לדליפת אייקונים" />
+            <p class="screenshot-caption">מודל מתכון — כותרות עם שמות אייקון באנגלית</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Issue 2 - vchgfxd -->
+    <section class="slide" data-slide="3">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-high">חומרה גבוהה</span>
+          <h2>בעיה 2: כרטיס מתכון שבור — vchgfxd</h2>
+          <p>כרטיס עם שם לא תקין מופיע לצד מתכונים אמיתיים ופוגע באמון ובמראה</p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <div class="highlight-box">
+              כרטיס בשם <strong>vchgfxd</strong> מוצג ברשת הראשית. נראה כמו רשומת בדיקה או נתונים פגומים שלא סוננו.
+            </div>
+            <ul class="findings" style="margin-top: 16px;">
+              <li><strong>השפעה על משתמש</strong> — בלבול, חשד לבאג, מראה לא מקצועי</li>
+              <li><strong>השפעה על SEO/שיתוף</strong> — אם יש routing ל־/recipe/{id}</li>
+            </ul>
+            <div class="fix-box" style="margin-top: 16px;">
+              <h4>תיקון מוצע</h4>
+              מחיקת הרשומה מהמסד / סינון כרטיסים ללא שם תקין / ולידציה בשמירה.
+            </div>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/01-home-desktop.png" alt="דף הבית — כרטיס vchgfxd" />
+            <p class="screenshot-caption">דף הבית — הכרטיס השבור בצד שמאל למעלה</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: Issue 3 - Grid -->
+    <section class="slide" data-slide="4">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-medium">חומרה בינונית</span>
+          <h2>בעיה 3: רשת צפופה בדסקטופ</h2>
+          <p>~7 עמודות · כרטיסים ברוחב ~166px · כותרות נחתכות</p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <ul class="findings">
+              <li><strong>הגדרת משתמש</strong> — מספר עמודות גבוה מדי לרוחב 1440px</li>
+              <li><strong>כותרות</strong> — "אוזני המן מעולות" נחתך בכרטיסים קטנים</li>
+              <li><strong>תמונות</strong> — קטנות מדי לזיהוי מהיר של המנה</li>
+            </ul>
+            <div class="fix-box" style="margin-top: 16px;">
+              <h4>תיקון מוצע</h4>
+              הגבלת מקסימום עמודות בדסקטופ (למשל 4–5), או <code>minmax(220px, 1fr)</code> ב־CSS. קובץ: <code>css/style.css</code> + <code>setRecipesPerRow()</code> ב־<code>js/main.js</code>.
+            </div>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/01-home-desktop.png" alt="רשת צפופה" />
+            <p class="screenshot-caption">7 כרטיסים בשורה — צפיפות גבוהה</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Issue 4 - AI Chat -->
+    <section class="slide" data-slide="5">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-medium">חומרה בינונית</span>
+          <h2>בעיה 4: צ'אט AI ברוחב טלפון</h2>
+          <p>על מסך 1440px החלון נשאר ברוחב ~400px ומשאיר שטח ריק</p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <ul class="findings">
+              <li><strong>מחלקה</strong> — <code>ai-chat-phone</code> + <code>max-width: 400px</code></li>
+              <li><strong>חוויה</strong> — קשה לקרוא שיחות ארוכות, מרגיש כמו overlay מובייל</li>
+              <li><strong>השוואה</strong> — מודל המתכון (~1368px) מנוצל היטב; הצ'אט לא</li>
+            </ul>
+            <div class="fix-box" style="margin-top: 16px;">
+              <h4>תיקון מוצע</h4>
+              ב־<code>@media (min-width: 1024px)</code> — הרחבה ל־480–560px או layout דו־עמודות (רשימת שיחות + צ'אט). קובץ: <code>css/style.css</code> שורות ~3200.
+            </div>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/03-ai-chat-desktop.png" alt="צ'אט AI צר בדסקטופ" />
+            <p class="screenshot-caption">צ'אט AI — רוחב טלפוני על מסך רחב</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Issue 5 - Categories -->
+    <section class="slide" data-slide="6">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-medium">חומרה בינונית</span>
+          <h2>בעיה 5: פילטר קטגוריות</h2>
+          <p>ניגודיות חלשה במובייל · אייקונים לא תמיד תואמים לקטגוריה</p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <ul class="findings">
+              <li><strong>ניגודיות</strong> — כפתורי קטגוריה לא בולטים מספיק על רקע בהיר</li>
+              <li><strong>אייקונים</strong> — <code>lunch_dining</code> ל"תוספות", <code>icecream</code> ל"קינוחים" (סביר אך לא אחיד)</li>
+              <li><strong>נגישות</strong> — שם הכפתור כולל שם האייקון באנגלית (קשור לבעיה 1)</li>
+            </ul>
+            <div class="fix-box" style="margin-top: 16px;">
+              <h4>תיקון מוצע</h4>
+              חיזוק border/רקע לכפתור פעיל, מפת אייקונים עקבית לקטגוריות, תיקון aria.
+            </div>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/01-home-desktop.png" alt="שורת קטגוריות" />
+            <p class="screenshot-caption">שורת הקטגוריות מתחת לחיפוש</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Issue 6 - Empty states -->
+    <section class="slide" data-slide="7">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-low">חומרה נמוכה</span>
+          <h2>בעיה 6: ערכי placeholder גולמיים</h2>
+          <p>שדות ריקים מציגים <code>-- דקות</code> וסוג תזונה <code>--</code></p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <ul class="findings">
+              <li><strong>זמן הכנה</strong> — במקום להסתיר או לכתוב "לא צוין"</li>
+              <li><strong>סוג תזונה</strong> — מקף כפול נראה כמו באג טכני</li>
+            </ul>
+            <div class="fix-box" style="margin-top: 16px;">
+              <h4>תיקון מוצע</h4>
+              הצגת "לא צוין" / הסתרת השורה כשאין ערך. שינוי ב־<code>js/main.js</code> בתבנית כרטיס המתכון.
+            </div>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/04-add-recipe-form.png" alt="טופס הוספה — דוגמה לשדות" />
+            <p class="screenshot-caption">טופס הוספה — גם כאן יש דליפות אייקון (שמירה, OCR, tune)</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: What works -->
+    <section class="slide" data-slide="8">
+      <div class="slide-card">
+        <div class="slide-header">
+          <span class="badge badge-good">עובד טוב</span>
+          <h2>מה שעובד היטב</h2>
+          <p>נקודות חוזק שכדאי לשמר</p>
+        </div>
+        <div class="slide-body two-col">
+          <div>
+            <ul class="findings">
+              <li><strong>מודל מתכון</strong> — רוחב נדיב (~1368px), תמונה גדולה, קריאות טובה</li>
+              <li><strong>טופס הוספה</strong> — עד ~1152px, מבנה ברור, ייבוא מקישור</li>
+              <li><strong>ניווט URL</strong> — <code>/recipe/{id}</code> עובד לשיתוף</li>
+              <li><strong>עיצוב כללי</strong> — glassmorphism, RTL עברית, מצב כהה/בהיר</li>
+              <li><strong>צ'אט AI</strong> — פונקציונלי, רק צריך התאמה לדסקטופ</li>
+            </ul>
+          </div>
+          <div>
+            <img class="screenshot" src="screenshots/02-recipe-modal.png" alt="מודל מתכון — עובד טוב" />
+            <p class="screenshot-caption">מודל מתכון — חוויית קריאה מצוינת</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 9: Quick wins -->
+    <section class="slide" data-slide="9">
+      <div class="slide-card">
+        <div class="slide-header">
+          <h2>Quick Wins — סדר עדיפויות לתיקון</h2>
+          <p>שינויים קטנים עם השפעה גדולה · ממתין לאישור לפני יישום</p>
+        </div>
+        <div class="slide-body">
+          <table class="summary">
+            <thead>
+              <tr>
+                <th>עדיפות</th>
+                <th>פעולה</th>
+                <th>מאמץ</th>
+                <th>קובץ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="severity-high">1</td>
+                <td><code>aria-hidden</code> + <code>aria-label</code> על כל האייקונים</td>
+                <td>נמוך</td>
+                <td>main.js, index.html</td>
+              </tr>
+              <tr>
+                <td class="severity-high">2</td>
+                <td>מחיקה/סינון כרטיס vchgfxd</td>
+                <td>נמוך</td>
+                <td>DB / main.js</td>
+              </tr>
+              <tr>
+                <td class="severity-medium">3</td>
+                <td>הגבלת עמודות ברשת בדסקטופ</td>
+                <td>נמוך</td>
+                <td>style.css, main.js</td>
+              </tr>
+              <tr>
+                <td class="severity-medium">4</td>
+                <td>הרחבת צ'אט AI בדסקטופ</td>
+                <td>בינוני</td>
+                <td>style.css</td>
+              </tr>
+              <tr>
+                <td class="severity-low">5</td>
+                <td>טקסט "לא צוין" במקום --</td>
+                <td>נמוך</td>
+                <td>main.js</td>
+              </tr>
+              <tr>
+                <td class="severity-medium">6</td>
+                <td>שיפור ניגודיות קטגוריות</td>
+                <td>נמוך</td>
+                <td>style.css</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin-top: 20px; color: var(--muted); text-align: center;">
+            לפתיחת המצגת: פתחו את הקובץ בדפדפן · חצים ← → לניווט
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="nav-bar" aria-label="ניווט מצגת">
+    <button type="button" id="prev" disabled>→ הקודם</button>
+    <div class="dots" id="dots"></div>
+    <span class="counter" id="counter">1 / 10</span>
+    <button type="button" id="next">הבא ←</button>
+  </nav>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const counter = document.getElementById('counter');
+    const dotsEl = document.getElementById('dots');
+
+    for (let i = 0; i < total; i++) {
+      const d = document.createElement('button');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      d.type = 'button';
+      d.setAttribute('aria-label', 'שקופית ' + (i + 1));
+      d.addEventListener('click', () => go(i));
+      dotsEl.appendChild(d);
+    }
+
+    const dots = dotsEl.querySelectorAll('.dot');
+
+    function go(n) {
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = Math.max(0, Math.min(total - 1, n));
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+      counter.textContent = (current + 1) + ' / ' + total;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === total - 1;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    prevBtn.addEventListener('click', () => go(current - 1));
+    nextBtn.addEventListener('click', () => go(current + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') go(current + 1);
+      if (e.key === 'ArrowRight') go(current - 1);
+    });
+  </script>
+</body>
+</html>
