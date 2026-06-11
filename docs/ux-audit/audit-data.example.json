@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "date": "2026-06-11",
+    "url": "http://localhost:3001/",
+    "mode": "Standard",
+    "overallScore": 7.6,
+    "coverSubtitle": "מצגת ממצאים עם צילומי מסך · דסקטופ 1440×900",
+    "coverMeta": "תאריך: 2026-06-11 · localhost:3001 · משתמש מחובר"
+  },
+  "summary": {
+    "intro": "6 בעיות עיקריות — 2 חומרה גבוהה, 2 בינונית, 2 נמוכה",
+    "tableRows": [
+      { "num": 1, "issue": "שמות אייקונים Material נחשפים לקורא מסך", "severity": "high", "screen": "כל האתר" }
+    ],
+    "spotScores": [
+      { "label": "מודל מתכון", "score": 8 },
+      { "label": "נגישות", "score": 5 }
+    ]
+  },
+  "findings": [
+    {
+      "title": "דליפת שמות אייקונים לנגישות",
+      "severity": "high",
+      "subtitle": "קוראי מסך מקריאים שמות אנגליים של Material Symbols",
+      "bullets": [
+        { "label": "כפתור פרופיל", "text": "נקרא: account_circle" }
+      ],
+      "highlight": null,
+      "fixTitle": "תיקון מוצע",
+      "fixHtml": "<div class=\"aria-examples\"><div class=\"bad\">❌ אייקון בלי aria-hidden</div><div class=\"good\">✓ aria-hidden + aria-label עברי על הכפתור</div></div>",
+      "fixFiles": "js/main.js, index.html",
+      "screenshot": "screenshots/02-recipe-modal.png",
+      "screenshotCaption": "מודל מתכון — דוגמה לדליפת אייקונים"
+    }
+  ],
+  "strengths": {
+    "title": "מה שעובד היטב",
+    "subtitle": "נקודות חוזק שכדאי לשמר",
+    "bullets": [
+      { "label": "מודל מתכון", "text": "רוחב נדיב, קריאות טובה" }
+    ],
+    "screenshot": "screenshots/02-recipe-modal.png",
+    "screenshotCaption": "מודל מתכון — חוויית קריאה מצוינת"
+  },
+  "quickWins": [
+    { "priority": 1, "severity": "high", "action": "aria-hidden + aria-label על אייקונים", "effort": "נמוך", "file": "main.js" }
+  ]
+}

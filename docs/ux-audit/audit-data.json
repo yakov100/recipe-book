@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "date": "2026-06-11",
+    "url": "http://localhost:3000/",
+    "mode": "Standard",
+    "overallScore": 7.5,
+    "coverSubtitle": "מצגת ממצאים עם צילומי מסך · דסקטופ + מובייל",
+    "coverMeta": "תאריך: 2026-06-11 · localhost:3000 · משתמש מחובר"
+  },
+  "summary": {
+    "intro": "5 ממצאים עיקריים — 1 חומרה גבוהה, 2 בינונית, 2 נמוכה. המיקוד: נגישות אייקונים וחוויית מובייל.",
+    "tableRows": [
+      { "num": 1, "issue": "שמות Material Symbols נחשפים לקורא מסך ולכותרות", "severity": "high", "screen": "כל האתר" },
+      { "num": 2, "issue": "אין חיפוש במובייל (≤768px)", "severity": "medium", "screen": "Header / מובייל" },
+      { "num": 3, "issue": "זמן הכנה ריק מוצג כ־\"-- דקות\"", "severity": "low", "screen": "מודל מתכון" },
+      { "num": 4, "issue": "FABs חופפים לכרטיסים במובייל", "severity": "medium", "screen": "375px" },
+      { "num": 5, "issue": "כפתורי פעולה על תמונת המתכון", "severity": "low", "screen": "מודל מתכון" }
+    ],
+    "spotScores": [
+      { "label": "עקביות מותג", "score": 8 },
+      { "label": "נגישות", "score": 6 },
+      { "label": "תחושת מוצר", "score": 8 }
+    ]
+  },
+  "findings": [
+    {
+      "title": "דליפת שמות אייקונים Material Symbols",
+      "severity": "high",
+      "subtitle": "קוראי מסך וכותרות מציגים טקst אנגלי במקום אייקון בלבד",
+      "bullets": [
+        { "label": "מודל מתכון", "text": "shopping_basket מצרכים, cooking שלבי הכנה, description הערות השף" },
+        { "label": "טופס הוספה", "text": "2 tune תכונות המתכון, שמירת מתכון save, document_scanner סרוק מתכון" },
+        { "label": "צ'אט AI", "text": "edit_square שיחה חדשה" }
+      ],
+      "highlight": "Quick win: aria-hidden=\"true\" על כל material-symbols דקורטיבי ב-index.html",
+      "fixTitle": "תיקון מוצע",
+      "fixHtml": "<div class=\"aria-examples\"><div class=\"bad\">❌ &lt;span class=\"material-symbols-outlined\"&gt;save&lt;/span&gt; שמירת מתכון</div><div class=\"good\">✓ aria-hidden=\"true\" על האייקון + טקסט עברי בלבד על הכפתור</div></div>",
+      "fixFiles": "index.html",
+      "screenshot": "screenshots/02-recipe-modal.png",
+      "screenshotCaption": "מודל מתכון — דוגמה לדליפת שמות אייקון"
+    },
+    {
+      "title": "חיפוש לא זמין במובייל",
+      "severity": "medium",
+      "subtitle": "שדה החיפוש מוסתר מתחת ל-768px — אין חלופה",
+      "bullets": [
+        { "label": "מצב נוכחי", "text": "ב-desktop יש חיפוש + סינון ב-header" },
+        { "label": "במובייל", "text": "רק קטגוריות ו-FABs — קשה למצוא מתכון ברשימה גדולה" }
+      ],
+      "highlight": null,
+      "fixTitle": "תיקון מוצע",
+      "fixHtml": "<p>אייקון חיפוש שפותח overlay / מגירה, או שורת חיפוש sticky מתחת ל-header.</p>",
+      "fixFiles": "index.html, css/style.css",
+      "screenshot": "screenshots/04-mobile.png",
+      "screenshotCaption": "375px — אין שדה חיפוש ב-header"
+    },
+    {
+      "title": "FABs חופפים לתוכן",
+      "severity": "medium",
+      "subtitle": "כפתורי + ו-AI יושבים על כרטיסי המתכונים",
+      "bullets": [
+        { "label": "375px", "text": "קשה ללחוץ על פינת כרטיס ליד FAB" },
+        { "label": "המלצה", "text": "padding-bottom ל-grid + safe-area-inset-bottom" }
+      ],
+      "highlight": null,
+      "fixTitle": "תיקון מוצע",
+      "fixHtml": "<p>העלאת FAB stack או מרווח תחתון ל-.main / .recipe-grid.</p>",
+      "fixFiles": "css/style.css",
+      "screenshot": "screenshots/04-mobile.png",
+      "screenshotCaption": "מובייל — FAB על כרטיס"
+    }
+  ],
+  "strengths": {
+    "title": "מה שעובד היטב",
+    "subtitle": "נקודות חוזק שכדאי לשמר",
+    "bullets": [
+      { "label": "מותג", "text": "mint/peach/lavender, glassmorphism, gradient בכותרת — חם וביתי" },
+      { "label": "כרטיסי מתכון", "text": "יחס 4/5, hover עדין, meta pills ברורים" },
+      { "label": "טופס הוספה", "text": "עשיר, מסודר לשלבים, ייבוא URL + OCR" },
+      { "label": "מצב כהה", "text": "עובד ברוב המסכים — header ו-mesh מתעדכנים" }
+    ],
+    "screenshot": "screenshots/01-home-desktop.png",
+    "screenshotCaption": "דף הבית — מראה מזוהה וחם"
+  },
+  "quickWins": [
+    { "priority": 1, "severity": "high", "action": "aria-hidden=\"true\" על כל material-symbols דקורטיבי", "effort": "≤30 דק", "file": "index.html" },
+    { "priority": 2, "severity": "low", "action": "זמן הכנה ריק → \"לא צוין\" או הסתרה", "effort": "≤15 דק", "file": "js/main.js" },
+    { "priority": 3, "severity": "medium", "action": "padding-bottom ל-grid במובייל (FAB)", "effort": "≤20 דק", "file": "css/style.css" }
+  ]
+}

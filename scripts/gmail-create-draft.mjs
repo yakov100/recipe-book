@@ -9,10 +9,10 @@
  */
 import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, join, relative } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE = resolve(__dirname, "..");
@@ -22,6 +22,11 @@ const DEFAULT_TO_FILE = resolve(
   WORKSPACE,
   ".cursor/skills/recipe-book-design-consultant/draft-to.txt"
 );
+const DEFAULT_PRESENTATION_URL_FILE = resolve(
+  WORKSPACE,
+  ".cursor/skills/recipe-book-design-consultant/presentation-url.txt"
+);
+const ATTACH_MAX_BYTES = Number(process.env.GMAIL_ATTACH_MAX_MB ?? 5) * 1024 * 1024;
 const CALLBACK_PORT = 8787;
 const CALLBACK_PATH = "/oauth/callback";
 const REDIRECT_URI = `http://localhost:${CALLBACK_PORT}${CALLBACK_PATH}`;
@@ -38,6 +43,12 @@ function arg(name) {
 const authOnly = process.argv.includes("--auth-only");
 const subject = arg("--subject");
 const bodyFile = arg("--body-file");
+const attachDir = arg("--attach-dir");
+const presentationUrl =
+  arg("--presentation-url") ??
+  (existsSync(DEFAULT_PRESENTATION_URL_FILE)
+    ? readFileSync(DEFAULT_PRESENTATION_URL_FILE, "utf8").trim()
+    : null);
 const toEmail =
   arg("--to") ??
   process.env.GMAIL_DRAFT_TO ??
@@ -205,21 +216,78 @@ async function authorize(client) {
   return token.access_token;
 }
 
-function buildDraftRaw({ to, subject, bodyText }) {
-  const lines = [
+function mimeTypeFor(name) {
+  if (name.endsWith(".html")) return "text/html; charset=UTF-8";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
+function collectAttachments(dir) {
+  const base = resolve(dir);
+  const files = [];
+  const pres = join(base, "presentation.html");
+  if (existsSync(pres)) files.push(pres);
+  const shots = join(base, "screenshots");
+  if (existsSync(shots)) {
+    for (const name of readdirSync(shots)) {
+      if (/\.(png|jpe?g|webp)$/i.test(name)) files.push(join(shots, name));
+    }
+  }
+  return files.map((path) => {
+    const data = readFileSync(path);
+    const rel = relative(base, path).replace(/\\/g, "/");
+    return { filename: rel.includes("/") ? rel.replace("/", "-") : rel, path, data, mimeType: mimeTypeFor(path) };
+  });
+}
+
+function buildDraftRaw({ to, subject, bodyText, attachments = [] }) {
+  const subjectB64 = `=?UTF-8?B?${Buffer.from(subject, "utf8").toString("base64")}?=`;
+
+  if (!attachments.length) {
+    const lines = [
+      `To: ${to}`,
+      `Subject: ${subjectB64}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=UTF-8",
+      "Content-Transfer-Encoding: base64",
+      "",
+      Buffer.from(bodyText, "utf8").toString("base64"),
+    ];
+    return Buffer.from(lines.join("\r\n"), "utf8").toString("base64url");
+  }
+
+  const boundary = `mix_${randomBytes(12).toString("hex")}`;
+  const parts = [
     `To: ${to}`,
-    `Subject: =?UTF-8?B?${Buffer.from(subject, "utf8").toString("base64")}?=`,
+    `Subject: ${subjectB64}`,
     "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
     "Content-Type: text/plain; charset=UTF-8",
     "Content-Transfer-Encoding: base64",
     "",
     Buffer.from(bodyText, "utf8").toString("base64"),
   ];
-  return Buffer.from(lines.join("\r\n"), "utf8").toString("base64url");
+
+  for (const att of attachments) {
+    const encName = `=?UTF-8?B?${Buffer.from(att.filename, "utf8").toString("base64")}?=`;
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: ${att.mimeType}; name="${encName}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${encName}"`,
+      "",
+      att.data.toString("base64")
+    );
+  }
+  parts.push(`--${boundary}--`);
+  return Buffer.from(parts.join("\r\n"), "utf8").toString("base64url");
 }
 
-async function createDraft(accessToken, { to, subject, bodyText }) {
-  const raw = buildDraftRaw({ to, subject, bodyText });
+async function createDraft(accessToken, { to, subject, bodyText, attachments = [] }) {
+  const raw = buildDraftRaw({ to, subject, bodyText, attachments });
   const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
     method: "POST",
     headers: {
@@ -257,11 +325,32 @@ const accessToken = await authorize(client);
 if (authOnly) {
   console.log("Auth OK.");
 } else {
-  const bodyText = readFileSync(resolve(bodyFile), "utf8");
+  let bodyText = readFileSync(resolve(bodyFile), "utf8");
   const footer = "\n\n---\nנוצר אוטומטית מ-recipe-book design consultant.";
+  let attachments = [];
+  let attachNote = "";
+
+  if (attachDir && existsSync(resolve(attachDir))) {
+    const candidates = collectAttachments(attachDir);
+    const totalBytes = candidates.reduce((n, a) => n + a.data.length, 0);
+    if (totalBytes <= ATTACH_MAX_BYTES && candidates.length) {
+      attachments = candidates;
+      attachNote = `\n\n📎 המצגת מצורפת (${candidates.length} קבצים, ${(totalBytes / 1024).toFixed(0)} KB).`;
+      console.log(`Attaching presentation (${(totalBytes / 1024).toFixed(0)} KB).`);
+    } else {
+      attachNote = `\n\n📎 המצגת כבדה מדי לצירוף (${(totalBytes / 1024 / 1024).toFixed(1)} MB) — קישור:`;
+      console.log(`Skip attach: ${(totalBytes / 1024 / 1024).toFixed(1)} MB > limit.`);
+    }
+  }
+
+  if (presentationUrl) {
+    bodyText += attachNote ? `${attachNote}\n${presentationUrl}` : `\n\n🎞️ מצגת אינטראקטיבית:\n${presentationUrl}`;
+  }
+
   await createDraft(accessToken, {
     to: toEmail,
     subject,
     bodyText: bodyText + footer,
+    attachments,
   });
 }
