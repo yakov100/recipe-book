@@ -22,7 +22,7 @@
     "vite-plugin-pwa": "^0.21.1"
   },
   "overrides": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.28.1"
   },
   "devDependencies": {
     "sharp": "^0.34.5"
