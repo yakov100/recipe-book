@@ -438,18 +438,12 @@
 
         <div class="form-add-recipe-main">
           <section class="form-add-recipe-card form-add-recipe-import-url" aria-labelledby="importRecipeUrlHeading">
-            <div class="form-add-recipe-import-url-head">
-              <div class="form-add-recipe-import-url-icon-wrap" aria-hidden="true">
-                <span class="material-symbols-outlined form-add-recipe-import-url-icon">travel_explore</span>
-              </div>
-              <div class="form-add-recipe-import-url-copy">
-                <h3 class="form-add-recipe-import-url-title" id="importRecipeUrlHeading">ייבוא מאתר</h3>
-                <p class="form-add-recipe-import-url-hint">הדביקו קישור למתכון — ה-AI ימשוך את התוכן וימלא את הטופס</p>
-              </div>
+            <h3 class="form-add-recipe-import-url-title auth-sr-only" id="importRecipeUrlHeading">ייבוא מתכון מאתר</h3>
+            <div class="form-add-recipe-import-url-icon-wrap" aria-hidden="true" title="ייבוא מאתר — ה-AI ימשוך את התוכן וימלא את הטופס">
+              <span class="material-symbols-outlined form-add-recipe-import-url-icon">travel_explore</span>
             </div>
             <div class="form-add-recipe-import-url-row">
-              <span class="material-symbols-outlined form-add-recipe-import-url-link-icon" aria-hidden="true">link</span>
-              <input type="url" id="importRecipeUrl" class="form-add-recipe-import-url-input" placeholder="https://example.com/recipe" inputmode="url" autocomplete="url" aria-label="קישור למתכון באתר">
+              <input type="url" id="importRecipeUrl" class="form-add-recipe-import-url-input" placeholder="הדביקו קישור למתכון לייבוא אוטומטי" inputmode="url" autocomplete="url" aria-label="קישור למתכון באתר">
               <button type="button" id="importRecipeUrlBtn" class="form-add-recipe-import-url-btn" onclick="importRecipeFromUrl()">
                 <span class="material-symbols-outlined import-url-btn-icon" aria-hidden="true">download</span>
                 <span class="import-url-btn-text">ייבוא</span>
