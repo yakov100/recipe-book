@@ -423,10 +423,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     // View recipe from chat card
     window.viewRecipeFromChat = function(recipeId) {
       if (!recipeId) return;
-      const recipe = recipes.find(r => r.id === recipeId);
-      if (recipe) {
+      const index = recipes.findIndex(r => r.id === recipeId);
+      if (index >= 0) {
         closeAiChat();
-        openPopup(recipe);
+        showRecipe(index);
       }
     };
     window.toggleChatMenu = toggleChatMenu;

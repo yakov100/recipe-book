@@ -563,6 +563,15 @@ export function editRecipe(index) {
     populateIngredientRows(recipe.ingredients || '');
     document.getElementById('instructions').value = recipe.instructions || '';
     document.getElementById('preparationTime').value = recipe.preparationTime || '';
+    // Reset the "new category" toggle to dropdown mode (in case it was left open)
+    const editNewCategory = document.getElementById('newCategory');
+    const editCategoryWrap = document.getElementById('categoryDropdownWrap');
+    const editToggleBtn = document.getElementById('toggleNewCategory');
+    const editCategorySelect = document.getElementById('category');
+    if (editNewCategory) { editNewCategory.style.display = 'none'; editNewCategory.required = false; editNewCategory.value = ''; }
+    if (editCategoryWrap) editCategoryWrap.style.display = '';
+    if (editToggleBtn) editToggleBtn.innerHTML = '<span class="material-symbols-outlined">add</span>';
+    if (editCategorySelect) editCategorySelect.required = true;
     populateCategorySelectAndDropdown();
     document.getElementById('category').value = recipe.category || 'שונות';
     updateCategoryTriggerDisplay();
