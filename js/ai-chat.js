@@ -3,7 +3,7 @@
 // recipe-ai edge function. setAuthGateVisible is reached via window (main.js).
 import { supabase, edgeFunctionUrl, edgeFunctionHeaders } from './supabase.js';
 import {
-    recipes,
+    recipes, setRecipes,
     aiChatMessages, setAiChatMessages,
     aiChatAbortController, setAiChatAbortController,
     aiGeneratedImage, setAiGeneratedImage,
@@ -17,11 +17,11 @@ import {
 } from './state.js';
 import { getCurrentUser, isAuthenticated } from './auth.js';
 import { saveRecipeToDB, saveRecipesToCache } from './data/recipes-repo.js';
-import { getDisplayUrl, getDefaultImageUrl, uploadImageToStorage } from './images.js';
-import { updateCategoryList, updateCategoryButtons } from './categories.js';
+import { getDisplayUrl, getDefaultImageUrl, uploadImageToStorage, deleteRecipeImageFromStorage } from './images.js';
+import { updateCategoryList, updateCategoryButtons, populateCategorySelectAndDropdown, updateCategoryTriggerDisplay } from './categories.js';
 import { filterRecipes } from './filters.js';
 import { showRecipe, displayRecipes } from './recipe-view.js';
-import { openFormPopup } from './recipe-form.js';
+import { openFormPopup, populateIngredientRows } from './recipe-form.js';
 import { initVoiceButton } from './voice.js';
 import { chefImageUrl, formatMessageTime, formatRelativeDate, compactRecipes } from './utils.js';
 
