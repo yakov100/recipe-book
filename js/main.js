@@ -32,28 +32,30 @@ import {
     getImageUrl,
     getImageSrcSet,
 } from './images.js';
+import {
+    recipes, setRecipes,
+    editingIndex, setEditingIndex,
+    formSelectedRating, setFormSelectedRating,
+    formSelectedDifficulty, setFormSelectedDifficulty,
+    selectedCategory, setSelectedCategory,
+    backupReminderTimeout, setBackupReminderTimeout,
+    aiChatMessages, setAiChatMessages,
+    aiChatAbortController, setAiChatAbortController,
+    aiGeneratedImage, setAiGeneratedImage,
+    formRegeneratedImage, setFormRegeneratedImage,
+    currentConversationId, setCurrentConversationId,
+    conversationHistory, setConversationHistory,
+    chatAttachments, setChatAttachments,
+    chatClosedAt, setChatClosedAt,
+    pendingSuggestedRecipe, setPendingSuggestedRecipe,
+    isSharedRecipeMode, setIsSharedRecipeMode,
+    CHAT_RESUME_THRESHOLD_MS,
+} from './state.js';
 
 console.log('🚀 [main.js] Script loaded successfully!');
 console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...');
 
 (() => {
-    let recipes = [];
-    let editingIndex = -1;
-    let formSelectedRating = 0;
-    let formSelectedDifficulty = 2; // 1=קל, 2=בינוני, 3=קשה
-    let selectedCategory = null;
-    let backupReminderTimeout;
-    let aiChatMessages = [];
-    let aiChatAbortController = null;
-    let aiGeneratedImage = null; // Stores AI-generated image for suggested recipes
-    let formRegeneratedImage = null; // { imagePath } or { image } - from "צור תמונה חדשה" in add/edit form
-    let currentConversationId = null;
-    let conversationHistory = [];
-    let chatAttachments = [];
-    let chatClosedAt = null;
-    const CHAT_RESUME_THRESHOLD_MS = 10 * 60 * 1000;
-    let pendingSuggestedRecipe = null; // Stores recipe waiting for user confirmation
-    let isSharedRecipeMode = false; // Track if loaded via shared link
 
     function recipeToRow(r) {
         const user = getCurrentUser();
@@ -425,14 +427,14 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     function resetAppStateForSignOut() {
-        recipes = [];
-        editingIndex = -1;
-        aiChatMessages = [];
-        currentConversationId = null;
-        conversationHistory = [];
-        chatClosedAt = null;
-        pendingSuggestedRecipe = null;
-        isSharedRecipeMode = false;
+        setRecipes([]);
+        setEditingIndex(-1);
+        setAiChatMessages([]);
+        setCurrentConversationId(null);
+        setConversationHistory([]);
+        setChatClosedAt(null);
+        setPendingSuggestedRecipe(null);
+        setIsSharedRecipeMode(false);
         const container = document.getElementById('recipesContainer');
         if (container) container.innerHTML = '';
     }
@@ -701,7 +703,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             if (sharedRecipeId) {
                 // מצב קישור משותף - טען רק את המתכון הספציפי
                 console.log('Loading shared recipe:', sharedRecipeId);
-                isSharedRecipeMode = true; // סמן שזה מצב קישור משותף
+                setIsSharedRecipeMode(true); // סמן שזה מצב קישור משותף
                 removeAppChromeForSharedRecipe();
                 setupPopupCloseOnOverlayClick();
 
@@ -711,7 +713,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                 // טען את המתכון הספציפי
                 const recipe = await loadPublicRecipeFromDB(sharedRecipeId);
                 if (recipe) {
-                    recipes = [recipe];
+                    setRecipes([recipe]);
                     await migrateLegacyBase64ToStorage();
                     displaySharedRecipeCard();
                 } else {
@@ -736,7 +738,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             const settings = await loadSettings();
             
             if (cachedRecipes && cachedRecipes.length > 0) {
-                recipes = cachedRecipes;
+                setRecipes(cachedRecipes);
                 filterRecipes();
                 updateCategoryList();
                 updateCategoryButtons();
@@ -763,7 +765,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
                     // Merge server data with locally-saved recipes (avoid race: user saved after our SELECT started)
                     const serverIds = new Set((freshRecipes || []).map(r => r && r.id).filter(Boolean));
                     const localOnly = (recipes || []).filter(r => r && r.id && !serverIds.has(r.id));
-                    recipes = [...(freshRecipes || []), ...localOnly];
+                    setRecipes([...(freshRecipes || []), ...localOnly]);
                     console.log('[loadFromServer] Merged: ' + (freshRecipes || []).length + ' from server, ' + localOnly.length + ' local-only preserved. Total: ' + recipes.length);
                     await migrateLegacyBase64ToStorage();
                     filterRecipes();
@@ -802,7 +804,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             }
         } catch (error) {
             console.error('שגיאה בטעינת מתכונים:', error);
-            recipes = [];
+            setRecipes([]);
             filterRecipes();
             updateCategoryList();
             updateCategoryButtons();
@@ -1568,7 +1570,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
               console.warn('Failed to upload regenerated image to Storage:', uploadErr);
             }
           }
-          formRegeneratedImage = imagePath ? { imagePath } : (data.image ? { image: data.image } : null);
+          setFormRegeneratedImage(imagePath ? { imagePath } : (data.image ? { image: data.image } : null));
 
           const inlinePreview = document.getElementById('inlineImagePreview');
           const inlineImg = document.getElementById('inlinePreviewImg');
@@ -1599,7 +1601,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     const DIFFICULTY_LABELS = { 1: 'קל', 2: 'בינוני', 3: 'קשה' };
 
     function setFormDifficulty(level) {
-        formSelectedDifficulty = level >= 1 && level <= 3 ? level : 2;
+        setFormSelectedDifficulty(level >= 1 && level <= 3 ? level : 2);
         const bars = document.querySelectorAll('#formDifficultyBars .form-diff-bar');
         const textEl = document.getElementById('formDifficultyText');
         if (!bars.length || !textEl) return;
@@ -1626,12 +1628,12 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         if (toggleBtn) toggleBtn.innerHTML = '<span class="material-symbols-outlined">add</span>';
         // איפוס הטופס
         document.getElementById('recipeForm').reset();
-        editingIndex = -1;
-        formSelectedRating = 0;
+        setEditingIndex(-1);
+        setFormSelectedRating(0);
         setFormDifficulty(2);
         updateFormRatingStars(0);
-        aiGeneratedImage = null; // איפוס תמונה שנוצרה ע"י AI
-        formRegeneratedImage = null; // איפוס תמונה שנוצרה ב"צור תמונה חדשה" בטופס
+        setAiGeneratedImage(null); // איפוס תמונה שנוצרה ע"י AI
+        setFormRegeneratedImage(null); // איפוס תמונה שנוצרה ב"צור תמונה חדשה" בטופס
         
         // עדכון רשימת הקטגוריות (select + dropdown עם אייקונים)
         populateCategorySelectAndDropdown();
@@ -1677,8 +1679,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     function closeFormPopup() {
       document.getElementById('formPopup').style.display = 'none';
       document.getElementById('recipeForm').reset();
-      editingIndex = -1;
-      formRegeneratedImage = null;
+      setEditingIndex(-1);
+      setFormRegeneratedImage(null);
       // Reset image preview
       const previewContainer = document.getElementById('imagePreviewContainer');
       const uploadArea = document.querySelector('.image-upload-area');
@@ -2320,7 +2322,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       const searchDietaryTypeEl = document.getElementById('searchDietaryType');
       if (searchDietaryTypeEl) searchDietaryTypeEl.value = '';
       updateDietarySelectTrigger();
-      selectedCategory = null;
+      setSelectedCategory(null);
       resetFilterStars();
       filterRecipes();
       updateCategoryButtons();
@@ -2640,10 +2642,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
 
       if (!lastBackup || now - lastBackup > twoWeeks) showBackupReminder();
 
-      backupReminderTimeout = setTimeout(async () => {
+      setBackupReminderTimeout(setTimeout(async () => {
         const s = await loadSettings();
         setupBackupReminder(s.lastBackup);
-      }, twoWeeks);
+      }, twoWeeks));
     }
 
     function showBackupReminder() {
@@ -3039,8 +3041,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             videoUrl: null,
             preparationTime: null
           };
-          if (!Array.isArray(recipes)) recipes = [];
-          recipes = recipes.filter(function(r) { return r && r.id !== data.insertedRecipeId; });
+          if (!Array.isArray(recipes)) setRecipes([]);
+          setRecipes(recipes.filter(function(r) { return r && r.id !== data.insertedRecipeId; }));
           recipes.push(newRecipe);
           saveRecipesToCache(recipes);
           m.recipeAdded = true;
@@ -3048,7 +3050,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           if (m.dbId) {
             await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
           }
-          pendingSuggestedRecipe = null;
+          setPendingSuggestedRecipe(null);
           renderAiChatMessages();
           filterRecipes();
           updateCategoryList();
@@ -3080,7 +3082,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         if (m.dbId) {
           await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
         }
-        pendingSuggestedRecipe = null;
+        setPendingSuggestedRecipe(null);
         removeAddingIndicator();
         renderAiChatMessages();
         filterRecipes();
@@ -3100,7 +3102,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       if (!m || !m.suggestedRecipe) return;
       applySuggestedRecipe(m.suggestedRecipe);
       m.suggestedRecipe = null;
-      pendingSuggestedRecipe = null;
+      setPendingSuggestedRecipe(null);
       if (m.dbId) {
         await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
       }
@@ -3113,7 +3115,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       var m = aiChatMessages[msgIndex];
       if (!m) return;
       m.suggestedRecipe = null;
-      pendingSuggestedRecipe = null;
+      setPendingSuggestedRecipe(null);
       if (m.dbId) {
         await updateMessageMetadataInDb(m.dbId, buildMessageMetadata(m));
       }
@@ -3360,15 +3362,15 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     async function goBackToChatHome() {
-      conversationHistory = await loadConversationHistory();
+      setConversationHistory(await loadConversationHistory());
       renderConversationList();
       showChatView('home');
     }
 
     async function loadPastConversation(conversationId) {
-      currentConversationId = conversationId;
+      setCurrentConversationId(conversationId);
       const messages = await loadConversationMessages(conversationId);
-      aiChatMessages = messages.map(function(m) {
+      setAiChatMessages(messages.map(function(m) {
         var message = {
           role: m.role,
           content: m.content,
@@ -3377,7 +3379,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           dbId: m.id || null
         };
         return applyMessageMetadata(message, m.metadata);
-      });
+      }));
       renderAiChatMessages();
       renderConversationList();
       showChatView('thread');
@@ -3390,9 +3392,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     async function startNewConversation() {
-      currentConversationId = await createNewConversation();
-      aiChatMessages = [];
-      chatAttachments = [];
+      setCurrentConversationId(await createNewConversation());
+      setAiChatMessages([]);
+      setChatAttachments([]);
 
       aiChatMessages.push({
         role: 'assistant',
@@ -3400,7 +3402,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         timestamp: new Date()
       });
 
-      conversationHistory = await loadConversationHistory();
+      setConversationHistory(await loadConversationHistory());
       renderConversationList();
       renderAiChatMessages();
       clearAttachmentPreview();
@@ -3512,7 +3514,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     function clearAttachmentPreview() {
-      chatAttachments = [];
+      setChatAttachments([]);
       renderAttachmentPreviews();
     }
 
@@ -3533,7 +3535,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         Date.now() - chatClosedAt < CHAT_RESUME_THRESHOLD_MS;
 
       if (shouldResume) {
-        conversationHistory = await loadConversationHistory();
+        setConversationHistory(await loadConversationHistory());
         renderConversationList();
         showChatView('thread');
         renderAiChatMessages();
@@ -3545,7 +3547,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         return;
       }
 
-      conversationHistory = await loadConversationHistory();
+      setConversationHistory(await loadConversationHistory());
       renderConversationList();
       showChatView('home');
     }
@@ -3553,9 +3555,9 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     function closeAiChat() {
       if (aiChatAbortController) {
         aiChatAbortController.abort();
-        aiChatAbortController = null;
+        setAiChatAbortController(null);
       }
-      chatClosedAt = Date.now();
+      setChatClosedAt(Date.now());
       var ov = document.getElementById('aiChatOverlay');
       if (ov) ov.style.display = 'none';
     }
@@ -3584,7 +3586,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         updateCategoryTriggerDisplay();
       }
       // Store AI-generated image/path for use when saving
-      aiGeneratedImage = suggestedRecipe.image_path ? { imagePath: suggestedRecipe.image_path } : (suggestedRecipe.image ? suggestedRecipe.image : null);
+      setAiGeneratedImage(suggestedRecipe.image_path ? { imagePath: suggestedRecipe.image_path } : (suggestedRecipe.image ? suggestedRecipe.image : null));
 
       var dietary = (typeof suggestedRecipe.dietaryType === 'string' && suggestedRecipe.dietaryType.trim())
         ? suggestedRecipe.dietaryType.trim()
@@ -3619,7 +3621,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       if (aiChatAbortController) {
         aiChatAbortController.abort();
       }
-      aiChatAbortController = new AbortController();
+      setAiChatAbortController(new AbortController());
 
       // Build message with attachments
       var userMessage = {
@@ -3723,7 +3725,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           var recipeIds = (data && Array.isArray(data.recipeIds)) ? data.recipeIds : [];
           if (data && data.insertedRecipeId) {
             // Recipe was confirmed and inserted to DB
-            pendingSuggestedRecipe = null;
+            setPendingSuggestedRecipe(null);
             closeAiChat();
             // Update local array and cache without a full DB refetch
             var aiNewRecipeRow = (data.suggestedRecipe && typeof data.suggestedRecipe === 'object') ? data.suggestedRecipe : {};
@@ -3744,8 +3746,8 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
               videoUrl: null,
               preparationTime: null
             };
-            if (!Array.isArray(recipes)) recipes = [];
-            recipes = recipes.filter(function(r) { return r && r.id !== data.insertedRecipeId; });
+            if (!Array.isArray(recipes)) setRecipes([]);
+            setRecipes(recipes.filter(function(r) { return r && r.id !== data.insertedRecipeId; }));
             recipes.push(aiNewRecipe);
             saveRecipesToCache(recipes);
             filterRecipes();
@@ -3793,7 +3795,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           } else if (data && data.suggestedRecipe) {
             // suggestedRecipe is already attached to the assistant message above
             // Re-render to show the inline recipe card with action buttons
-            pendingSuggestedRecipe = data.suggestedRecipe;
+            setPendingSuggestedRecipe(data.suggestedRecipe);
             renderAiChatMessages();
           }
         })
@@ -4610,7 +4612,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
     }
 
     function filterByCategory(category) {
-      selectedCategory = category;
+      setSelectedCategory(category);
       filterRecipes();
       // Update active state of category buttons
       updateCategoryButtons();
@@ -4799,10 +4801,10 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       if (!recipes[index]) return;
       
       closePopup();  // סוגרים את חלון הצפייה במתכון
-      formRegeneratedImage = null; // איפוס תמונה שנוצרה ב"צור תמונה חדשה"
+      setFormRegeneratedImage(null); // איפוס תמונה שנוצרה ב"צור תמונה חדשה"
       
       const recipe = recipes[index];
-      editingIndex = index;
+      setEditingIndex(index);
 
       // עדכון כותרת הטופס
       const formTitle = document.querySelector('.form-popup-content h2');
@@ -4834,7 +4836,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
       const dietaryTypeEl = document.getElementById('dietaryType');
       if (dietaryTypeEl) dietaryTypeEl.value = recipe.dietaryType || '';
 
-      formSelectedRating = recipe.rating || 0;
+      setFormSelectedRating(recipe.rating || 0);
       updateFormRatingStars(formSelectedRating);
       setFormDifficulty(recipe.difficulty ?? 2);
 
@@ -4891,7 +4893,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         // סגירת הטופס ואיפוס
         document.getElementById('formPopup').style.display = 'none';
         document.getElementById('recipeForm').reset();
-        editingIndex = -1;
+        setEditingIndex(-1);
         
         // החזרת כותרת הטופס למצב ההתחלתי
         const formTitle = document.querySelector('.form-popup-content h2');
@@ -4993,7 +4995,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         } else if (formRegeneratedImage.image) {
           imageData = formRegeneratedImage.image;
         }
-        formRegeneratedImage = null;
+        setFormRegeneratedImage(null);
       } else if (aiGeneratedImage) {
         if (typeof aiGeneratedImage === 'object' && aiGeneratedImage.imagePath) {
           imagePath = aiGeneratedImage.imagePath;
@@ -5016,7 +5018,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           if (imagePath) imageData = null;
         } catch (_) {}
       }
-      aiGeneratedImage = null;
+      setAiGeneratedImage(null);
 
       const previousImagePath = editingIndex >= 0 ? (recipes[editingIndex].imagePath || null) : null;
       if (imagePath && previousImagePath && previousImagePath !== imagePath) {
@@ -5046,7 +5048,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
         recipes[editingIndex] = { ...recipes[editingIndex], ...recipe };
         await saveRecipeToDB(recipes[editingIndex]);
         console.log('✅ Recipe updated in DB');
-        editingIndex = -1;
+        setEditingIndex(-1);
       } else {
         // New recipe - add to array
         recipes.push(recipe);
@@ -5082,7 +5084,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
           if (!star) return;
           const r = parseInt(star.dataset.rating, 10);
           if (r >= 1 && r <= 5) {
-            formSelectedRating = r;
+            setFormSelectedRating(r);
             updateFormRatingStars(r);
           }
         });
