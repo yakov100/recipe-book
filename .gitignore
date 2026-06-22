@@ -41,3 +41,6 @@ dist/
 assets/chef-defaults/
 dist/chef-defaults/
 .gstack/
+
+# Codex pet sprite generation artifacts
+.codex-pet-runs/
