@@ -11,6 +11,11 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets'
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
   // publicDir for static assets served at root
   publicDir: 'assets',
   root: '.',

@@ -669,12 +669,14 @@ body::after {
     display: grid;
     grid-template-columns: repeat(var(--columns, 4), 1fr);
     gap: clamp(1rem, 2vw, 2rem);
-    padding: 0 1rem;
+    padding: 1rem;
     background: none;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow-x: hidden;
+    /* visible so a hovered card that lifts/scales isn't clipped at the edges
+       (horizontal overflow is still contained by body { overflow-x: hidden }) */
+    overflow: visible;
 }
 
 /* Responsive adjustments based on number of columns */
@@ -764,6 +766,7 @@ body::after {
 .recipe-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--glow-hover);
+    z-index: 5;
 }
 
 .dark .recipe-card:hover {
