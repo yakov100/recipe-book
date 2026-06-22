@@ -36,6 +36,7 @@ import {
     blobToBase64,
 } from './utils.js';
 import { initializeTimer, applyTimerVisibility } from './timer.js';
+import { initRecipeTimers } from './recipe-timers.js';
 import {
     getDefaultImageUrl,
     resizeImage,
@@ -312,6 +313,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             setupGridSelector();
             applyTimerVisibility(settings.timerVisible);
             initializeTimer(settings, saveSetting);
+            initRecipeTimers();
             setupPopupCloseOnOverlayClick();
             mountFilterPanel();
             initDietaryDropdown();
@@ -377,6 +379,7 @@ console.log('🔗 [main.js] Supabase URL:', supabaseUrl?.substring(0, 30) + '...
             mountFilterPanel();
             initDietaryDropdown();
             initializeTimer({ timerVisible: false, timerVolume: 80 }, saveSetting);
+            initRecipeTimers();
             setupPopupCloseOnOverlayClick();
             handleInitialRoute();
             // הוסף event listener רק פעם אחת כדי למנוע הוספה חוזרת
