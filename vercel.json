@@ -1,6 +1,6 @@
 {
-  "installCommand": "echo skip-install",
-  "buildCommand": "echo skip-build-using-committed-dist",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "headers": [
     {
