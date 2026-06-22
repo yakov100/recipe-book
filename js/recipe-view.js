@@ -123,9 +123,6 @@ export function displayRecipes(recipesToShow) {
         actionsOverlay.className = 'action-buttons-overlay';
         const escapedName = recipe.name.replace(/'/g, "\\'");
         actionsOverlay.innerHTML = `
-          <button type="button" class="recipe-action-btn timer-btn" onclick="event.stopPropagation(); openRecipeTimerDialog('${escapedName}')" title="הגדר טיימר">
-            <span class="material-symbols-outlined">timer</span>
-          </button>
           <button type="button" class="recipe-action-btn" onclick="event.stopPropagation(); editRecipe(${actualIndex})" title="ערוך">
             <span class="material-symbols-outlined">edit</span>
           </button>
@@ -209,7 +206,7 @@ export function showRecipe(index) {
           <!-- Image Section (Left) -->
           <div class="recipe-image-section">
             <div class="recipe-actions-row recipe-actions-above-image">
-              <button class="recipe-action-btn timer-btn" onclick="openRecipeTimerDialog('${recipe.name.replace(/'/g, "\\'")}')" title="הגדר טיימר">
+              <button class="recipe-action-btn" onclick="openRecipeTimerDialog('${recipe.name.replace(/'/g, "\\'")}')" title="הגדר טיימר">
                 <span class="material-symbols-outlined">timer</span>
               </button>
               <button class="recipe-action-btn" onclick="editRecipe(${index})" title="ערוך">
